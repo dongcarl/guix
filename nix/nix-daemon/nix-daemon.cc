@@ -48,7 +48,6 @@ static FdSource from(STDIN_FILENO);
 static FdSink to(STDOUT_FILENO);
 
 bool canSendStderr;
-pid_t myPid;
 
 
 
@@ -58,11 +57,7 @@ pid_t myPid;
    socket. */
 static void tunnelStderr(const unsigned char * buf, size_t count)
 {
-    /* Don't send the message to the client if we're a child of the
-       process handling the connection.  Otherwise we could screw up
-       the protocol.  It's up to the parent to redirect stderr and
-       send it to the client somehow (e.g., as in build.cc). */
-    if (canSendStderr && myPid == getpid()) {
+    if (canSendStderr) {
         try {
             writeInt(STDERR_NEXT, to);
             writeString(buf, count, to);
@@ -663,7 +658,6 @@ static void performOp(bool trusted, unsigned int clientVersion,
 static void processConnection(bool trusted)
 {
     canSendStderr = false;
-    myPid = getpid();
     _writeToStderr = tunnelStderr;
 
 #ifdef HAVE_HUP_NOTIFICATION
