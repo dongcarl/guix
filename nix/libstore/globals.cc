@@ -131,7 +131,6 @@ void Settings::update()
     get(useSubstitutes, "build-use-substitutes");
     get(buildUsersGroup, "build-users-group");
     get(useChroot, "build-use-chroot");
-    get(dirsInChroot, "build-chroot-dirs");
     get(impersonateLinux26, "build-impersonate-linux-26");
     get(keepLog, "build-keep-log");
     get(compressLog, "build-compress-log");
