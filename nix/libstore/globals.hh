@@ -21,6 +21,10 @@ struct Settings {
 
     void set(const string & name, const string & value);
 
+    string get(const string & name, const string & def);
+
+    Strings get(const string & name, const Strings & def);
+
     void update();
 
     string pack();
