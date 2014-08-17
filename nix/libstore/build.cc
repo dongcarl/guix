@@ -1451,7 +1451,8 @@ void DerivationGoal::buildDone()
         outputLocks.unlock();
 
     } catch (BuildError & e) {
-        printMsg(lvlError, e.msg());
+        if (!hook)
+            printMsg(lvlError, e.msg());
         outputLocks.unlock();
         buildUser.release();
 
