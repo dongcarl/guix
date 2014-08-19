@@ -629,7 +629,6 @@ HookInstance::HookInstance()
     });
 
     pid.setSeparatePG(true);
-    pid.setKillSignal(SIGTERM);
     fromHook.writeSide.close();
     toHook.readSide.close();
 }
@@ -638,6 +637,7 @@ HookInstance::HookInstance()
 HookInstance::~HookInstance()
 {
     try {
+        toHook.writeSide.close();
         pid.kill(true);
     } catch (...) {
         ignoreException();
