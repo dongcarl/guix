@@ -19,6 +19,10 @@
 #include <sys/syscall.h>
 #endif
 
+#ifdef __linux__
+#include <sys/prctl.h>
+#endif
+
 
 extern char * * environ;
 
@@ -867,6 +871,10 @@ pid_t startProcess(std::function<void()> fun,
     if (pid == 0) {
         _writeToStderr = 0;
         try {
+#if __linux__
+            if (dieWithParent && prctl(PR_SET_PDEATHSIG, SIGKILL) == -1)
+                throw SysError("setting death signal");
+#endif
             restoreAffinity();
             fun();
         } catch (std::exception & e) {
