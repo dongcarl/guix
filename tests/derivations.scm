@@ -173,6 +173,11 @@
                 (= (stat:ino (lstat file1))
                    (stat:ino (lstat file2))))))))
 
+(test-equal "derivation-name"
+  "foo-0.0"
+  (let ((drv (derivation %store "foo-0.0" %bash '())))
+    (derivation-name drv)))
+
 (test-assert "fixed-output-derivation?"
   (let* ((builder    (add-text-to-store %store "my-fixed-builder.sh"
                                         "echo -n hello > $out" '()))
