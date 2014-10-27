@@ -79,6 +79,12 @@
    (26 "0k919ir0inwn4wai2vdzpbwqq5h54fnrlkmgccxjg91v3ch15k1f") ;CVE-2014-7169
    (27 "1gnsfvq6bhb3srlbh0cannj2hackdsipcg7z0ds7zlk1hp96mdqy")))
 
+(define %extra-patch-series-4.3
+  (patch-series
+   (28 "17a65c4fn4c5rgsiw9gqqnzhznh3gwnd2xzzv2dppyi48znxpc78") ;CVE-2014-7186
+   (29 "14k27p28r5l2fz3r03kd0x72vvsq8bja8c6hjz5kxikbzsbs7i2c") ;CVE-2014-6277
+   (30 "0nrqb0m7s89qsrbfaffpilc5gcf82bx9yvgzld4hr79p5y54yhw5"))) ;CVE-2014-6278
+
 (define (download-patches store count)
   "Download COUNT Bash patches into store.  Return a list of
 number/base32-hash tuples, directly usable in the 'patch-series' form."
@@ -96,6 +102,16 @@ number/base32-hash tuples, directly usable in the 'patch-series' form."
                      (call-with-input-file patch port-sha256)))))
           1+
           1))
+
+(define %oob-patch
+  ;; Fix out-of-bound memory accesses.  Superseded by 'bash43-028'.
+  ;; See <http://seclists.org/oss-sec/2014/q3/712>.
+  (origin
+    (method url-fetch)
+    (uri "http://seclists.org/oss-sec/2014/q3/att-712/parser-oob-4_2.patch")
+    (sha256
+     (base32
+      "1zc26qv76ch2l7pxyzcw0b0bpdsr65g9hrrl2gpw6k9kq2sjvc36"))))
 
 (define-public bash
   (let* ((cppflags (string-join '("-DSYS_BASHRC='\"/etc/bashrc\"'"
@@ -133,17 +149,8 @@ number/base32-hash tuples, directly usable in the 'patch-series' form."
                 "1m14s1f61mf6bijfibcjm9y6pkyvz6gibyl8p4hxq90fisi8gimg"))
               (patch-flags '("-p0"))
               (patches
-               (append
-                %patch-series-4.3
-                (list
-                 ;; Fix out-of-bound memory accesses.
-                 ;; See <http://seclists.org/oss-sec/2014/q3/712>.
-                 (origin
-                   (method url-fetch)
-                   (uri "http://seclists.org/oss-sec/2014/q3/att-712/parser-oob-4_2.patch")
-                   (sha256
-                    (base32
-                     "1zc26qv76ch2l7pxyzcw0b0bpdsr65g9hrrl2gpw6k9kq2sjvc36"))))))
+               (append %patch-series-4.3
+                       (list %oob-patch)))
 
               ;; The patches above modify 'parse.y', so force a rebuild of the
               ;; parser.
@@ -185,10 +192,21 @@ allows command-line editing, unlimited command history, shell functions and
 aliases, and job control while still allowing most sh scripts to be run
 without modification.")
      (license gpl3+)
-     (home-page "http://www.gnu.org/software/bash/"))))
+     (home-page "http://www.gnu.org/software/bash/")
+     (replacement bash-fixed))))
 
-(define-public bash-light
-  ;; A stripped-down Bash for non-interactive use.
+(define bash-fixed
+  ;; Bash 4.3 with additional security updates.
+  (package (inherit bash)
+    ;; We would like to change the 'version' field to "4.3.30", but grafting
+    ;; doesn't allow it (yet.)
+    (source (origin (inherit (package-source bash))
+              (patches (append %patch-series-4.3
+                               %extra-patch-series-4.3))))
+    (replacement #f)))
+
+(define (lightweight-bash bash)
+  "Return a stripped-down package based on BASH for non-interactive use."
   (package (inherit bash)
     (name "bash-light")
     (inputs '())                                ; no readline, no curses
@@ -210,4 +228,15 @@ without modification.")
 
                  ,@(if (%current-target-system)
                        '("bash_cv_job_control_missing=no")
-                       '()))))))))
+                       '()))))))
+    (replacement #f)))
+
+(define-public bash-light
+  (package (inherit (lightweight-bash bash))
+    (replacement
+     (package (inherit (lightweight-bash bash-fixed))
+       ;; Use a Bison that does not depend on Flex.  This is only so that
+       ;; GLIBC-FINAL can be built with the graft; without it, Flex's C++
+       ;; tests fail because GLIBC-FINAL's environment has g++ but not
+       ;; libstdc++.
+       (native-inputs `(("bison" ,(bison-without-tests))))))))

@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2012, 2013 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2012, 2013, 2014 Ludovic Courtès <ludo@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -52,6 +52,13 @@ grammar.  It is versatile enough to have many applications, from parsers for
 simple tools through complex programming languages.")
     (license gpl3+)))
 
+(define-public (bison-without-tests)
+  "Return a Bison variant that does not depend on Flex and does not run its
+tests.  This is useful in bootstrap context."
+  (package (inherit bison)
+    (inputs '())                                  ;remove Flex...
+    (arguments '(#:tests? #f))))                  ;... and thus disable tests
+
 (define-public bison-2.7
   (package (inherit bison)
     (version "2.7")
@@ -63,4 +70,3 @@ simple tools through complex programming languages.")
       (sha256
        (base32
         "1zd77ilmpv5mi3kr55jrj6ncqlcnyhpianhrwzak2q28cv2cbn23"))))))
-
