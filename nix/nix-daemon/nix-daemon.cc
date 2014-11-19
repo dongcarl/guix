@@ -924,8 +924,8 @@ static void daemonLoop()
                 to.fd = remote;
                 processConnection(trusted);
 
-                _exit(0);
-            }, "unexpected Nix daemon error: ");
+                exit(0);
+            }, false, "unexpected Nix daemon error: ", true);
 
         } catch (Interrupted & e) {
             throw;
