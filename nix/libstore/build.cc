@@ -1752,18 +1752,7 @@ void DerivationGoal::startBuilder()
             throw SysError(format("cannot change ownership of '%1%'") % tmpDir);
     }
 
-
-    /* Are we doing a chroot build?  Note that fixed-output
-       derivations are never done in a chroot, mainly so that
-       functions like fetchurl (which needs a proper /etc/resolv.conf)
-       work properly.  Purity checking for fixed-output derivations
-       is somewhat pointless anyway. */
     useChroot = settings.useChroot;
-
-    if (fixedOutput) useChroot = false;
-
-    /* Hack to allow derivations to disable chroot builds. */
-    if (get(drv.env, "__noChroot") == "1") useChroot = false;
 
     if (useChroot) {
 #if CHROOT_ENABLED
@@ -1805,7 +1794,8 @@ void DerivationGoal::startBuilder()
                 % (buildUser.enabled() ? buildUser.getGID() : getgid())).str());
 
         /* Create /etc/hosts with localhost entry. */
-        writeFile(chrootRootDir + "/etc/hosts", "127.0.0.1 localhost\n");
+        if (!fixedOutput)
+            writeFile(chrootRootDir + "/etc/hosts", "127.0.0.1 localhost\n");
 
         /* Bind-mount a user-configurable set of directories from the
            host file system. */
@@ -1938,9 +1928,12 @@ void DerivationGoal::startBuilder()
     */
 #if CHROOT_ENABLED
     if (useChroot) {
-        char stack[32 * 1024];
-        pid = clone(childEntry, stack + sizeof(stack) - 8,
-            CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWNET | CLONE_NEWIPC | CLONE_NEWUTS | SIGCHLD, this);
+	char stack[32 * 1024];
+	int flags = CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWIPC | CLONE_NEWUTS | SIGCHLD;
+	if (!fixedOutput) flags |= CLONE_NEWNET;
+	pid = clone(childEntry, stack + sizeof(stack) - 8, flags, this);
+	if (pid == -1)
+	    throw SysError("cloning builder process");
     } else
 #endif
     {
@@ -2026,10 +2019,10 @@ void DerivationGoal::runChild()
 
             /* Set up a nearly empty /dev, unless the user asked to
                bind-mount the host /dev. */
+            Strings ss;
             if (dirsInChroot.find("/dev") == dirsInChroot.end()) {
                 createDirs(chrootRootDir + "/dev/shm");
                 createDirs(chrootRootDir + "/dev/pts");
-                Strings ss;
                 ss.push_back("/dev/full");
 #ifdef __linux__
                 if (pathExists("/dev/kvm"))
@@ -2040,12 +2033,23 @@ void DerivationGoal::runChild()
                 ss.push_back("/dev/tty");
                 ss.push_back("/dev/urandom");
                 ss.push_back("/dev/zero");
-                foreach (Strings::iterator, i, ss) dirsInChroot[*i] = *i;
                 createSymlink("/proc/self/fd", chrootRootDir + "/dev/fd");
                 createSymlink("/proc/self/fd/0", chrootRootDir + "/dev/stdin");
                 createSymlink("/proc/self/fd/1", chrootRootDir + "/dev/stdout");
                 createSymlink("/proc/self/fd/2", chrootRootDir + "/dev/stderr");
             }
+
+            /* Fixed-output derivations typically need to access the
+               network, so give them access to /etc/resolv.conf and so
+               on. */
+            if (fixedOutput) {
+                ss.push_back("/etc/resolv.conf");
+                ss.push_back("/etc/nsswitch.conf");
+                ss.push_back("/etc/services");
+                ss.push_back("/etc/hosts");
+            }
+
+            for (auto & i : ss) dirsInChroot[i] = i;
 
             /* Bind-mount all the directories from the "host"
                filesystem that we want in the chroot
