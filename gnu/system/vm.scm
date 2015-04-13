@@ -62,6 +62,8 @@
             virtualized-operating-system
             system-qemu-image
 
+            virtualized-operating-system
+
             system-qemu-image/shared-store
             system-qemu-image/shared-store-script
             system-disk-image))

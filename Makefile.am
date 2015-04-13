@@ -148,6 +148,7 @@ MODULES =					\
   guix/scripts/graph.scm			\
   guix/scripts/container.scm			\
   guix/scripts/container/exec.scm		\
+  guix/scripts/deploy.scm			\
   guix.scm					\
   $(GNU_SYSTEM_MODULES)
 

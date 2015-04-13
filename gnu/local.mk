@@ -430,6 +430,8 @@ GNU_SYSTEM_MODULES =				\
   %D%/build/marionette.scm			\
   %D%/build/vm.scm				\
 						\
+  %D%/machines.scm				\
+						\
   %D%/tests.scm					\
   %D%/tests/base.scm				\
   %D%/tests/install.scm				\

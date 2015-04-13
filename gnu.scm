@@ -43,6 +43,7 @@
         (gnu services base)
         (gnu packages)
         (gnu packages base)
+        (gnu machines)
         (guix gexp)))                             ; so gexps can be used
 
     (for-each (let ((i (module-public-interface (current-module))))
