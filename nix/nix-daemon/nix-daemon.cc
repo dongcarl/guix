@@ -735,12 +735,10 @@ static void processConnection(bool trusted)
                during addTextToStore() / importPath().  If that
                happens, just send the error message and exit. */
             bool errorAllowed = canSendStderr;
-            if (!errorAllowed) printMsg(lvlError, format("error processing client input: %1%") % e.msg());
             stopWork(false, e.msg(), GET_PROTOCOL_MINOR(clientVersion) >= 8 ? e.status : 0);
-            if (!errorAllowed) break;
+            if (!errorAllowed) throw;
         } catch (std::bad_alloc & e) {
-            if (canSendStderr)
-                stopWork(false, "Nix daemon out of memory", GET_PROTOCOL_MINOR(clientVersion) >= 8 ? 1 : 0);
+            stopWork(false, "Nix daemon out of memory", GET_PROTOCOL_MINOR(clientVersion) >= 8 ? 1 : 0);
             throw;
         }
 
@@ -874,40 +872,27 @@ static void daemonLoop()
             printMsg(lvlInfo, format("accepted connection from pid %1%, uid %2%") % clientPid % clientUid);
 
             /* Fork a child to handle the connection. */
-            pid_t child;
-            child = fork();
+            startProcess([&]() {
+                /* Background the daemon. */
+                if (setsid() == -1)
+                    throw SysError(format("creating a new session"));
 
-            switch (child) {
+                /* Restore normal handling of SIGCHLD. */
+                setSigChldAction(false);
 
-            case -1:
-                throw SysError("unable to fork");
-
-            case 0:
-                try { /* child */
-
-                    /* Background the daemon. */
-                    if (setsid() == -1)
-                        throw SysError(format("creating a new session"));
-
-                    /* Restore normal handling of SIGCHLD. */
-                    setSigChldAction(false);
-
-                    /* For debugging, stuff the pid into argv[1]. */
-                    if (clientPid != -1 && argvSaved[1]) {
-                        string processName = int2String(clientPid);
-                        strncpy(argvSaved[1], processName.c_str(), strlen(argvSaved[1]));
-                    }
-
-                    /* Handle the connection. */
-                    from.fd = remote;
-                    to.fd = remote;
-                    processConnection(trusted);
-
-                } catch (std::exception & e) {
-                    writeToStderr("unexpected Nix daemon error: " + string(e.what()) + "\n");
+                /* For debugging, stuff the pid into argv[1]. */
+                if (clientPid != -1 && argvSaved[1]) {
+                    string processName = int2String(clientPid);
+                    strncpy(argvSaved[1], processName.c_str(), strlen(argvSaved[1]));
                 }
-                exit(0);
-            }
+
+                /* Handle the connection. */
+                from.fd = remote;
+                to.fd = remote;
+                processConnection(trusted);
+
+                _exit(0);
+            }, "unexpected Nix daemon error: ");
 
         } catch (Interrupted & e) {
             throw;
