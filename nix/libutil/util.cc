@@ -708,17 +708,14 @@ void AutoCloseDir::close()
 
 
 Pid::Pid()
+    : pid(-1), separatePG(false), killSignal(SIGKILL)
 {
-    pid = -1;
-    separatePG = false;
-    killSignal = SIGKILL;
 }
 
 
 Pid::Pid(pid_t pid)
+    : pid(pid), separatePG(false), killSignal(SIGKILL)
 {
-    Pid();
-    *this = pid;
 }
 
 
@@ -857,8 +854,10 @@ pid_t startProcess(std::function<void()> fun, const string & errorPrefix)
             restoreAffinity();
             fun();
         } catch (std::exception & e) {
-            writeToStderr(errorPrefix + string(e.what()) + "\n");
-        }
+            try {
+                std::cerr << errorPrefix << e.what() << "\n";
+            } catch (...) { }
+        } catch (...) { }
         _exit(1);
     }
 

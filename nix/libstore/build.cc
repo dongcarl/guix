@@ -590,7 +590,9 @@ HookInstance::HookInstance()
 {
     debug("starting build hook");
 
-    Path buildHook = absPath(getEnv("NIX_BUILD_HOOK"));
+    Path buildHook = getEnv("NIX_BUILD_HOOK");
+    if (string(buildHook, 0, 1) != "/") buildHook = settings.nixLibexecDir + "/nix/" + buildHook;
+    buildHook = canonPath(buildHook);
 
     /* Create a pipe to get the output of the child. */
     fromHook.create();
@@ -2075,9 +2077,9 @@ void DerivationGoal::initChild()
                     throw SysError("mounting /dev/pts");
                 createSymlink("/dev/pts/ptmx", chrootRootDir + "/dev/ptmx");
 
-		/* Make sure /dev/pts/ptmx is world-writable.  With some
-		   Linux versions, it is created with permissions 0.  */
-		chmod_(chrootRootDir + "/dev/pts/ptmx", 0666);
+                /* Make sure /dev/pts/ptmx is world-writable.  With some
+                   Linux versions, it is created with permissions 0.  */
+                chmod_(chrootRootDir + "/dev/pts/ptmx", 0666);
             }
 
             /* Do the chroot().  Below we do a chdir() to the
