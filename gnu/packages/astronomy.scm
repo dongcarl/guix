@@ -1,6 +1,7 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2016 John Darrington <jmd@gnu.org>
 ;;; Copyright © 2018 Tobias Geerinckx-Rice <me@tobias.gr>
+;;; Copyright © 2016 Mark H Weaver <mhw@netris.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -22,6 +23,14 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix download)
   #:use-module (guix utils)
+  #:use-module (gnu packages)
+  #:use-module (gnu packages lua)
+  #:use-module (gnu packages glib)
+  #:use-module (gnu packages gnome)
+  #:use-module (gnu packages gtk)
+  #:use-module (gnu packages gl)
+  #:use-module (gnu packages xiph)
+  #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages image)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages gettext)
@@ -30,7 +39,8 @@
   #:use-module (gnu packages qt)
   #:use-module (gnu packages maths)
   #:use-module (guix build-system cmake)
-  #:use-module (guix build-system gnu))
+  #:use-module (guix build-system gnu)
+  #:use-module (guix build-system glib-or-gtk))
 
 (define-public cfitsio
   (package
@@ -165,4 +175,51 @@ programs for the manipulation and analysis of astronomical data.")
 3D, just like what you see with the naked eye, binoculars, or a telescope.  It
 can be used to control telescopes over a serial port for tracking celestial
 objects.")
+    (license license:gpl2+)))
+
+(define-public celestia
+  (package
+    (name "celestia")
+    (version "1.6.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://sourceforge/" name
+                                  "/Celestia-source/" version "/"
+                                  name "-" version ".tar.gz"))
+              (sha256
+               (base32 "1i1lvhbgllsh2z8i6jj4mvrjak4a7r69psvk7syw03s4p7670mfk"))
+              (patches (map search-patch '("celestia-libpng-1.5.patch"
+                                           "celestia-libpng-1.6.patch"
+                                           "celestia-use-stdint.h.patch"
+                                           "celestia-use-0-not-NULL.patch"
+                                           "celestia-add-missing-includes.patch"
+                                           "celestia-gcc-4.7.patch"
+                                           "celestia-mips.patch")))))
+    (build-system glib-or-gtk-build-system)
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (inputs
+     `(("lua" ,lua-5.1)
+       ("gtk+" ,gtk+-2)
+       ("gtkglext" ,gtkglext)
+       ("mesa" ,mesa)
+       ("glu" ,glu)
+       ("libtheora" ,libtheora)
+       ("libjpeg" ,libjpeg)
+       ("libpng" ,libpng)))
+    (arguments
+     `(#:configure-flags
+       (let ((lua (assoc-ref %build-inputs "lua")))
+         (list "--with-gtk"
+               (string-append "LUA_CFLAGS=-I" lua "/include")
+               (string-append "LUA_LIBS=-L" lua "/libs -llua")))
+       #:out-of-source? #f))
+    (home-page "http://www.shatters.net/celestia/")
+    (synopsis "Real-time visual space simulation")
+    (description
+     "Celestia is a free 3D astronomy program.  Based on the Hipparcos
+Catalogue, it allows users to display objects ranging in scale from artificial
+satellites to entire galaxies in three dimensions using OpenGL.  Unlike most
+planetarium software, the user is free to travel about the Universe.")
+    ;; XXX TODO: Investigate licenses of included images and models.
     (license license:gpl2+)))

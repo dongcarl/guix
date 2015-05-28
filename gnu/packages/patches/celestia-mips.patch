@@ -1,0 +1,32 @@
+Copied from Debian.
+
+Index: celestia-1.6.1+dfsg/src/celengine/image.cpp
+===================================================================
+--- celestia-1.6.1+dfsg.orig/src/celengine/image.cpp	2014-10-16 18:20:45.000000000 +0800
++++ celestia-1.6.1+dfsg/src/celengine/image.cpp	2014-10-16 18:25:25.308234608 +0800
+@@ -149,10 +149,10 @@
+ }
+ 
+ 
+-Image::Image(int fmt, int w, int h, int mips) :
++Image::Image(int fmt, int w, int h, int mip) :
+     width(w),
+     height(h),
+-    mipLevels(mips),
++    mipLevels(mip),
+     format(fmt),
+     pixels(NULL)
+ {
+Index: celestia-1.6.1+dfsg/src/celengine/image.h
+===================================================================
+--- celestia-1.6.1+dfsg.orig/src/celengine/image.h	2011-06-06 00:11:09.000000000 +0800
++++ celestia-1.6.1+dfsg/src/celengine/image.h	2014-10-16 18:25:38.200234942 +0800
+@@ -22,7 +22,7 @@
+ class Image
+ {
+  public:
+-    Image(int fmt, int w, int h, int mips = 1);
++    Image(int fmt, int w, int h, int mip = 1);
+     ~Image();
+ 
+     int getWidth() const;

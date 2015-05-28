@@ -586,6 +586,13 @@ dist_patch_DATA =						\
   %D%/packages/patches/calibre-use-packaged-feedparser.patch	\
   %D%/packages/patches/catdoc-CVE-2017-11110.patch		\
   %D%/packages/patches/cdparanoia-fpic.patch			\
+  %D%/packages/patches/celestia-add-missing-includes.patch	\
+  %D%/packages/patches/celestia-gcc-4.7.patch			\
+  %D%/packages/patches/celestia-libpng-1.5.patch		\
+  %D%/packages/patches/celestia-libpng-1.6.patch		\
+  %D%/packages/patches/celestia-mips.patch			\
+  %D%/packages/patches/celestia-use-0-not-NULL.patch		\
+  %D%/packages/patches/celestia-use-stdint.h.patch		\
   %D%/packages/patches/cdrtools-3.01-mkisofs-isoinfo.patch 	\
   %D%/packages/patches/ceph-disable-cpu-optimizations.patch	\
   %D%/packages/patches/ceph-rocksdb-compat.patch		\
