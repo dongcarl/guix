@@ -764,7 +764,7 @@ private:
     typedef void (DerivationGoal::*GoalState)();
     GoalState state;
 
-    /* Stuff we need to pass to initChild(). */
+    /* Stuff we need to pass to runChild(). */
     typedef map<Path, Path> DirsInChroot; // maps target path to source path
     DirsInChroot dirsInChroot;
     typedef map<string, string> Environment;
@@ -828,8 +828,8 @@ private:
     /* Start building a derivation. */
     void startBuilder();
 
-    /* Initialise the builder's process. */
-    void initChild();
+    /* Run the builder's process. */
+    void runChild();
 
     friend int childEntry(void *);
 
@@ -1612,7 +1612,7 @@ void chmod_(const Path & path, mode_t mode)
 
 int childEntry(void * arg)
 {
-    ((DerivationGoal *) arg)->initChild();
+    ((DerivationGoal *) arg)->runChild();
     return 1;
 }
 
@@ -1970,7 +1970,7 @@ void DerivationGoal::startBuilder()
 #endif
     {
         pid = fork();
-        if (pid == 0) initChild();
+        if (pid == 0) runChild();
     }
 
     if (pid == -1) throw SysError("unable to fork");
@@ -1993,7 +1993,7 @@ void DerivationGoal::startBuilder()
 }
 
 
-void DerivationGoal::initChild()
+void DerivationGoal::runChild()
 {
     /* Warning: in the child we should absolutely not make any SQLite
        calls! */
