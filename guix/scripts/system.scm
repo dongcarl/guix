@@ -33,6 +33,7 @@
   #:use-module (gnu build install)
   #:use-module (gnu system)
   #:use-module (gnu system file-systems)
+  #:use-module (gnu system linux-container)
   #:use-module (gnu system vm)
   #:use-module (gnu system grub)
   #:use-module (gnu services)
@@ -336,6 +337,8 @@ list of services."
   (case action
     ((build init reconfigure)
      (operating-system-derivation os))
+    ((container)
+     (container-script os #:mappings mappings))
     ((vm-image)
      (system-qemu-image os #:disk-image-size image-size))
     ((vm)
@@ -368,10 +371,12 @@ building anything."
                                                 #:full-boot? full-boot?
                                                 #:mappings mappings))
        (grub      (package->derivation grub))
-       (grub.cfg  (operating-system-grub.cfg os
-                                             (if (eq? 'init action)
-                                                 '()
-                                                 (previous-grub-entries))))
+       (grub.cfg  (if (eq? 'container action)
+                      (return #f)
+                      (operating-system-grub.cfg os
+                                                 (if (eq? 'init action)
+                                                     '()
+                                                     (previous-grub-entries)))))
        (drvs   -> (if (and grub? (memq action '(init reconfigure)))
                       (list sys grub grub.cfg)
                       (list sys)))
@@ -451,6 +456,8 @@ Build the operating system declared in FILE according to ACTION.\n"))
    reconfigure      switch to a new operating system configuration\n"))
   (display (_ "\
    build            build the operating system without installing anything\n"))
+  (display (_ "\
+  container         build a Linux container that shares the host's store\n"))
   (display (_ "\
    vm               build a virtual machine image that shares the host's store\n"))
   (display (_ "\
@@ -557,7 +564,7 @@ Build the operating system declared in FILE according to ACTION.\n"))
         (alist-cons 'argument arg result)
         (let ((action (string->symbol arg)))
           (case action
-            ((build vm vm-image disk-image reconfigure init
+            ((build container vm vm-image disk-image reconfigure init
               extension-graph dmd-graph)
              (alist-cons 'action action result))
             (else (leave (_ "~a: unknown action~%") action))))))
@@ -586,7 +593,7 @@ Build the operating system declared in FILE according to ACTION.\n"))
         (exit 1))
 
       (case action
-        ((build vm vm-image disk-image reconfigure)
+        ((build container vm vm-image disk-image reconfigure)
          (unless (= count 1)
            (fail)))
         ((init)

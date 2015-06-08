@@ -7168,6 +7168,27 @@ using the following command:
 # dd if=$(guix system disk-image my-os.scm) of=/dev/sdc
 @end example
 
+@item container
+Return a script to run the operating system declared in @var{file}
+within a container.  Currently, the script must be run as root in order
+to support more than a single user and group.
+
+The container shares its store with the host system.
+
+Additional file systems can be shared between the host and the container
+using the @code{--share} and @code{--expose} command-line options: the
+former specifies a directory to be shared with write access, while the
+latter provides read-only access to the shared directory.
+
+The example below creates a container in which the user's home directory
+is accessible read-only, and where the @file{/exchange} directory is a
+read-write mapping of the host's @file{$HOME/tmp}:
+
+@example
+guix system container my-config.scm \
+   --expose=$HOME --share=$HOME/tmp=/exchange
+@end example
+
 @end table
 
 @var{options} can contain any of the common build options provided by
