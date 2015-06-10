@@ -1188,15 +1188,6 @@ void DerivationGoal::inputsRealised()
 }
 
 
-PathSet outputPaths(const DerivationOutputs & outputs)
-{
-    PathSet paths;
-    foreach (DerivationOutputs::const_iterator, i, outputs)
-        paths.insert(i->second.path);
-    return paths;
-}
-
-
 static bool canBuildLocally(const string & platform)
 {
     return platform == settings.thisSystem
@@ -1248,7 +1239,7 @@ void DerivationGoal::tryToBuild()
        can't acquire the lock, then continue; hopefully some other
        goal can start a build, and if not, the main loop will sleep a
        few seconds and then retry this goal. */
-    if (!outputLocks.lockPaths(outputPaths(drv.outputs), "", false)) {
+    if (!outputLocks.lockPaths(outputPaths(drv), "", false)) {
         worker.waitForAWhile(shared_from_this());
         return;
     }
@@ -1269,7 +1260,7 @@ void DerivationGoal::tryToBuild()
         return;
     }
 
-    missingPaths = outputPaths(drv.outputs);
+    missingPaths = outputPaths(drv);
     if (buildMode != bmCheck)
         foreach (PathSet::iterator, i, validPaths) missingPaths.erase(*i);
 
