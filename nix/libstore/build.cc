@@ -2174,7 +2174,6 @@ void DerivationGoal::runChild()
         Strings envStrs;
         foreach (Environment::const_iterator, i, env)
             envStrs.push_back(rewriteHashes(i->first + "=" + i->second, rewritesToTmp));
-        auto envArr = stringsToCharPtrs(envStrs);
 
         /* If we are running in `build-users' mode, then switch to the
            user we allocated above.  Make sure that we drop all root
@@ -2205,7 +2204,6 @@ void DerivationGoal::runChild()
         args.push_back(builderBasename);
         foreach (Strings::iterator, i, drv.args)
             args.push_back(rewriteHashes(*i, rewritesToTmp));
-        auto argArr = stringsToCharPtrs(args);
 
         restoreSIGPIPE();
 
@@ -2213,7 +2211,7 @@ void DerivationGoal::runChild()
         writeFull(STDERR_FILENO, "\n");
 
         /* Execute the program.  This should not return. */
-        execve(drv.builder.c_str(), (char * *) &argArr[0], (char * *) &envArr[0]);
+        execve(drv.builder.c_str(), stringsToCharPtrs(args).data(), stringsToCharPtrs(envStrs).data());
 
         throw SysError(format("executing `%1%'") % drv.builder);
 
@@ -2843,7 +2841,6 @@ void SubstitutionGoal::tryToRun()
     args.push_back("--substitute");
     args.push_back(storePath);
     args.push_back(destPath);
-    auto argArr = stringsToCharPtrs(args);
 
     /* Fork the substitute program. */
     pid = startProcess([&]() {
@@ -2853,7 +2850,7 @@ void SubstitutionGoal::tryToRun()
         if (dup2(outPipe.writeSide, STDOUT_FILENO) == -1)
             throw SysError("cannot dup output pipe into stdout");
 
-        execv(sub.c_str(), (char * *) &argArr[0]);
+        execv(sub.c_str(), stringsToCharPtrs(args).data());
 
         throw SysError(format("executing `%1%'") % sub);
     });
