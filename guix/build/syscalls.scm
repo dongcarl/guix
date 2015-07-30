@@ -23,6 +23,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
+  #:use-module (srfi srfi-11)
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 regex)
   #:use-module (ice-9 match)
@@ -82,7 +83,13 @@
             interface-address
             interface-netmask
             interface-broadcast-address
-            network-interfaces))
+            network-interfaces
+
+            openpt
+            grantpt
+            unlockpt
+            ptsname
+            call-with-pty))
 
 ;;; Commentary:
 ;;;
@@ -848,5 +855,106 @@ network interface.  This is implemented using the 'getifaddrs' libc function."
 (define free-ifaddrs
   (let ((ptr (dynamic-func "freeifaddrs" (dynamic-link))))
     (pointer->procedure void ptr '(*))))
+
+
+;;;
+;;; Psuedo-Terminals.
+;;;
+
+;; See misc/sys/select.h in GNU libc.
+
+(define cc-t uint8)
+(define speed-t unsigned-int)
+(define tcflag-t unsigned-int)
+(define NCCS 32)
+
+;; (define-c-struct termios
+;;   values->termios
+;;   read-termios
+;;   write-termios!
+;;   (c-iflag tcflag-t)
+;;   (c-oflag tcflag-t)
+;;   (c-cflag tcflag-t)
+;;   (c-lflag tcflag-t)
+;;   (c-line cc-t)
+;;   (c))
+
+(define TIOCSCTTY #x540E)
+
+(define getpt
+  (let* ((ptr  (dynamic-func "getpt" (dynamic-link)))
+         (proc (pointer->procedure int ptr '())))
+    (lambda ()
+      "Open a new master pseudo-terminal and return its file descriptor."
+      (let* ((ret (proc))
+             (err (errno)))
+        (if (= ret -1)
+            (throw 'system-error "getpt" "~A"
+                   (list (strerror err))
+                   (list err))
+            ret)))))
+
+(define grantpt
+  (let* ((ptr  (dynamic-func "grantpt" (dynamic-link)))
+         (proc (pointer->procedure int ptr (list int))))
+    (lambda (fdes)
+      "Changes the ownership and access permission of the slave
+pseudo-terminal device corresponding to the master pseudo-terminal device
+associated with the file descriptor FDES."
+      (let* ((ret (proc fdes))
+             (err (errno)))
+        (unless (zero? ret)
+          (throw 'system-error "grantpt" "~d: ~A"
+                 (list fdes (strerror err))
+                 (list err)))))))
+
+(define unlockpt
+  (let* ((ptr  (dynamic-func "unlockpt" (dynamic-link)))
+         (proc (pointer->procedure int ptr (list int))))
+    (lambda (fdes)
+      "Unlocks the slave pseudo-terminal device corresponding to the master
+pseudo-terminal device associated with the file descriptor FDES."
+      (let* ((ret (proc fdes))
+             (err (errno)))
+        (unless (zero? ret)
+          (throw 'system-error "unlockpt" "~d: ~A"
+                 (list fdes (strerror err))
+                 (list err)))))))
+
+(define ptsname
+  (let* ((ptr  (dynamic-func "ptsname" (dynamic-link)))
+         (proc (pointer->procedure '* ptr (list int))))
+    (lambda (fdes)
+      "If the file descriptor FDES is associated with a master pseudo-terminal
+device, return the file name of the associated slave pseudo-terminal file.
+Otherwise, return #f."
+      (let ((ret (proc fdes)))
+        (and (not (null-pointer? ret))
+             (pointer->string ret))))))
+
+(define (open-pty-pair)
+  "Open a new pseudo-terminal pair and return the corresponding ports."
+  (let ((master (getpt)))
+    (catch #t
+      (lambda ()
+        (grantpt master)
+        (unlockpt master)
+        (let ((name (ptsname master)))
+          (values (fdopen master "r+")
+                  (open-file name "r+"))))
+      (lambda args
+        (close master)
+        (apply throw args)))))
+
+(define (call-with-pty proc)
+  "Apply PROC with the master and slave side of a new pseudo-terminal pair."
+  (let-values (((master slave) (open-pty-pair)))
+    (dynamic-wind
+      (const #t)
+      (lambda ()
+        (proc master slave))
+      (lambda ()
+        (close slave)
+        (close master)))))
 
 ;;; syscalls.scm ends here
