@@ -1,0 +1,48 @@
+From c49e2c1b1dbe95821f8134a48ca747e5161e75a6 Mon Sep 17 00:00:00 2001
+From: Mark H Weaver <mhw@netris.org>
+Date: Sun, 23 Aug 2015 17:06:18 -0400
+Subject: [PATCH] Yeeloong: Ignore the Fn + F5 (rfkill toggle) key combination.
+
+* drivers/platform/mips/yeeloong_laptop.c (yeeloong_keymap): Do not
+  generate a user-visible key press from the Fn + F5 key combination.
+---
+ drivers/platform/mips/yeeloong_laptop.c | 23 ++++++++++++++++++++++-
+ 1 file changed, 22 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/platform/mips/yeeloong_laptop.c b/drivers/platform/mips/yeeloong_laptop.c
+index 9f2d81b..6d7cde6 100644
+--- a/drivers/platform/mips/yeeloong_laptop.c
++++ b/drivers/platform/mips/yeeloong_laptop.c
+@@ -803,7 +803,28 @@ static const struct key_entry yeeloong_keymap[] = {
+ 	{KE_KEY, EVENT_BLACK_SCREEN, { KEY_DISPLAYTOGGLE } }, /* Fn + F2 */
+ 	{KE_KEY, EVENT_DISPLAY_TOGGLE, { KEY_SWITCHVIDEOMODE } }, /* Fn + F3 */
+ 	{KE_KEY, EVENT_AUDIO_MUTE, { KEY_MUTE } }, /* Fn + F4 */
+-	{KE_KEY, EVENT_WLAN, { KEY_WLAN } }, /* Fn + F5 */
++
++	/* XXX Fn + F5 is handled at a lower level (presumably by the
++	   embedded controller) to toggle the state of the hardware
++	   rfkill switch of the internal RTL8187B wireless adapter.
++
++	   If we also map it to KEY_WLAN, as is done by the
++	   loongson-community kernel as of August 2015, that causes
++	   the generic rfkill input subsystem to toggle the state of
++	   the software rfkill switch for all wireless devices.
++
++	   At boot time, these two switch states start out
++	   out-of-sync, so rfkill is always blocked by one or the
++	   other: pressing Fn + F5 merely toggles whether it is the
++	   software or hardware rfkill switch that's causing the
++	   block.  Even if we arranged to start with these two switch
++	   states in sync, they might possibly get out of sync at some
++	   point.  It seems fragile.
++
++	   So, instead, we simply avoid the dual meaning of this key,
++	   by ignoring the key from software. */
++	{KE_IGNORE, EVENT_WLAN, { KEY_WLAN } }, /* Fn + F5 */
++
+ 	{KE_KEY, EVENT_DISPLAY_BRIGHTNESS, { KEY_BRIGHTNESSUP } }, /* Fn + up */
+ 	{KE_KEY, EVENT_DISPLAY_BRIGHTNESS, { KEY_BRIGHTNESSDOWN } }, /* Fn + down */
+ 	{KE_KEY, EVENT_AUDIO_VOLUME, { KEY_VOLUMEUP } }, /* Fn + right */
+-- 
+2.5.0
+

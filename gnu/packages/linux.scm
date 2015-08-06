@@ -372,6 +372,32 @@ It has been modified to remove all non-free binary blobs.")
        `(,@(alist-delete "kconfig" (package-native-inputs linux-libre))
          ("kconfig" ,conf))))))
 
+(define-public linux-libre-loongson2f
+  (package (inherit linux-libre-4.1)
+    (name "linux-libre-loongson2f")
+    (source (origin
+              (inherit (package-source linux-libre-4.1))
+              (patches
+               (map search-patch
+                    '("linux-libre-mips-hugetlb-fix.patch"
+                      "linux-libre-mips-ftrace-fix.patch"
+                      "linux-libre-mips-math-emu-fix-pt1.patch"
+                      "linux-libre-mips-math-emu-fix-pt2.patch"
+                      "linux-libre-loongson2-math-emu.patch"
+                      "linux-libre-loongson2-cpufreq-fix.patch"
+                      "linux-libre-loongson2-max-physmem-bits.patch"
+                      "linux-libre-export-loongson-chipcfg.patch"
+                      "linux-libre-yeeloong.patch"
+                      "linux-libre-yeeloong-rfkill-key-fix.patch"
+                      "linux-libre-yeeloong-silence-ec-messages.patch"
+                      "linux-libre-gdium.patch")))))
+    (supported-systems '("mips64el-linux"))
+    (native-inputs
+     (let ((conf (search-path %load-path
+                              "gnu/packages/linux-libre-loongson2f.conf")))
+       `(,@(alist-delete "kconfig" (package-native-inputs linux-libre-4.1))
+         ("kconfig" ,conf))))))
+
 
 ;;;
 ;;; Pluggable authentication modules (PAM).

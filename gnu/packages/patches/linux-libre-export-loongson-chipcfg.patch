@@ -1,0 +1,28 @@
+From: Alexandre Oliva <lxoliva@fsfla.org>
+Date: Thu, 6 Aug 2015 01:54:21 -0400
+Subject: [PATCH 6/9] Loongson: export loongson_chipcfg
+
+Building drivers/cpufreq/loongson_cpufreq as a module would fail
+because loongson_chipcfg wasn't exported in
+arch/mips/loongson/common/env.c.  Fixed.
+
+Signed-off-by: Alexandre Oliva <lxoliva@fsfla.org>
+---
+ arch/mips/loongson64/common/env.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/mips/loongson/common/env.c b/arch/mips/loongson/common/env.c
+index 22f04ca..fc454f2 100644
+--- a/arch/mips/loongson/common/env.c
++++ b/arch/mips/loongson/common/env.c
+@@ -29,6 +29,7 @@ struct efi_memory_map_loongson *loongson_memmap;
+ struct loongson_system_configuration loongson_sysconf;
+ 
+ u64 loongson_chipcfg[MAX_PACKAGES] = {0xffffffffbfc00180};
++EXPORT_SYMBOL_GPL(loongson_chipcfg);
+ u64 loongson_chiptemp[MAX_PACKAGES];
+ u64 loongson_freqctrl[MAX_PACKAGES];
+ 
+-- 
+2.4.3
+

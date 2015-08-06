@@ -1,0 +1,2549 @@
+Add support for the gdium laptop.  This selection of patches was derived from
+looking at the differences between the linux-stable and loongson-community git
+repositories.
+
+diff --git a/arch/mips/include/asm/mach-loongson/machine.h b/arch/mips/include/asm/mach-loongson/machine.h
+index cb2b602..78fcd38 100644
+--- a/arch/mips/include/asm/mach-loongson/machine.h
++++ b/arch/mips/include/asm/mach-loongson/machine.h
+@@ -24,6 +24,12 @@
+ 
+ #endif
+ 
++#ifdef CONFIG_DEXXON_GDIUM
++
++#define LOONGSON_MACHTYPE MACH_DEXXON_GDIUM2F10
++
++#endif
++
+ #ifdef CONFIG_LOONGSON_MACH3X
+ 
+ #define LOONGSON_MACHTYPE MACH_LOONGSON_GENERIC
+diff --git a/arch/mips/loongson/Kconfig b/arch/mips/loongson/Kconfig
+index 659ca91..e6a9ac3 100644
+--- a/arch/mips/loongson/Kconfig
++++ b/arch/mips/loongson/Kconfig
+@@ -59,6 +59,31 @@ config LEMOTE_MACH2F
+ 	  These family machines include fuloong2f mini PC, yeeloong2f notebook,
+ 	  LingLoong allinone PC and so forth.
+ 
++config DEXXON_GDIUM
++	bool "Dexxon Gdium Netbook"
++	select ARCH_SPARSEMEM_ENABLE
++	select BOARD_SCACHE
++	select BOOT_ELF32
++	select CEVT_R4K if ! MIPS_EXTERNAL_TIMER
++	select CPU_HAS_WB
++	select CSRC_R4K if ! MIPS_EXTERNAL_TIMER
++	select DMA_NONCOHERENT
++	select GENERIC_ISA_DMA_SUPPORT_BROKEN
++	select HW_HAS_PCI
++	select I8259
++	select IRQ_CPU
++	select ISA
++	select SYS_HAS_CPU_LOONGSON2F
++	select SYS_HAS_EARLY_PRINTK
++	select SYS_SUPPORTS_32BIT_KERNEL
++	select SYS_SUPPORTS_64BIT_KERNEL
++	select SYS_SUPPORTS_HIGHMEM
++	select SYS_SUPPORTS_LITTLE_ENDIAN
++	select ARCH_REQUIRE_GPIOLIB
++	select HAVE_PWM if MFD_SM501
++	help
++	  Dexxon gdium netbook based on Loongson 2F and SM502.
++
+ config LOONGSON_MACH3X
+ 	bool "Generic Loongson 3 family machines"
+ 	select ARCH_SPARSEMEM_ENABLE
+@@ -151,6 +176,24 @@ config LOONGSON_MC146818
+ 	bool
+ 	default n
+ 
++config GDIUM_PWM_CLOCK
++	tristate "Gdium PWM Timer"
++	default n
++	depends on HAVE_PWM && EXPERIMENTAL && BROKEN
++	select MIPS_EXTERNAL_TIMER
++	help
++	  This options enables the experimental sm501-pwm based clock. With it,
++	  you may be possible to use the loongson2f cpufreq driver.
++
++config GDIUM_VERSION
++	int "Configure Gdium Version"
++	depends on DEXXON_GDIUM
++	default "3"
++	help
++	  I have no information about how to determine which version your board
++	  is, If the default config doesn't work for it, please change it to
++	  smaller ones.
++
+ config LEFI_FIRMWARE_INTERFACE
+ 	bool
+ 
+diff --git a/arch/mips/loongson/Makefile b/arch/mips/loongson/Makefile
+index 7429994..63214c8 100644
+--- a/arch/mips/loongson/Makefile
++++ b/arch/mips/loongson/Makefile
+@@ -17,6 +17,12 @@ obj-$(CONFIG_LEMOTE_FULOONG2E)	+= fuloong-2e/
+ obj-$(CONFIG_LEMOTE_MACH2F)  += lemote-2f/
+ 
+ #
++# Dexxon gdium netbook, based on loongson 2F and SM502
++#
++
++obj-$(CONFIG_DEXXON_GDIUM)  += gdium/
++
++#
+ # All Loongson-3 family machines
+ #
+ 
+diff --git a/arch/mips/loongson/Platform b/arch/mips/loongson/Platform
+index 0ac20eb..cd957dd 100644
+--- a/arch/mips/loongson/Platform
++++ b/arch/mips/loongson/Platform
+@@ -30,4 +30,5 @@ platform-$(CONFIG_MACH_LOONGSON) += loongson/
+ cflags-$(CONFIG_MACH_LOONGSON) += -I$(srctree)/arch/mips/include/asm/mach-loongson -mno-branch-likely
+ load-$(CONFIG_LEMOTE_FULOONG2E) += 0xffffffff80100000
+ load-$(CONFIG_LEMOTE_MACH2F) += 0xffffffff80200000
++load-$(CONFIG_DEXXON_GDIUM) += 0xffffffff80200000
+ load-$(CONFIG_LOONGSON_MACH3X) += 0xffffffff80200000
+diff --git a/arch/mips/loongson/common/cmdline.c b/arch/mips/loongson/common/cmdline.c
+index 679a18a..96d5919 100644
+--- a/arch/mips/loongson/common/cmdline.c
++++ b/arch/mips/loongson/common/cmdline.c
+@@ -66,6 +66,11 @@ void __init prom_init_cmdline(void)
+ 		if ((strstr(arcs_cmdline, "vga=")) == NULL)
+ 			strcat(arcs_cmdline, " vga=0x313");
+ 		break;
++	case MACH_DEXXON_GDIUM2F10:
++		/* gdium has a 1024x600 screen */
++		if ((strstr(arcs_cmdline, "video=")) == NULL)
++			strcat(arcs_cmdline, " video=sm501fb:1024x600@60");
++		break;
+ 	default:
+ 		break;
+ 	}
+diff --git a/arch/mips/loongson/gdium/Makefile b/arch/mips/loongson/gdium/Makefile
+new file mode 100644
+index 0000000..f3f4f51
+--- /dev/null
++++ b/arch/mips/loongson/gdium/Makefile
+@@ -0,0 +1,6 @@
++# Makefile for gdium
++
++obj-y += irq.o reset.o platform.o
++
++obj-$(CONFIG_MFD_SM501) += sm501-pwm.o
++obj-$(CONFIG_GDIUM_PWM_CLOCK) += gdium-clock.o
+diff --git a/arch/mips/loongson/gdium/gdium-clock.c b/arch/mips/loongson/gdium/gdium-clock.c
+new file mode 100644
+index 0000000..fdbf42a
+--- /dev/null
++++ b/arch/mips/loongson/gdium/gdium-clock.c
+@@ -0,0 +1,234 @@
++/*
++ * Doesn't work really well. When used, the clocksource is producing
++ * bad timings and the clockevent can't be used (don't have one shot feature
++ * thus can't switch on the fly and the pwm is initialised too late to be able
++ * to use it at boot time).
++ */
++
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/platform_device.h>
++#include <linux/interrupt.h>
++#include <linux/delay.h>
++#include <linux/pwm.h>
++#include <linux/clocksource.h>
++#include <linux/debugfs.h>
++#include <asm/irq_cpu.h>
++#include <asm/mipsregs.h>
++#include <asm/mips-boards/bonito64.h>
++#include <asm/time.h>
++
++#include <loongson.h>
++
++#define CLOCK_PWM		1
++#define CLOCK_PWM_FREQ		1500000				/* Freq in Hz */
++#define CLOCK_LATCH		((CLOCK_PWM_FREQ + HZ/2) / HZ)
++#define CLOCK_PWM_PERIOD	(1000000000/CLOCK_PWM_FREQ)	/* period ns  */
++#define CLOCK_PWM_DUTY		50
++#define CLOCK_PWM_IRQ		(MIPS_CPU_IRQ_BASE + 4)
++
++static const char drv_name[] = "gdium-clock";
++
++static struct pwm_device *clock_pwm;
++
++static DEFINE_SPINLOCK(clock_pwm_lock);
++static uint64_t clock_tick;
++
++static irqreturn_t gdium_pwm_clock_interrupt(int irq, void *dev_id)
++{
++	struct clock_event_device *cd = dev_id;
++	unsigned long flag;
++
++	spin_lock_irqsave(&clock_pwm_lock, flag);
++	clock_tick++;
++	/* wait intn2 to finish */
++	do {
++		LOONGSON_INTENCLR = (1 << 13);
++	} while (LOONGSON_INTISR & (1 << 13));
++	spin_unlock_irqrestore(&clock_pwm_lock, flag);
++
++	if (cd && cd->event_handler)
++		cd->event_handler(cd);
++
++	return IRQ_HANDLED;
++}
++
++static cycle_t gdium_pwm_clock_read(struct clocksource *cs)
++{
++	unsigned long flag;
++	uint32_t jifs;
++	uint64_t ticks;
++
++	spin_lock_irqsave(&clock_pwm_lock, flag);
++	jifs = jiffies;
++	ticks = clock_tick;
++	spin_unlock_irqrestore(&clock_pwm_lock, flag);
++	/* return (cycle_t)ticks; */
++	return (cycle_t)(CLOCK_LATCH * jifs);
++}
++
++static struct clocksource gdium_pwm_clock_clocksource = {
++	.name   = "gdium_csrc",
++	.read   = gdium_pwm_clock_read,
++	.mask   = CLOCKSOURCE_MASK(64),
++	.flags	= CLOCK_SOURCE_IS_CONTINUOUS | CLOCK_SOURCE_MUST_VERIFY,
++	.shift	= 20,
++};
++
++/* Debug fs */
++static int gdium_pwm_clock_show(struct seq_file *s, void *p)
++{
++	unsigned long flag;
++	uint64_t ticks;
++
++	spin_lock_irqsave(&clock_pwm_lock, flag);
++	ticks = clock_tick;
++	spin_unlock_irqrestore(&clock_pwm_lock, flag);
++	seq_printf(s, "%lld\n", ticks);
++	return 0;
++}
++
++static int gdium_pwm_clock_open(struct inode *inode, struct file *file)
++{
++	return single_open(file, gdium_pwm_clock_show, inode->i_private);
++}
++
++static const struct file_operations gdium_pwm_clock_fops = {
++	.open		= gdium_pwm_clock_open,
++	.read		= seq_read,
++	.llseek		= seq_lseek,
++	.release	= single_release,
++	.owner		= THIS_MODULE,
++};
++static struct dentry   *debugfs_file;
++
++static void gdium_pwm_clock_set_mode(enum clock_event_mode mode,
++		struct clock_event_device *evt)
++{
++	/* Nothing to do ...  */
++}
++
++static struct clock_event_device gdium_pwm_clock_cevt = {
++	.name           = "gdium_cevt",
++	.features       = CLOCK_EVT_FEAT_PERIODIC,
++	/* .mult, .shift, .max_delta_ns and .min_delta_ns left uninitialized */
++	.rating         = 299,
++	.irq            = CLOCK_PWM_IRQ,
++	.set_mode       = gdium_pwm_clock_set_mode,
++};
++
++static struct platform_device_id platform_device_ids[] = {
++	{
++		.name = "gdium-pwmclk",
++	},
++	{}
++};
++MODULE_DEVICE_TABLE(platform, platform_device_ids);
++
++static struct platform_driver gdium_pwm_clock_driver = {
++	.driver		= {
++		.name   = drv_name,
++		.owner  = THIS_MODULE,
++	},
++	.id_table = platform_device_ids,
++};
++
++static int gdium_pwm_clock_drvinit(void)
++{
++	int ret;
++	struct clocksource *cs = &gdium_pwm_clock_clocksource;
++	struct clock_event_device *cd = &gdium_pwm_clock_cevt;
++	unsigned int cpu = smp_processor_id();
++
++	clock_tick = 0;
++
++	clock_pwm = pwm_request(CLOCK_PWM, drv_name);
++	if (clock_pwm == NULL) {
++		pr_err("unable to request PWM for Gdium clock\n");
++		return -EBUSY;
++	}
++	ret = pwm_config(clock_pwm, CLOCK_PWM_DUTY, CLOCK_PWM_PERIOD);
++	if (ret) {
++		pr_err("unable to configure PWM for Gdium clock\n");
++		goto err_pwm_request;
++	}
++	ret = pwm_enable(clock_pwm);
++	if (ret) {
++		pr_err("unable to enable PWM for Gdium clock\n");
++		goto err_pwm_request;
++	}
++
++	cd->cpumask = cpumask_of(cpu);
++
++	cd->shift = 22;
++	cd->mult  = div_sc(CLOCK_PWM_FREQ, NSEC_PER_SEC, cd->shift);
++	cd->max_delta_ns = clockevent_delta2ns(0x7FFF, cd);
++	cd->min_delta_ns = clockevent_delta2ns(0xF, cd);
++	clockevents_register_device(&gdium_pwm_clock_cevt);
++
++	/* SM501 PWM1 connected to intn2 <->ip4 */
++	LOONGSON_INTPOL = (1 << 13);
++	LOONGSON_INTEDGE &= ~(1 << 13);
++	ret = request_irq(CLOCK_PWM_IRQ, gdium_pwm_clock_interrupt, IRQF_DISABLED, drv_name, &gdium_pwm_clock_cevt);
++	if (ret) {
++		pr_err("Can't claim irq\n");
++		goto err_pwm_disable;
++	}
++
++	cs->rating = 200;
++	cs->mult = clocksource_hz2mult(CLOCK_PWM_FREQ, cs->shift);
++	ret = clocksource_register(&gdium_pwm_clock_clocksource);
++	if (ret) {
++		pr_err("Can't register clocksource\n");
++		goto err_irq;
++	}
++	pr_info("Clocksource registered with shift %d and mult %d\n",
++			cs->shift, cs->mult);
++
++	debugfs_file = debugfs_create_file(drv_name, S_IFREG | S_IRUGO,
++			NULL, NULL, &gdium_pwm_clock_fops);
++
++	return 0;
++
++err_irq:
++	free_irq(CLOCK_PWM_IRQ, &gdium_pwm_clock_cevt);
++err_pwm_disable:
++	pwm_disable(clock_pwm);
++err_pwm_request:
++	pwm_free(clock_pwm);
++	return ret;
++}
++
++static void gdium_pwm_clock_drvexit(void)
++{
++	free_irq(CLOCK_PWM_IRQ, &gdium_pwm_clock_cevt);
++	pwm_disable(clock_pwm);
++	pwm_free(clock_pwm);
++}
++
++
++static int __devinit gdium_pwm_clock_init(void)
++{
++	int ret = gdium_pwm_clock_drvinit();
++
++	if (ret) {
++		pr_err("Fail to register gdium clock driver\n");
++		return ret;
++	}
++
++	return platform_driver_register(&gdium_pwm_clock_driver);
++}
++
++static void __exit gdium_pwm_clock_cleanup(void)
++{
++	gdium_pwm_clock_drvexit();
++	platform_driver_unregister(&gdium_pwm_clock_driver);
++}
++
++module_init(gdium_pwm_clock_init);
++module_exit(gdium_pwm_clock_cleanup);
++
++MODULE_AUTHOR("Arnaud Patard <apatard@mandriva.com>");
++MODULE_DESCRIPTION("Gdium PWM clock driver");
++MODULE_LICENSE("GPL");
++MODULE_ALIAS("platform:gdium-pwmclk");
+diff --git a/arch/mips/loongson/gdium/irq.c b/arch/mips/loongson/gdium/irq.c
+new file mode 100644
+index 0000000..2415d20
+--- /dev/null
++++ b/arch/mips/loongson/gdium/irq.c
+@@ -0,0 +1,55 @@
++/*
++ * Copyright (C) 2007 Lemote Inc.
++ * Author: Fuxin Zhang, zhangfx@lemote.com
++ *
++ * Copyright (c) 2010 yajin <yajin@vm-kernel.org>
++ *
++ *  This program is free software; you can redistribute  it and/or modify it
++ *  under  the terms of  the GNU General  Public License as published by the
++ *  Free Software Foundation;  either version 2 of the  License, or (at your
++ *  option) any later version.
++ */
++
++#include <linux/interrupt.h>
++#include <linux/module.h>
++
++#include <loongson.h>
++#include <machine.h>
++
++#define LOONGSON_TIMER_IRQ      (MIPS_CPU_IRQ_BASE + 7) /* cpu timer */
++#define LOONGSON_NORTH_BRIDGE_IRQ       (MIPS_CPU_IRQ_BASE + 6) /* bonito */
++#define LOONGSON_UART_IRQ       (MIPS_CPU_IRQ_BASE + 3) /* cpu serial port */
++
++void mach_irq_dispatch(unsigned int pending)
++{
++	if (pending & CAUSEF_IP7)
++		do_IRQ(LOONGSON_TIMER_IRQ);
++	else if (pending & CAUSEF_IP6) {        /* North Bridge, Perf counter */
++		do_perfcnt_IRQ();
++		bonito_irqdispatch();
++	} else if (pending & CAUSEF_IP3)        /* CPU UART */
++		do_IRQ(LOONGSON_UART_IRQ);
++#if defined(CONFIG_GDIUM_PWM_CLOCK) || defined(CONFIG_GDIUM_PWM_CLOCK_MODULE)
++	else if (pending & CAUSEF_IP4)		/* SM501 PWM clock */
++		do_IRQ(MIPS_CPU_IRQ_BASE + 4);
++#endif
++	else
++		spurious_interrupt();
++}
++
++static irqreturn_t ip6_action(int cpl, void *dev_id)
++{
++	return IRQ_HANDLED;
++}
++
++struct irqaction ip6_irqaction = {
++	.handler = ip6_action,
++	.name = "cascade",
++	.flags = IRQF_SHARED,
++};
++
++void __init mach_init_irq(void)
++{
++	/* setup north bridge irq (bonito) */
++	setup_irq(LOONGSON_NORTH_BRIDGE_IRQ, &ip6_irqaction);
++}
+diff --git a/arch/mips/loongson/gdium/platform.c b/arch/mips/loongson/gdium/platform.c
+new file mode 100644
+index 0000000..ffafba4
+--- /dev/null
++++ b/arch/mips/loongson/gdium/platform.c
+@@ -0,0 +1,135 @@
++/*
++ * Copyright (c) 2009 Philippe Vachon <philippe@cowpig.ca>
++ *
++ * This program is free software; you can redistribute  it and/or modify it
++ * under  the terms of  the GNU General  Public License as published by the
++ * Free Software Foundation;  either version 2 of the  License, or (at your
++ * option) any later version.
++ */
++
++#include <linux/init.h>
++#include <linux/kernel.h>
++#include <linux/platform_device.h>
++#include <linux/pwm_backlight.h>
++#include <linux/i2c.h>
++#include <linux/i2c-gpio.h>
++
++#define GDIUM_GPIO_BASE 224
++
++static struct i2c_board_info __initdata sm502dev_i2c_devices[] = {
++	{
++		I2C_BOARD_INFO("lm75", 0x48),
++	},
++	{
++		I2C_BOARD_INFO("m41t83", 0x68),
++	},
++	{
++		I2C_BOARD_INFO("gdium-laptop", 0x40),
++	},
++};
++
++static int sm502dev_backlight_init(struct device *dev)
++{
++	/* Add gpio request stuff here */
++	return 0;
++}
++
++static void sm502dev_backlight_exit(struct device *dev)
++{
++	/* Add gpio free stuff here */
++}
++
++static struct platform_pwm_backlight_data backlight_data = {
++	.pwm_id		= 0,
++	.max_brightness	= 15,
++	.dft_brightness	= 8,
++	.pwm_period_ns	= 50000, /* 20 kHz */
++	.init		= sm502dev_backlight_init,
++	.exit		= sm502dev_backlight_exit,
++};
++
++static struct platform_device backlight = {
++	.name = "pwm-backlight",
++	.dev  = {
++		.platform_data = &backlight_data,
++	},
++	.id   = -1,
++};
++
++/*
++ * Warning this stunt is very dangerous
++ * as the sm501 gpio have dynamic numbers...
++ */
++/* bus 0 is the one for the ST7, DS75 etc... */
++static struct i2c_gpio_platform_data i2c_gpio0_data = {
++#if CONFIG_GDIUM_VERSION > 2
++	.sda_pin	= GDIUM_GPIO_BASE + 13,
++	.scl_pin	= GDIUM_GPIO_BASE + 6,
++#else
++	.sda_pin        = 192+15,
++	.scl_pin        = 192+14,
++#endif
++	.udelay		= 5,
++	.timeout	= HZ / 10,
++	.sda_is_open_drain = 0,
++	.scl_is_open_drain = 0,
++};
++
++static struct platform_device i2c_gpio0_device = {
++	.name	= "i2c-gpio",
++	.id	= 0,
++	.dev	= { .platform_data  = &i2c_gpio0_data, },
++};
++
++/* bus 1 is for the CRT/VGA external screen */
++static struct i2c_gpio_platform_data i2c_gpio1_data = {
++	.sda_pin	= GDIUM_GPIO_BASE + 10,
++	.scl_pin	= GDIUM_GPIO_BASE + 9,
++	.udelay		= 5,
++	.timeout	= HZ / 10,
++	.sda_is_open_drain = 0,
++	.scl_is_open_drain = 0,
++};
++
++static struct platform_device i2c_gpio1_device = {
++	.name	= "i2c-gpio",
++	.id	= 1,
++	.dev	= { .platform_data  = &i2c_gpio1_data, },
++};
++
++static struct platform_device gdium_clock = {
++	.name		= "gdium-pwmclk",
++	.id		= -1,
++};
++
++static struct platform_device *devices[] __initdata = {
++	&i2c_gpio0_device,
++	&i2c_gpio1_device,
++	&backlight,
++	&gdium_clock,
++};
++
++static int __init gdium_platform_devices_setup(void)
++{
++	int ret;
++
++	pr_info("Registering gdium platform devices\n");
++
++	ret = i2c_register_board_info(0, sm502dev_i2c_devices,
++		ARRAY_SIZE(sm502dev_i2c_devices));
++
++	if (ret != 0) {
++		pr_info("Error while registering platform devices: %d\n", ret);
++		return ret;
++	}
++
++	platform_add_devices(devices, ARRAY_SIZE(devices));
++
++	return 0;
++}
++
++/*
++ * some devices are on the pwm stuff which is behind the mfd which is
++ * behind the pci bus so arch_initcall can't work because too early
++ */
++late_initcall(gdium_platform_devices_setup);
+diff --git a/arch/mips/loongson/gdium/reset.c b/arch/mips/loongson/gdium/reset.c
+new file mode 100644
+index 0000000..8289f95
+--- /dev/null
++++ b/arch/mips/loongson/gdium/reset.c
+@@ -0,0 +1,22 @@
++/* Board-specific reboot/shutdown routines
++ *
++ * Copyright (C) 2010 yajin <yajin@vm-kernel.org>
++ *
++ * This program is free software; you can redistribute  it and/or modify it
++ * under  the terms of  the GNU General  Public License as published by the
++ * Free Software Foundation;  either version 2 of the  License, or (at your
++ * option) any later version.
++ */
++#include <loongson.h>
++
++void mach_prepare_shutdown(void)
++{
++	LOONGSON_GPIOIE &= ~(1<<1);
++	LOONGSON_GPIODATA |= (1<<1);
++}
++
++void mach_prepare_reboot(void)
++{
++	LOONGSON_GPIOIE &= ~(1<<2);
++	LOONGSON_GPIODATA &= ~(1<<2);
++}
+diff --git a/arch/mips/loongson/gdium/sm501-pwm.c b/arch/mips/loongson/gdium/sm501-pwm.c
+new file mode 100644
+index 0000000..5af3b23
+--- /dev/null
++++ b/arch/mips/loongson/gdium/sm501-pwm.c
+@@ -0,0 +1,465 @@
++/*
++ * SM501 PWM clock
++ * Copyright (C) 2009-2010 Arnaud Patard <apatard@mandriva.com>
++ *
++ * This program is free software; you can redistribute  it and/or modify it
++ * under  the terms of  the GNU General  Public License as published by the
++ * Free Software Foundation;  either version 2 of the  License, or (at your
++ * option) any later version.
++ */
++
++#include <linux/module.h>
++#include <linux/kernel.h>
++#include <linux/errno.h>
++#include <linux/init.h>
++#include <linux/interrupt.h>
++#include <linux/platform_device.h>
++#include <linux/slab.h>
++#include <linux/pwm.h>
++#include <linux/sm501.h>
++#include <linux/sm501-regs.h>
++#include <linux/debugfs.h>
++#include <linux/seq_file.h>
++
++static const char drv_name[] = "sm501-pwm";
++
++#define INPUT_CLOCK		96 /* MHz */
++#define PWM_COUNT		3
++
++#define SM501PWM_HIGH_COUNTER	(1<<20)
++#define SM501PWM_LOW_COUNTER	(1<<8)
++#define SM501PWM_CLOCK_DIVIDE	(1>>4)
++#define SM501PWM_IP		(1<<3)
++#define SM501PWM_I		(1<<2)
++#define SM501PWM_E		(1<<0)
++
++struct pwm_device {
++	struct list_head	node;
++	struct device		*dev;
++	void __iomem		*regs;
++	int			duty_ns;
++	int			period_ns;
++	char			enabled;
++	void			(*handler)(struct pwm_device *pwm);
++
++	const char		*label;
++	unsigned int		use_count;
++	unsigned int		pwm_id;
++};
++
++struct sm501pwm_info {
++	void __iomem	*regs;
++	int		irq;
++	struct resource *res;
++	struct device	*dev;
++	struct dentry	*debugfs;
++
++	struct pwm_device pwm[3];
++};
++
++int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
++{
++	unsigned int high, low, divider;
++	int divider1, divider2;
++	unsigned long long delay;
++
++	if (!pwm || !pwm->regs || period_ns == 0 || duty_ns > period_ns)
++		return -EINVAL;
++
++	/* Get delay
++	 * We're loosing some precision but multiplying then dividing
++	 * will overflow
++	 */
++	if (period_ns > 1000) {
++		delay = period_ns / 1000;
++		delay *= INPUT_CLOCK;
++	} else {
++		delay = period_ns * 96;
++		delay /= 1000;
++	}
++
++	/* Get the number of clock low and high */
++	high  = delay * duty_ns / period_ns;
++	low = delay - high;
++
++	/* Get divider to make 'low' and 'high' fit into 12 bits */
++	/* No need to say that the divider must be >= 0 */
++	divider1 = fls(low)-12;
++	divider2 = fls(high)-12;
++
++	if (divider1 < 0)
++		divider1 = 0;
++	if (divider2 < 0)
++		divider2 = 0;
++
++	divider = max(divider1, divider2);
++
++	low >>= divider;
++	high >>= divider;
++
++	pwm->duty_ns = duty_ns;
++	pwm->period_ns = period_ns;
++
++	writel((high<<20)|(low<<8)|(divider<<4), pwm->regs);
++	return 0;
++}
++EXPORT_SYMBOL(pwm_config);
++
++int pwm_enable(struct pwm_device *pwm)
++{
++	u32 reg;
++
++	if (!pwm)
++		return -EINVAL;
++
++	switch (pwm->pwm_id) {
++	case 0:
++		sm501_configure_gpio(pwm->dev->parent, 29, 1);
++		break;
++	case 1:
++		sm501_configure_gpio(pwm->dev->parent, 30, 1);
++		break;
++	case 2:
++		sm501_configure_gpio(pwm->dev->parent, 31, 1);
++		break;
++	default:
++		return -EINVAL;
++	}
++
++	reg = readl(pwm->regs);
++	reg |= (SM501PWM_IP | SM501PWM_E);
++	writel(reg, pwm->regs);
++	pwm->enabled = 1;
++
++	return 0;
++}
++EXPORT_SYMBOL(pwm_enable);
++
++void pwm_disable(struct pwm_device *pwm)
++{
++	u32 reg;
++
++	if (!pwm)
++		return;
++
++	reg = readl(pwm->regs);
++	reg &= ~(SM501PWM_IP | SM501PWM_E);
++	writel(reg, pwm->regs);
++
++	switch (pwm->pwm_id) {
++	case 0:
++		sm501_configure_gpio(pwm->dev->parent, 29, 0);
++		break;
++	case 1:
++		sm501_configure_gpio(pwm->dev->parent, 30, 0);
++		break;
++	case 2:
++		sm501_configure_gpio(pwm->dev->parent, 31, 0);
++		break;
++	default:
++		break;
++	}
++	pwm->enabled = 0;
++}
++EXPORT_SYMBOL(pwm_disable);
++
++static DEFINE_MUTEX(pwm_lock);
++static LIST_HEAD(pwm_list);
++
++struct pwm_device *pwm_request(int pwm_id, const char *label)
++{
++	struct pwm_device *pwm;
++	int found = 0;
++
++	mutex_lock(&pwm_lock);
++
++	list_for_each_entry(pwm, &pwm_list, node) {
++		if (pwm->pwm_id == pwm_id && pwm->use_count == 0) {
++			pwm->use_count++;
++			pwm->label = label;
++			found = 1;
++			break;
++		}
++	}
++
++	mutex_unlock(&pwm_lock);
++
++	return (found) ? pwm : NULL;
++}
++EXPORT_SYMBOL(pwm_request);
++
++void pwm_free(struct pwm_device *pwm)
++{
++	mutex_lock(&pwm_lock);
++
++	if (pwm->use_count) {
++		pwm->use_count--;
++		pwm->label = NULL;
++	} else
++		dev_warn(pwm->dev, "PWM device already freed\n");
++
++	mutex_unlock(&pwm_lock);
++}
++EXPORT_SYMBOL(pwm_free);
++
++int pwm_int_enable(struct pwm_device *pwm)
++{
++	unsigned long conf;
++
++	if (!pwm || !pwm->regs || !pwm->handler)
++		return -EINVAL;
++
++	conf = readl(pwm->regs);
++	conf |= SM501PWM_I;
++	writel(conf, pwm->regs);
++	return 0;
++}
++EXPORT_SYMBOL(pwm_int_enable);
++
++int pwm_int_disable(struct pwm_device *pwm)
++{
++	unsigned long conf;
++
++	if (!pwm || !pwm->regs || !pwm->handler)
++		return -EINVAL;
++
++	conf = readl(pwm->regs);
++	conf &= ~SM501PWM_I;
++	writel(conf, pwm->regs);
++	return 0;
++}
++EXPORT_SYMBOL(pwm_int_disable);
++
++int pwm_set_handler(struct pwm_device *pwm,
++		    void (*handler)(struct pwm_device *pwm))
++{
++	if (!pwm || !handler)
++		return -EINVAL;
++	pwm->handler = handler;
++	return 0;
++}
++EXPORT_SYMBOL(pwm_set_handler);
++
++static irqreturn_t sm501pwm_irq(int irq, void *dev_id)
++{
++	unsigned long value;
++	struct sm501pwm_info *info = (struct sm501pwm_info *)dev_id;
++	struct pwm_device *pwm;
++	int i;
++
++	value = sm501_modify_reg(info->dev->parent, SM501_IRQ_STATUS, 0, 0);
++
++	/* Check is the interrupt is for us */
++	if (value & (1<<22)) {
++		for (i = 0 ; i < PWM_COUNT ; i++) {
++			/*
++			 * Find which pwm triggered the interrupt
++			 * and ack
++			 */
++			value = readl(info->regs + i*4);
++			if (value & SM501PWM_IP)
++				writel(value | SM501PWM_IP, info->regs + i*4);
++
++			pwm = &info->pwm[i];
++			if (pwm->handler)
++				pwm->handler(pwm);
++		}
++		return IRQ_HANDLED;
++	}
++
++	return IRQ_NONE;
++}
++
++static void add_pwm(int id, struct sm501pwm_info *info)
++{
++	struct pwm_device *pwm = &info->pwm[id];
++
++	pwm->use_count	= 0;
++	pwm->pwm_id	= id;
++	pwm->dev	= info->dev;
++	pwm->regs	= info->regs + id * 4;
++
++	mutex_lock(&pwm_lock);
++	list_add_tail(&pwm->node, &pwm_list);
++	mutex_unlock(&pwm_lock);
++}
++
++static void del_pwm(int id, struct sm501pwm_info *info)
++{
++	struct pwm_device *pwm = &info->pwm[id];
++
++	pwm->use_count  = 0;
++	pwm->pwm_id     = -1;
++	mutex_lock(&pwm_lock);
++	list_del(&pwm->node);
++	mutex_unlock(&pwm_lock);
++}
++
++/* Debug fs */
++static int sm501pwm_show(struct seq_file *s, void *p)
++{
++	struct pwm_device *pwm;
++
++	mutex_lock(&pwm_lock);
++	list_for_each_entry(pwm, &pwm_list, node) {
++		if (pwm->use_count) {
++			seq_printf(s, "pwm-%d (%12s) %d %d %s\n",
++					pwm->pwm_id, pwm->label,
++					pwm->duty_ns, pwm->period_ns,
++					pwm->enabled ? "on" : "off");
++			seq_printf(s, "       %08x\n", readl(pwm->regs));
++		}
++	}
++	mutex_unlock(&pwm_lock);
++
++	return 0;
++}
++
++static int sm501pwm_open(struct inode *inode, struct file *file)
++{
++	return single_open(file, sm501pwm_show, inode->i_private);
++}
++
++static const struct file_operations sm501pwm_fops = {
++	.open		= sm501pwm_open,
++	.read		= seq_read,
++	.llseek		= seq_lseek,
++	.release	= single_release,
++	.owner		= THIS_MODULE,
++};
++
++static int __init sm501pwm_probe(struct platform_device *pdev)
++{
++	struct sm501pwm_info *info;
++	struct device   *dev = &pdev->dev;
++	struct resource *res;
++	int ret = 0;
++	int res_len;
++	int i;
++
++	info = kzalloc(sizeof(struct sm501pwm_info), GFP_KERNEL);
++	if (!info) {
++		dev_err(dev, "Allocation failure\n");
++		ret = -ENOMEM;
++		goto err;
++	}
++	info->dev = dev;
++	platform_set_drvdata(pdev, info);
++
++	/* Get irq number */
++	info->irq = platform_get_irq(pdev, 0);
++	if (!info->irq) {
++		dev_err(dev, "no irq found\n");
++		ret = -ENODEV;
++		goto err_alloc;
++	}
++
++	/* Get regs address */
++	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	if (res == NULL) {
++		dev_err(dev, "No memory resource found\n");
++		ret = -ENODEV;
++		goto err_alloc;
++	}
++	info->res = res;
++	res_len = (res->end - res->start)+1;
++
++	if (!request_mem_region(res->start, res_len, drv_name)) {
++		dev_err(dev, "Can't request iomem resource\n");
++		ret = -EBUSY;
++		goto err_alloc;
++	}
++
++	info->regs = ioremap(res->start, res_len);
++	if (!info->regs) {
++		dev_err(dev, "ioremap failed\n");
++		ret = -ENOMEM;
++		goto err_mem;
++	}
++
++	ret = request_irq(info->irq, sm501pwm_irq, IRQF_SHARED, drv_name, info);
++	if (ret != 0) {
++		dev_err(dev, "can't get irq\n");
++		goto err_map;
++	}
++
++
++	sm501_unit_power(info->dev->parent, SM501_GATE_GPIO, 1);
++
++	for (i = 0; i < 3; i++)
++		add_pwm(i, info);
++
++	dev_info(dev, "SM501 PWM Found at %lx irq %d\n",
++		 (unsigned long)info->res->start, info->irq);
++
++	info->debugfs = debugfs_create_file("pwm", S_IFREG | S_IRUGO,
++				NULL, info, &sm501pwm_fops);
++
++
++	return 0;
++
++err_map:
++	iounmap(info->regs);
++
++err_mem:
++	release_mem_region(res->start, res_len);
++
++err_alloc:
++	kfree(info);
++	platform_set_drvdata(pdev, NULL);
++err:
++	return ret;
++}
++
++static int sm501pwm_remove(struct platform_device *pdev)
++{
++	struct sm501pwm_info *info = platform_get_drvdata(pdev);
++	int i;
++
++	if (info->debugfs)
++		debugfs_remove(info->debugfs);
++
++	for (i = 0; i < 3; i++) {
++		pwm_disable(&info->pwm[i]);
++		del_pwm(i, info);
++	}
++
++	sm501_unit_power(info->dev->parent, SM501_GATE_GPIO, 0);
++	sm501_modify_reg(info->dev->parent, SM501_IRQ_STATUS, 0, 1<<22);
++
++	free_irq(info->irq, info);
++	iounmap(info->regs);
++	release_mem_region(info->res->start,
++			   (info->res->end - info->res->start)+1);
++	kfree(info);
++	platform_set_drvdata(pdev, NULL);
++
++	return 0;
++}
++
++static struct platform_driver sm501pwm_driver = {
++	.probe		= sm501pwm_probe,
++	.remove		= sm501pwm_remove,
++	.driver		= {
++		.name	= drv_name,
++		.owner	= THIS_MODULE,
++	},
++};
++
++static int __devinit sm501pwm_init(void)
++{
++	return platform_driver_register(&sm501pwm_driver);
++}
++
++static void __exit sm501pwm_cleanup(void)
++{
++	platform_driver_unregister(&sm501pwm_driver);
++}
++
++module_init(sm501pwm_init);
++module_exit(sm501pwm_cleanup);
++
++MODULE_AUTHOR("Arnaud Patard <apatard@mandriva.com>");
++MODULE_DESCRIPTION("SM501 PWM driver");
++MODULE_LICENSE("GPL");
++MODULE_ALIAS("platform:sm501-pwm");
+diff --git a/arch/mips/pci/Makefile b/arch/mips/pci/Makefile
+index 2eda01e..8adaa3d 100644
+--- a/arch/mips/pci/Makefile
++++ b/arch/mips/pci/Makefile
+@@ -30,6 +30,7 @@ obj-$(CONFIG_LASAT)		+= pci-lasat.o
+ obj-$(CONFIG_MIPS_COBALT)	+= fixup-cobalt.o
+ obj-$(CONFIG_LEMOTE_FULOONG2E)	+= fixup-fuloong2e.o ops-loongson2.o
+ obj-$(CONFIG_LEMOTE_MACH2F)	+= fixup-lemote2f.o ops-loongson2.o
++obj-$(CONFIG_DEXXON_GDIUM)      += fixup-gdium.o ops-loongson2.o
+ obj-$(CONFIG_LOONGSON_MACH3X)	+= fixup-loongson3.o ops-loongson3.o
+ obj-$(CONFIG_MIPS_MALTA)	+= fixup-malta.o pci-malta.o
+ obj-$(CONFIG_PMC_MSP7120_GW)	+= fixup-pmcmsp.o ops-pmcmsp.o
+diff --git a/arch/mips/pci/fixup-gdium.c b/arch/mips/pci/fixup-gdium.c
+new file mode 100644
+index 0000000..b296220
+--- /dev/null
++++ b/arch/mips/pci/fixup-gdium.c
+@@ -0,0 +1,90 @@
++/*
++ * Copyright (C) 2010 yajin <yajin@vm-kernel.org>
++ *
++ *  This program is free software; you can redistribute  it and/or modify it
++ *  under  the terms of  the GNU General  Public License as published by the
++ *  Free Software Foundation;  either version 2 of the  License, or (at your
++ *  option) any later version.
++ */
++
++#include <linux/init.h>
++#include <linux/pci.h>
++
++#include <loongson.h>
++/*
++ * http://www.pcidatabase.com
++ * GDIUM has different PCI mapping
++ *  slot 13 (0x1814/0x0301) -> RaLink rt2561 Wireless-G PCI
++ *  slog 14 (0x126f/0x0501) -> sm501
++ *  slot 15 (0x1033/0x0035) -> NEC Dual OHCI controllers
++ *                             plus Single EHCI controller
++ *  slot 16 (0x10ec/0x8139) -> Realtek 8139c
++ *  slot 17 (0x1033/0x00e0) -> NEC USB 2.0 Host Controller
++ */
++
++#undef INT_IRQA
++#undef INT_IRQB
++#undef INT_IRQC
++#undef INT_IRQD
++#define INT_IRQA 36
++#define INT_IRQB 37
++#define INT_IRQC 38
++#define INT_IRQD 39
++
++int __init pcibios_map_irq(const struct pci_dev *dev, u8 slot, u8 pin)
++{
++	int irq = 0;
++
++	switch (slot) {
++	case 13:
++		irq = INT_IRQC + ((pin - 1) & 3);
++		break;
++	case 14:
++		irq = INT_IRQA;
++		break;
++	case 15:
++#if CONFIG_GDIUM_VERSION > 2
++		irq = INT_IRQB;
++#else
++		irq = INT_IRQA + ((pin - 1) & 3);
++#endif
++		break;
++	case 16:
++		irq = INT_IRQD;
++		break;
++#if CONFIG_GDIUM_VERSION > 2
++	case 17:
++		irq = INT_IRQC;
++		break;
++#endif
++	default:
++		pr_info(" strange pci slot number %d on gdium.\n", slot);
++		break;
++	}
++	return irq;
++}
++
++/* Do platform specific device initialization at pci_enable_device() time */
++int pcibios_plat_dev_init(struct pci_dev *dev)
++{
++	return 0;
++}
++
++/* Fixups for the USB host controllers */
++static void __init gdium_usb_host_fixup(struct pci_dev *dev)
++{
++	unsigned int val;
++	pci_read_config_dword(dev, 0xe0, &val);
++#if CONFIG_GDIUM_VERSION > 2
++	pci_write_config_dword(dev, 0xe0, (val & ~3) | 0x3);
++#else
++	pci_write_config_dword(dev, 0xe0, (val & ~7) | 0x5);
++	pci_write_config_dword(dev, 0xe4, 1<<5);
++#endif
++}
++DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_NEC, PCI_DEVICE_ID_NEC_USB,
++				gdium_usb_host_fixup);
++#if CONFIG_GDIUM_VERSION > 2
++DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_NEC, PCI_DEVICE_ID_CT_65550,
++				gdium_usb_host_fixup);
++#endif
+diff --git a/drivers/hid/Kconfig b/drivers/hid/Kconfig
+index 15338af..e839ebf 100644
+--- a/drivers/hid/Kconfig
++++ b/drivers/hid/Kconfig
+@@ -864,6 +864,13 @@ config HID_ZYDACRON
+ 	---help---
+ 	Support for Zydacron remote control.
+ 
++config HID_GDIUM
++	bool "Gdium Fn keys support" if EMBEDDED
++	depends on USB_HID && DEXXON_GDIUM
++	default !EMBEDDED
++	---help---
++	Support for Functions keys available on Gdiums.
++
+ config HID_SENSOR_HUB
+ 	tristate "HID Sensors framework support"
+ 	depends on HID && HAS_IOMEM
+diff --git a/drivers/hid/Makefile b/drivers/hid/Makefile
+index e4a21df..51fc941 100644
+--- a/drivers/hid/Makefile
++++ b/drivers/hid/Makefile
+@@ -98,6 +98,7 @@ obj-$(CONFIG_HID_ZYDACRON)	+= hid-zydacron.o
+ wacom-objs			:= wacom_wac.o wacom_sys.o
+ obj-$(CONFIG_HID_WACOM)		+= wacom.o
+ obj-$(CONFIG_HID_WALTOP)	+= hid-waltop.o
++obj-$(CONFIG_HID_GDIUM)		+= hid-gdium.o
+ obj-$(CONFIG_HID_WIIMOTE)	+= hid-wiimote.o
+ obj-$(CONFIG_HID_SENSOR_HUB)	+= hid-sensor-hub.o
+ obj-$(CONFIG_HID_SENSOR_CUSTOM_SENSOR)	+= hid-sensor-custom.o
+diff --git a/drivers/hid/hid-gdium.c b/drivers/hid/hid-gdium.c
+new file mode 100644
+index 0000000..67cc095
+--- /dev/null
++++ b/drivers/hid/hid-gdium.c
+@@ -0,0 +1,210 @@
++/*
++ * hid-gdium  --  Gdium laptop function keys
++ *
++ * Arnaud Patard <apatard@mandriva.com>
++ *
++ * Based on hid-apple.c
++ *
++ *  This program is free software; you can redistribute  it and/or modify it
++ *  under  the terms of  the GNU General  Public License as published by the
++ *  Free Software Foundation;  either version 2 of the  License, or (at your
++ *  option) any later version.
++ */
++
++
++#include <linux/device.h>
++#include <linux/hid.h>
++#include <linux/module.h>
++#include <linux/usb.h>
++
++#include "hid-ids.h"
++
++#define GDIUM_FN_ON	1
++
++static int fnmode = GDIUM_FN_ON;
++module_param(fnmode, int, 0644);
++MODULE_PARM_DESC(fnmode, "Mode of fn key on Gdium (0 = disabled, 1 = Enabled)");
++
++struct gdium_data {
++	unsigned int fn_on;
++};
++
++
++struct gdium_key_translation {
++	u16 from;
++	u16 to;
++};
++
++static struct gdium_key_translation gdium_fn_keys[] = {
++	{ KEY_F1,	KEY_CAMERA },
++	{ KEY_F2,	KEY_CONNECT },
++	{ KEY_F3,	KEY_MUTE },
++	{ KEY_F4,	KEY_VOLUMEUP},
++	{ KEY_F5,	KEY_VOLUMEDOWN },
++	{ KEY_F6,	KEY_SWITCHVIDEOMODE },
++	{ KEY_F7,	KEY_F19 }, /* F7+12. Have to use existant keycodes */
++	{ KEY_F8,	KEY_BRIGHTNESSUP },
++	{ KEY_F9,	KEY_BRIGHTNESSDOWN },
++	{ KEY_F10,	KEY_SLEEP },
++	{ KEY_F11,	KEY_PROG1 },
++	{ KEY_F12,	KEY_PROG2 },
++	{ KEY_UP,	KEY_PAGEUP },
++	{ KEY_DOWN,	KEY_PAGEDOWN },
++	{ KEY_INSERT,	KEY_NUMLOCK },
++	{ KEY_DELETE,	KEY_SCROLLLOCK },
++	{ KEY_T,	KEY_STOPCD },
++	{ KEY_F,	KEY_PREVIOUSSONG },
++	{ KEY_H,	KEY_NEXTSONG },
++	{ KEY_G,        KEY_PLAYPAUSE },
++	{ }
++};
++
++static struct gdium_key_translation *gdium_find_translation(
++		struct gdium_key_translation *table, u16 from)
++{
++	struct gdium_key_translation *trans;
++
++	/* Look for the translation */
++	for (trans = table; trans->from; trans++)
++		if (trans->from == from)
++			return trans;
++	return NULL;
++}
++
++static int hidinput_gdium_event(struct hid_device *hid, struct input_dev *input,
++		struct hid_usage *usage, __s32 value)
++{
++	struct gdium_data *data = hid_get_drvdata(hid);
++	struct gdium_key_translation *trans;
++	int do_translate;
++
++	if (usage->type != EV_KEY)
++		return 0;
++
++	if ((usage->code == KEY_FN)) {
++		data->fn_on = !!value;
++		input_event(input, usage->type, usage->code, value);
++		return 1;
++	}
++
++	if (fnmode) {
++		trans = gdium_find_translation(gdium_fn_keys, usage->code);
++		if (trans) {
++			do_translate = data->fn_on;
++			if (do_translate) {
++				input_event(input, usage->type, trans->to, value);
++				return 1;
++			}
++		}
++	}
++
++	return 0;
++}
++
++static int gdium_input_event(struct hid_device *hdev, struct hid_field *field,
++			struct hid_usage *usage, __s32 value)
++{
++	if (!(hdev->claimed & HID_CLAIMED_INPUT) || !field->hidinput || !usage->type)
++		return 0;
++
++	if (hidinput_gdium_event(hdev, field->hidinput->input, usage, value))
++		return 1;
++
++	return 0;
++}
++
++
++static void gdium_input_setup(struct input_dev *input)
++{
++	struct gdium_key_translation *trans;
++
++	set_bit(KEY_NUMLOCK, input->keybit);
++
++	/* Enable all needed keys */
++	for (trans = gdium_fn_keys; trans->from; trans++)
++		set_bit(trans->to, input->keybit);
++}
++
++static int gdium_input_mapping(struct hid_device *hdev, struct hid_input *hi,
++		struct hid_field *field, struct hid_usage *usage,
++		unsigned long **bit, int *max)
++{
++	if (((usage->hid & HID_USAGE_PAGE) == HID_UP_KEYBOARD)
++			&& ((usage->hid & HID_USAGE) == 0x82)) {
++		hid_map_usage_clear(hi, usage, bit, max, EV_KEY, KEY_FN);
++		gdium_input_setup(hi->input);
++		return 1;
++	}
++	return 0;
++}
++
++static int gdium_input_probe(struct hid_device *hdev, const struct hid_device_id *id)
++{
++	struct gdium_data *data;
++	int ret;
++
++	data = kzalloc(sizeof(*data), GFP_KERNEL);
++	if (!data) {
++		dev_err(&hdev->dev, "can't alloc gdium keyboard data\n");
++		return -ENOMEM;
++	}
++
++	hid_set_drvdata(hdev, data);
++
++	ret = hid_parse(hdev);
++	if (ret) {
++		dev_err(&hdev->dev, "parse failed\n");
++		goto err_free;
++	}
++
++	ret = hid_hw_start(hdev, HID_CONNECT_DEFAULT);
++	if (ret) {
++		dev_err(&hdev->dev, "hw start failed\n");
++		goto err_free;
++	}
++
++	return 0;
++err_free:
++	kfree(data);
++	return ret;
++}
++static void gdium_input_remove(struct hid_device *hdev)
++{
++	hid_hw_stop(hdev);
++	kfree(hid_get_drvdata(hdev));
++}
++
++static const struct hid_device_id gdium_input_devices[] = {
++	{ HID_USB_DEVICE(USB_VENDOR_ID_GDIUM, USB_DEVICE_ID_GDIUM) },
++	{}
++};
++MODULE_DEVICE_TABLE(hid, gdium_input_devices);
++
++static struct hid_driver gdium_input_driver = {
++	.name = "gdium-fnkeys",
++	.id_table = gdium_input_devices,
++	.probe = gdium_input_probe,
++	.remove = gdium_input_remove,
++	.event = gdium_input_event,
++	.input_mapping = gdium_input_mapping,
++};
++
++static int gdium_input_init(void)
++{
++	int ret;
++
++	ret = hid_register_driver(&gdium_input_driver);
++	if (ret)
++		 pr_err("can't register gdium keyboard driver\n");
++
++	return ret;
++}
++static void gdium_input_exit(void)
++{
++	hid_unregister_driver(&gdium_input_driver);
++}
++
++module_init(gdium_input_init);
++module_exit(gdium_input_exit);
++MODULE_LICENSE("GPL");
++
+diff --git a/drivers/hid/hid-ids.h b/drivers/hid/hid-ids.h
+index 7ce93d9..da52392 100644
+--- a/drivers/hid/hid-ids.h
++++ b/drivers/hid/hid-ids.h
+@@ -1031,6 +1031,9 @@
+ #define USB_VENDOR_ID_ZYTRONIC		0x14c8
+ #define USB_DEVICE_ID_ZYTRONIC_ZXY100	0x0005
+ 
++#define USB_VENDOR_ID_GDIUM		0x04B4
++#define USB_DEVICE_ID_GDIUM		0xe001
++
+ #define USB_VENDOR_ID_PRIMAX	0x0461
+ #define USB_DEVICE_ID_PRIMAX_MOUSE_4D22	0x4d22
+ #define USB_DEVICE_ID_PRIMAX_KEYBOARD	0x4e05
+diff --git a/drivers/mfd/sm501.c b/drivers/mfd/sm501.c
+index 91077ef..2cfd9ff 100644
+--- a/drivers/mfd/sm501.c
++++ b/drivers/mfd/sm501.c
+@@ -58,7 +58,7 @@ struct sm501_gpio {
+ struct sm501_gpio {
+ 	/* no gpio support, empty definition for sm501_devdata. */
+ };
+-#endif
++#endif	/* CONFIG_MFD_SM501_GPIO */
+ 
+ struct sm501_devdata {
+ 	spinlock_t			 reg_lock;
+@@ -1124,6 +1124,22 @@ static inline int sm501_gpio_isregistered(struct sm501_devdata *sm)
+ {
+ 	return sm->gpio.registered;
+ }
++
++void sm501_configure_gpio(struct device *dev, unsigned int gpio, unsigned
++		char mode)
++{
++	unsigned long set, reg, offset = gpio;
++
++	if (offset >= 32) {
++		reg = SM501_GPIO63_32_CONTROL;
++		offset = gpio - 32;
++	} else
++		reg = SM501_GPIO31_0_CONTROL;
++
++	set = mode ? 1 << offset : 0;
++
++	sm501_modify_reg(dev, reg, set, 0);
++}
+ #else
+ static inline int sm501_register_gpio(struct sm501_devdata *sm)
+ {
+@@ -1143,7 +1159,13 @@ static inline int sm501_gpio_isregistered(struct sm501_devdata *sm)
+ {
+ 	return 0;
+ }
+-#endif
++
++void sm501_configure_gpio(struct device *dev, unsigned int gpio,
++			 unsigned char mode)
++{
++}
++#endif	/* CONFIG_MFD_SM501_GPIO */
++EXPORT_SYMBOL_GPL(sm501_configure_gpio);
+ 
+ static int sm501_register_gpio_i2c_instance(struct sm501_devdata *sm,
+ 					    struct sm501_platdata_gpio_i2c *iic)
+@@ -1198,6 +1220,20 @@ static int sm501_register_gpio_i2c(struct sm501_devdata *sm,
+ 	return 0;
+ }
+ 
++/* register sm501 PWM device */
++static int sm501_register_pwm(struct sm501_devdata *sm)
++{
++	struct platform_device *pdev;
++
++	pdev = sm501_create_subdev(sm, "sm501-pwm", 2, 0);
++	if (!pdev)
++		return -ENOMEM;
++	sm501_create_subio(sm, &pdev->resource[0], 0x10020, 0xC);
++	sm501_create_irq(sm, &pdev->resource[1]);
++
++	return sm501_register_device(sm, pdev);
++}
++
+ /* sm501_dbg_regs
+  *
+  * Debug attribute to attach to parent device to show core registers
+@@ -1356,6 +1392,8 @@ static int sm501_init_dev(struct sm501_devdata *sm)
+ 			sm501_register_uart(sm, idata->devices);
+ 		if (idata->devices & SM501_USE_GPIO)
+ 			sm501_register_gpio(sm);
++		if (idata->devices & SM501_USE_PWM)
++			sm501_register_pwm(sm);
+ 	}
+ 
+ 	if (pdata && pdata->gpio_i2c != NULL && pdata->gpio_i2c_nr > 0) {
+@@ -1542,10 +1580,15 @@ static struct sm501_initdata sm501_pci_initdata = {
+ 	.devices	= SM501_USE_ALL,
+ 
+ 	/* Errata AB-3 says that 72MHz is the fastest available
+-	 * for 33MHZ PCI with proper bus-mastering operation */
+-
++	 * for 33MHZ PCI with proper bus-mastering operation
++	 * For gdium, it works under 84&112M clock freq.*/
++#ifdef CONFIG_DEXXON_GDIUM
++	.mclk		= 84 * MHZ,
++	.m1xclk		= 112 * MHZ,
++#else
+ 	.mclk		= 72 * MHZ,
+ 	.m1xclk		= 144 * MHZ,
++#endif
+ };
+ 
+ static struct sm501_platdata_fbsub sm501_pdata_fbsub = {
+diff --git a/drivers/platform/mips/Kconfig b/drivers/platform/mips/Kconfig
+index c80714b..70a607d 100644
+--- a/drivers/platform/mips/Kconfig
++++ b/drivers/platform/mips/Kconfig
+@@ -47,6 +47,17 @@ config LEMOTE_LYNLOONG2F
+ 	  size-fixed screen: 1360x768 with sisfb video driver. and also, it has
+ 	  its own specific suspend support.
+ 
++config GDIUM_LAPTOP
++	tristate "GDIUM laptop extras"
++	depends on DEXXON_GDIUM
++	select POWER_SUPPLY
++	select I2C
++	select INPUT_POLLDEV
++	default m
++	help
++	  This mini-driver drives the ST7 chipset present in the Gdium laptops.
++	  This gives battery support, wlan rfkill.
++
+ config MIPS_ACPI
+ 	bool
+ 	default y if LOONGSON_MACH3X
+diff --git a/drivers/platform/mips/Makefile b/drivers/platform/mips/Makefile
+index 0e21bfb..0bc93de 100644
+--- a/drivers/platform/mips/Makefile
++++ b/drivers/platform/mips/Makefile
+@@ -7,5 +7,7 @@ CFLAGS_yeeloong_laptop.o = -I$(srctree)/arch/mips/loongson/lemote-2f
+ 
+ obj-$(CONFIG_LEMOTE_LYNLOONG2F)	+= lynloong_pc.o
+ 
++obj-$(CONFIG_GDIUM_LAPTOP)	+= gdium_laptop.o
++
+ obj-$(CONFIG_MIPS_ACPI) += acpi_init.o
+ obj-$(CONFIG_CPU_HWMON) += cpu_hwmon.o
+diff --git a/drivers/platform/mips/gdium_laptop.c b/drivers/platform/mips/gdium_laptop.c
+new file mode 100644
+index 0000000..41a65ad
+--- /dev/null
++++ b/drivers/platform/mips/gdium_laptop.c
+@@ -0,0 +1,927 @@
++/*
++ * gdium_laptop  --  Gdium laptop extras
++ *
++ * Arnaud Patard <apatard@mandriva.com>
++ *
++ *  This program is free software; you can redistribute  it and/or modify it
++ *  under  the terms of  the GNU General  Public License as published by the
++ *  Free Software Foundation;  either version 2 of the  License, or (at your
++ *  option) any later version.
++ *
++ */
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/platform_device.h>
++#include <linux/input-polldev.h>
++#include <linux/debugfs.h>
++#include <linux/seq_file.h>
++#include <linux/i2c.h>
++#include <linux/mutex.h>
++#include <linux/power_supply.h>
++#include <linux/workqueue.h>
++#include <linux/delay.h>
++#include <linux/slab.h>
++#include <asm/gpio.h>
++
++/* For input device */
++#define SCAN_INTERVAL		150
++
++/* For battery status */
++#define BAT_SCAN_INTERVAL	500
++
++#define EC_FIRM_VERSION		0
++
++#if CONFIG_GDIUM_VERSION > 2
++#define EC_REG_BASE		1
++#else
++#define EC_REG_BASE		0
++#endif
++
++#define EC_STATUS		(EC_REG_BASE+0)
++#define EC_STATUS_LID		(1<<0)
++#define EC_STATUS_PWRBUT	(1<<1)
++#define EC_STATUS_BATID		(1<<2)		/* this bit has no real meaning on v2.         */
++						/* Same as EC_STATUS_ADAPT                     */
++						/* but on v3 it's BATID which mean bat present */
++#define EC_STATUS_SYS_POWER	(1<<3)
++#define EC_STATUS_WLAN		(1<<4)
++#define EC_STATUS_ADAPT		(1<<5)
++
++#define EC_CTRL			(EC_REG_BASE+1)
++#define EC_CTRL_DDR_CLK		(1<<0)
++#define EC_CTRL_CHARGE_LED	(1<<1)
++#define EC_CTRL_BEEP		(1<<2)
++#define EC_CTRL_SUSB		(1<<3)	/* memory power */
++#define EC_CTRL_TRICKLE		(1<<4)
++#define EC_CTRL_WLAN_EN		(1<<5)
++#define EC_CTRL_SUSC		(1<<6) /* main power */
++#define EC_CTRL_CHARGE_EN	(1<<7)
++
++#define EC_BAT_LOW		(EC_REG_BASE+2)
++#define EC_BAT_HIGH		(EC_REG_BASE+3)
++
++#define EC_SIGN			(EC_REG_BASE+4)
++#define EC_SIGN_OS		0xAE /* write 0xae to control pm stuff */
++#define EC_SIGN_EC		0x00 /* write 0x00 to let the st7 manage pm stuff */
++
++#if 0
++#define EC_TEST			(EC_REG_BASE+5) /* Depending on firmware version this register */
++						/* may be the programmation register so don't play */
++						/* with it */
++#endif
++
++#define BAT_VOLT_PRESENT	500000	/* Min voltage to consider battery present uV */
++#define BAT_MIN			7000000	/* Min battery voltage in uV */
++#define BAT_MIN_MV		7000	/* Min battery voltage in mV */
++#define BAT_TRICKLE_EN		8000000	/* Charging at 1.4A before  8.0V and then charging at 0.25A */
++#define BAT_MAX			7950000	/* Max battery voltage ~8V in V */
++#define BAT_MAX_MV		7950	/* Max battery voltage ~8V in V */
++#define BAT_READ_ERROR		300000	/* battery read error of 0.3V */
++#define BAT_READ_ERROR_MV	300	/* battery read error of 0.3V */
++
++#define SM502_WLAN_ON		(224+16)/* SM502 GPIO16 may be used on gdium v2 (v3?) as wlan_on */
++					/* when R422 is connected */
++
++static unsigned char verbose;
++static unsigned char gpio16;
++static unsigned char ec;
++module_param(verbose, byte, S_IRUGO | S_IWUSR);
++MODULE_PARM_DESC(verbose, "Add some debugging messages");
++module_param(gpio16, byte, S_IRUGO);
++MODULE_PARM_DESC(gpio16, "Enable wlan_on signal on SM502");
++module_param(ec, byte, S_IRUGO);
++MODULE_PARM_DESC(ec, "Let the ST7 handle the battery (default OS)");
++
++struct gdium_laptop_data {
++	struct i2c_client		*client;
++	struct input_polled_dev		*input_polldev;
++	struct dentry			*debugfs;
++	struct mutex			mutex;
++	struct platform_device		*bat_pdev;
++	struct power_supply		gdium_ac;
++	struct power_supply		gdium_battery;
++	struct workqueue_struct		*workqueue;
++	struct delayed_work		work;
++	char				charge_cmd;
++	/* important registers value */
++	char				status;
++	char				ctrl;
++	/* mV */
++	int				battery_level;
++	char				version;
++};
++
++/**********************************************************************/
++/* Low level I2C functions                                            */
++/* All are supposed to be called with mutex held                      */
++/**********************************************************************/
++/*
++ * Return battery voltage in mV
++ * >= 0 battery voltage
++ * < 0 error
++ */
++static s32 ec_read_battery(struct i2c_client *client)
++{
++	unsigned char bat_low, bat_high;
++	s32 data;
++	unsigned int ret;
++
++	/*
++	 * a = battery high
++	 * b = battery low
++	 * bat = a << 2 | b & 0x03;
++	 * battery voltage = (bat / 1024) * 5 * 2
++	 */
++	data = i2c_smbus_read_byte_data(client, EC_BAT_LOW);
++	if (data < 0) {
++		dev_err(&client->dev, "ec_read_bat: read bat_low failed\n");
++		return data;
++	}
++	bat_low = data & 0xff;
++	if (verbose)
++		dev_info(&client->dev, "bat_low %x\n", bat_low);
++
++	data = i2c_smbus_read_byte_data(client, EC_BAT_HIGH);
++	if (data < 0) {
++		dev_err(&client->dev, "ec_read_bat: read bat_high failed\n");
++		return data;
++	}
++	bat_high = data & 0xff;
++	if (verbose)
++		dev_info(&client->dev, "bat_high %x\n", bat_high);
++
++	ret = (bat_high << 2) | (bat_low & 3);
++	/*
++	 * mV
++	 */
++	ret = (ret * 5 * 2) * 1000 / 1024;
++
++	return ret;
++}
++
++static s32 ec_read_version(struct i2c_client *client)
++{
++#if CONFIG_GDIUM_VERSION > 2
++	return i2c_smbus_read_byte_data(client, EC_FIRM_VERSION);
++#else
++	return 0;
++#endif
++}
++
++static s32 ec_read_status(struct i2c_client *client)
++{
++	return i2c_smbus_read_byte_data(client, EC_STATUS);
++}
++
++static s32 ec_read_ctrl(struct i2c_client *client)
++{
++	return i2c_smbus_read_byte_data(client, EC_CTRL);
++}
++
++static s32 ec_write_ctrl(struct i2c_client *client, unsigned char newvalue)
++{
++	return i2c_smbus_write_byte_data(client, EC_CTRL, newvalue);
++}
++
++static s32 ec_read_sign(struct i2c_client *client)
++{
++	return i2c_smbus_read_byte_data(client, EC_SIGN);
++}
++
++static s32 ec_write_sign(struct i2c_client *client, unsigned char sign)
++{
++	unsigned char value;
++	s32 ret;
++
++	ret = i2c_smbus_write_byte_data(client, EC_SIGN, sign);
++	if (ret < 0) {
++		dev_err(&client->dev, "ec_set_control: write failed\n");
++		return ret;
++	}
++
++	value = ec_read_sign(client);
++	if (value != sign) {
++		dev_err(&client->dev, "Failed to set control to %s\n",
++				sign == EC_SIGN_OS ? "OS" : "EC");
++		return -EIO;
++	}
++
++	return 0;
++}
++
++#if 0
++static int ec_power_off(struct i2c_client *client)
++{
++	char value;
++	int ret;
++
++	value = ec_read_ctrl(client);
++	if (value < 0) {
++		dev_err(&client->dev, "ec_power_off: read failed\n");
++		return value;
++	}
++	value &= ~(EC_CTRL_SUSB | EC_CTRL_SUSC);
++	ret = ec_write_ctrl(client, value);
++	if (ret < 0) {
++		dev_err(&client->dev, "ec_power_off: write failed\n");
++		return ret;
++	}
++
++	return 0;
++}
++#endif
++
++static s32 ec_wlan_status(struct i2c_client *client)
++{
++	s32 value;
++
++	value = ec_read_ctrl(client);
++	if (value < 0)
++		return value;
++
++	return (value & EC_CTRL_WLAN_EN) ? 1 : 0;
++}
++
++static s32 ec_wlan_en(struct i2c_client *client, int on)
++{
++	s32 value;
++
++	value = ec_read_ctrl(client);
++	if (value < 0)
++		return value;
++
++	value &= ~EC_CTRL_WLAN_EN;
++	if (on)
++		value |= EC_CTRL_WLAN_EN;
++
++	return ec_write_ctrl(client, value&0xff);
++}
++
++#if 0
++static s32 ec_led_status(struct i2c_client *client)
++{
++	s32 value;
++
++	value = ec_read_ctrl(client);
++	if (value < 0)
++		return value;
++
++	return (value & EC_CTRL_CHARGE_LED) ? 1 : 0;
++}
++#endif
++
++/* Changing the charging led status has never worked */
++static s32 ec_led_en(struct i2c_client *client, int on)
++{
++#if 0
++	s32 value;
++
++	value = ec_read_ctrl(client);
++	if (value < 0)
++		return value;
++
++	value &= ~EC_CTRL_CHARGE_LED;
++	if (on)
++		value |= EC_CTRL_CHARGE_LED;
++	return ec_write_ctrl(client, value&0xff);
++#else
++	return 0;
++#endif
++}
++
++static s32 ec_charge_en(struct i2c_client *client, int on, int trickle)
++{
++	s32 value;
++	s32 set = 0;
++
++	value = ec_read_ctrl(client);
++	if (value < 0)
++		return value;
++
++	if (on)
++		set |= EC_CTRL_CHARGE_EN;
++	if (trickle)
++		set |= EC_CTRL_TRICKLE;
++
++	/* Be clever : don't change values if you don't need to */
++	if ((value & (EC_CTRL_CHARGE_EN | EC_CTRL_TRICKLE)) == set)
++		return 0;
++
++	value &= ~(EC_CTRL_CHARGE_EN | EC_CTRL_TRICKLE);
++	value |= set;
++	ec_led_en(client, on);
++	return ec_write_ctrl(client, (unsigned char)(value&0xff));
++
++}
++
++/**********************************************************************/
++/* Input functions                                                    */
++/**********************************************************************/
++struct gdium_keys {
++	int last_state;
++	int key_code;
++	int mask;
++	int type;
++};
++
++static struct gdium_keys gkeys[] = {
++	{
++		.key_code	= KEY_WLAN,
++		.mask		= EC_STATUS_WLAN,
++		.type		= EV_KEY,
++	},
++	{
++		.key_code	= KEY_POWER,
++		.mask		= EC_STATUS_PWRBUT,
++		.type		= EV_KEY, /*EV_PWR,*/
++	},
++	{
++		.key_code	= SW_LID,
++		.mask		= EC_STATUS_LID,
++		.type		= EV_SW,
++	},
++};
++
++static void gdium_laptop_keys_poll(struct input_polled_dev *dev)
++{
++	int state, i;
++	struct gdium_laptop_data *data = dev->private;
++	struct i2c_client *client = data->client;
++	struct input_dev *input = dev->input;
++	s32 status;
++
++	mutex_lock(&data->mutex);
++	status = ec_read_status(client);
++	mutex_unlock(&data->mutex);
++
++	if (status < 0) {
++		/*
++		 * Don't know exactly  which version of the firmware
++		 * has this bug but when the power button is pressed
++		 * there are i2c read errors :(
++		 */
++		if ((data->version >= 0x13) && !gkeys[1].last_state) {
++			input_event(input, EV_KEY, KEY_POWER, 1);
++			input_sync(input);
++			gkeys[1].last_state = 1;
++		}
++		return;
++	}
++
++	for (i = 0; i < ARRAY_SIZE(gkeys); i++) {
++		state = status & gkeys[i].mask;
++		if (state != gkeys[i].last_state) {
++			gkeys[i].last_state = state;
++			/* for power key, we want power & key press/release event */
++			if (gkeys[i].type == EV_PWR) {
++				input_event(input, EV_KEY, gkeys[i].key_code, !!state);
++				input_sync(input);
++			}
++			/* Disable wifi on key press but not key release */
++			/*
++			 * On firmware >= 0x13 the EC_STATUS_WLAN has it's
++			 * original meaning of Wifi status and no more the
++			 * wifi button status so we have to ignore the event
++			 * on theses versions
++			 */
++			if (state && (gkeys[i].key_code == KEY_WLAN) && (data->version < 0x13)) {
++				mutex_lock(&data->mutex);
++				ec_wlan_en(client, !ec_wlan_status(client));
++				if (gpio16)
++					gpio_set_value(SM502_WLAN_ON, !ec_wlan_status(client));
++				mutex_unlock(&data->mutex);
++			}
++
++			input_event(input, gkeys[i].type, gkeys[i].key_code, !!state);
++			input_sync(input);
++		}
++	}
++}
++
++static int gdium_laptop_input_init(struct gdium_laptop_data *data)
++{
++	struct i2c_client *client = data->client;
++	struct input_dev *input;
++	int ret, i;
++
++	data->input_polldev = input_allocate_polled_device();
++	if (!data->input_polldev) {
++		ret = -ENOMEM;
++		goto err;
++	}
++
++	input = data->input_polldev->input;
++	input->evbit[0] = BIT(EV_KEY) | BIT_MASK(EV_PWR) | BIT_MASK(EV_SW);
++	data->input_polldev->poll = gdium_laptop_keys_poll;
++	data->input_polldev->poll_interval = SCAN_INTERVAL;
++	data->input_polldev->private = data;
++	input->name = "gdium-keys";
++	input->dev.parent = &client->dev;
++
++	input->id.bustype = BUS_HOST;
++	input->id.vendor = 0x0001;
++	input->id.product = 0x0001;
++	input->id.version = 0x0100;
++
++	for (i = 0; i < ARRAY_SIZE(gkeys); i++)
++		input_set_capability(input, gkeys[i].type, gkeys[i].key_code);
++
++	ret = input_register_polled_device(data->input_polldev);
++	if (ret) {
++		dev_err(&client->dev, "Unable to register button device\n");
++		goto err_poll_dev;
++	}
++
++	return 0;
++
++err_poll_dev:
++	input_free_polled_device(data->input_polldev);
++err:
++	return ret;
++}
++
++static void gdium_laptop_input_exit(struct gdium_laptop_data *data)
++{
++	input_unregister_polled_device(data->input_polldev);
++	input_free_polled_device(data->input_polldev);
++}
++
++/**********************************************************************/
++/* Battery management                                                 */
++/**********************************************************************/
++static int gdium_ac_get_props(struct power_supply *psy,
++		enum power_supply_property psp,
++		union power_supply_propval *val)
++{
++	char status;
++	struct gdium_laptop_data *data = container_of(psy, struct gdium_laptop_data, gdium_ac);
++	int ret = 0;
++
++	if (!data) {
++		pr_err("gdium-ac: gdium_laptop_data not found\n");
++		return -EINVAL;
++	}
++
++	status = data->status;
++	switch (psp) {
++	case POWER_SUPPLY_PROP_ONLINE:
++		val->intval = !!(status & EC_STATUS_ADAPT);
++		break;
++	default:
++		ret = -EINVAL;
++		break;
++	}
++
++	return ret;
++}
++
++#undef RET
++#define RET (val->intval)
++
++static int gdium_battery_get_props(struct power_supply *psy,
++		enum power_supply_property psp,
++		union power_supply_propval *val)
++{
++	char status, ctrl;
++	struct gdium_laptop_data *data = container_of(psy, struct gdium_laptop_data, gdium_battery);
++	int percentage_capacity = 0, charge_now = 0, time_to_empty = 0;
++	int ret = 0, tmp;
++
++	if (!data) {
++		pr_err("gdium-battery: gdium_laptop_data not found\n");
++		return -EINVAL;
++	}
++
++	status = data->status;
++	ctrl   = data->ctrl;
++	switch (psp) {
++	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
++		/* uAh */
++		RET = 5000000;
++		break;
++	case POWER_SUPPLY_PROP_CURRENT_NOW:
++	case POWER_SUPPLY_PROP_TIME_TO_EMPTY_NOW:
++		/* This formula is gotten by gnuplot with the statistic data */
++		time_to_empty = (data->battery_level - BAT_MIN_MV + BAT_READ_ERROR_MV) * 113 - 29870;
++		if (psp == POWER_SUPPLY_PROP_TIME_TO_EMPTY_NOW) {
++			/* seconds */
++			RET = time_to_empty / 10;
++			break;
++		}
++		/* fall through */
++	case POWER_SUPPLY_PROP_CHARGE_NOW:
++	case POWER_SUPPLY_PROP_CAPACITY: {
++		tmp = data->battery_level * 1000;
++		/* > BAT_MIN to avoid negative values */
++		percentage_capacity = 0;
++		if ((status & EC_STATUS_BATID) && (tmp > BAT_MIN))
++			percentage_capacity = (tmp-BAT_MIN)*100/(BAT_MAX-BAT_MIN);
++
++		if (percentage_capacity > 100)
++			percentage_capacity = 100;
++
++		if (psp == POWER_SUPPLY_PROP_CAPACITY) {
++			RET = percentage_capacity;
++			break;
++		}
++		charge_now = 50000 * percentage_capacity;
++		if (psp == POWER_SUPPLY_PROP_CHARGE_NOW) {
++			/* uAh */
++			RET = charge_now;
++			break;
++		}
++	}	/* fall through */
++	case POWER_SUPPLY_PROP_STATUS: {
++		if (status & EC_STATUS_ADAPT)
++			if (ctrl & EC_CTRL_CHARGE_EN)
++				RET = POWER_SUPPLY_STATUS_CHARGING;
++			else
++				RET = POWER_SUPPLY_STATUS_NOT_CHARGING;
++		else
++			RET = POWER_SUPPLY_STATUS_DISCHARGING;
++
++		if (psp == POWER_SUPPLY_PROP_STATUS)
++			break;
++		/* mAh -> µA */
++		switch (RET) {
++		case POWER_SUPPLY_STATUS_CHARGING:
++			RET = -(data->charge_cmd == 2) ? 1400000 : 250000;
++			break;
++		case POWER_SUPPLY_STATUS_DISCHARGING:
++			RET = charge_now / time_to_empty * 36000;
++			break;
++		case POWER_SUPPLY_STATUS_NOT_CHARGING:
++		default:
++			RET = 0;
++			break;
++		}
++	} break;
++	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
++		RET = BAT_MAX+BAT_READ_ERROR;
++		break;
++	case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
++		RET = BAT_MIN-BAT_READ_ERROR;
++		break;
++	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
++		/* mV -> uV */
++		RET = data->battery_level * 1000;
++		break;
++	case POWER_SUPPLY_PROP_PRESENT:
++#if CONFIG_GDIUM_VERSION > 2
++		RET = !!(status & EC_STATUS_BATID);
++#else
++		RET = !!(data->battery_level > BAT_VOLT_PRESENT);
++#endif
++		break;
++	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
++		tmp = data->battery_level * 1000;
++		RET = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
++		if (status & EC_STATUS_BATID) {
++			if (tmp >= BAT_MAX) {
++				RET = POWER_SUPPLY_CAPACITY_LEVEL_HIGH;
++				if (tmp >= BAT_MAX+BAT_READ_ERROR)
++					RET = POWER_SUPPLY_CAPACITY_LEVEL_FULL;
++			} else if (tmp <= BAT_MIN+BAT_READ_ERROR) {
++				RET = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
++				if (tmp <= BAT_MIN)
++					RET = POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL;
++			} else
++				RET = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
++		}
++		break;
++	case POWER_SUPPLY_PROP_CHARGE_TYPE:
++		if (ctrl & EC_CTRL_TRICKLE)
++			RET = POWER_SUPPLY_CHARGE_TYPE_TRICKLE;
++		else if (ctrl & EC_CTRL_CHARGE_EN)
++			RET = POWER_SUPPLY_CHARGE_TYPE_FAST;
++		else
++			RET = POWER_SUPPLY_CHARGE_TYPE_NONE;
++		break;
++	case POWER_SUPPLY_PROP_CURRENT_MAX:
++		/* 1.4A ? */
++		RET = 1400000;
++		break;
++	default:
++		break;
++	}
++
++	return ret;
++}
++#undef RET
++
++static enum power_supply_property gdium_ac_props[] = {
++	POWER_SUPPLY_PROP_ONLINE,
++};
++
++static enum power_supply_property gdium_battery_props[] = {
++	POWER_SUPPLY_PROP_STATUS,
++	POWER_SUPPLY_PROP_PRESENT,
++	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
++	POWER_SUPPLY_PROP_CHARGE_NOW,
++	POWER_SUPPLY_PROP_TIME_TO_EMPTY_NOW,
++	POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN,
++	POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,
++	POWER_SUPPLY_PROP_VOLTAGE_NOW,
++	POWER_SUPPLY_PROP_CURRENT_MAX,
++	POWER_SUPPLY_PROP_CURRENT_NOW,
++	POWER_SUPPLY_PROP_CAPACITY,
++	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
++	POWER_SUPPLY_PROP_CHARGE_TYPE,
++};
++
++static void gdium_laptop_battery_work(struct work_struct *work)
++{
++	struct gdium_laptop_data *data = container_of(work, struct gdium_laptop_data, work.work);
++	struct i2c_client *client;
++	int ret;
++	char old_status, old_charge_cmd;
++	char present;
++	s32 status;
++
++	mutex_lock(&data->mutex);
++	client	= data->client;
++	status	= ec_read_status(client);
++	ret	= ec_read_battery(client);
++
++	if ((status < 0) || (ret < 0))
++		goto i2c_read_error;
++
++	old_status = data->status;
++	old_charge_cmd = data->charge_cmd;
++	data->status = status;
++
++	/*
++	 * Charge only if :
++	 * - battery present
++	 * - ac adapter plugged in
++	 * - battery not fully charged
++	 */
++#if CONFIG_GDIUM_VERSION > 2
++	present = !!(data->status & EC_STATUS_BATID);
++#else
++	present = !!(ret > BAT_VOLT_PRESENT);
++#endif
++	data->battery_level = 0;
++	if (present) {
++		data->battery_level = (unsigned int)ret;
++		if (data->status & EC_STATUS_ADAPT)
++			data->battery_level -= BAT_READ_ERROR_MV;
++	}
++
++	data->charge_cmd = 0;
++	if ((data->status & EC_STATUS_ADAPT) && present && (data->battery_level <= BAT_MAX_MV))
++		data->charge_cmd = (ret < BAT_TRICKLE_EN) ? 2 : 3;
++
++	ec_charge_en(client, (data->charge_cmd >> 1) & 1, data->charge_cmd & 1);
++
++	/*
++	 * data->ctrl must be set _after_ calling ec_charge_en as this will change the
++	 * control register content
++	 */
++	data->ctrl = ec_read_ctrl(client);
++
++	if ((data->status & EC_STATUS_ADAPT) != (old_status & EC_STATUS_ADAPT)) {
++		power_supply_changed(&data->gdium_ac);
++		/* Send charging/discharging state change */
++		power_supply_changed(&data->gdium_battery);
++	} else if ((data->status & EC_STATUS_ADAPT) &&
++			((old_charge_cmd&2) != (data->charge_cmd&2)))
++		power_supply_changed(&data->gdium_battery);
++
++i2c_read_error:
++	mutex_unlock(&data->mutex);
++	queue_delayed_work(data->workqueue, &data->work, msecs_to_jiffies(BAT_SCAN_INTERVAL));
++}
++
++static int gdium_laptop_battery_init(struct gdium_laptop_data *data)
++{
++	int ret;
++
++	data->bat_pdev = platform_device_register_simple("gdium-battery", 0, NULL, 0);
++	if (IS_ERR(data->bat_pdev))
++		return PTR_ERR(data->bat_pdev);
++
++	data->gdium_battery.name		= data->bat_pdev->name;
++	data->gdium_battery.properties		= gdium_battery_props;
++	data->gdium_battery.num_properties	= ARRAY_SIZE(gdium_battery_props);
++	data->gdium_battery.get_property	= gdium_battery_get_props;
++	data->gdium_battery.use_for_apm		= 1;
++
++	ret = power_supply_register(&data->bat_pdev->dev, &data->gdium_battery);
++	if (ret)
++		goto err_platform;
++
++	data->gdium_ac.name			= "gdium-ac";
++	data->gdium_ac.type			= POWER_SUPPLY_TYPE_MAINS;
++	data->gdium_ac.properties		= gdium_ac_props;
++	data->gdium_ac.num_properties		= ARRAY_SIZE(gdium_ac_props);
++	data->gdium_ac.get_property		= gdium_ac_get_props;
++/*	data->gdium_ac.use_for_apm_ac		= 1,	*/
++
++	ret = power_supply_register(&data->bat_pdev->dev, &data->gdium_ac);
++	if (ret)
++		goto err_battery;
++
++	if (!ec) {
++		INIT_DELAYED_WORK(&data->work, gdium_laptop_battery_work);
++		data->workqueue = create_singlethread_workqueue("gdium-battery-work");
++		if (!data->workqueue) {
++			ret = -ESRCH;
++			goto err_work;
++		}
++		queue_delayed_work(data->workqueue, &data->work, msecs_to_jiffies(BAT_SCAN_INTERVAL));
++	}
++
++	return 0;
++
++err_work:
++err_battery:
++	power_supply_unregister(&data->gdium_battery);
++err_platform:
++	platform_device_unregister(data->bat_pdev);
++
++	return ret;
++}
++static void gdium_laptop_battery_exit(struct gdium_laptop_data *data)
++{
++	if (!ec) {
++		cancel_rearming_delayed_workqueue(data->workqueue, &data->work);
++		destroy_workqueue(data->workqueue);
++	}
++	power_supply_unregister(&data->gdium_battery);
++	power_supply_unregister(&data->gdium_ac);
++	platform_device_unregister(data->bat_pdev);
++}
++
++/* Debug fs */
++static int gdium_laptop_regs_show(struct seq_file *s, void *p)
++{
++	struct gdium_laptop_data *data = s->private;
++	struct i2c_client *client = data->client;
++
++	mutex_lock(&data->mutex);
++	seq_printf(s, "Version    : 0x%02x\n", (unsigned char)ec_read_version(client));
++	seq_printf(s, "Status     : 0x%02x\n", (unsigned char)ec_read_status(client));
++	seq_printf(s, "Ctrl       : 0x%02x\n", (unsigned char)ec_read_ctrl(client));
++	seq_printf(s, "Sign       : 0x%02x\n", (unsigned char)ec_read_sign(client));
++	seq_printf(s, "Bat Lo     : 0x%02x\n", (unsigned char)i2c_smbus_read_byte_data(client, EC_BAT_LOW));
++	seq_printf(s, "Bat Hi     : 0x%02x\n", (unsigned char)i2c_smbus_read_byte_data(client, EC_BAT_HIGH));
++	seq_printf(s, "Battery    : %d uV\n",  (unsigned int)ec_read_battery(client) * 1000);
++	seq_printf(s, "Charge cmd : %s %s\n", data->charge_cmd & 2 ? "C" : " ", data->charge_cmd & 1 ? "T" : " ");
++
++	mutex_unlock(&data->mutex);
++	return 0;
++}
++
++static int gdium_laptop_regs_open(struct inode *inode,
++					 struct file *file)
++{
++	return single_open(file, gdium_laptop_regs_show, inode->i_private);
++}
++
++static const struct file_operations gdium_laptop_regs_fops = {
++	.open		= gdium_laptop_regs_open,
++	.read		= seq_read,
++	.llseek		= seq_lseek,
++	.release	= single_release,
++	.owner		= THIS_MODULE,
++};
++
++
++static int gdium_laptop_probe(struct i2c_client *client, const struct i2c_device_id *id)
++{
++	struct gdium_laptop_data *data;
++	int ret;
++
++	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BYTE_DATA)) {
++		dev_err(&client->dev,
++				"%s: no smbus_byte support !\n", __func__);
++		return -ENODEV;
++	}
++
++	data = kzalloc(sizeof(struct gdium_laptop_data), GFP_KERNEL);
++	if (!data)
++		return -ENOMEM;
++
++	i2c_set_clientdata(client, data);
++	data->client = client;
++	mutex_init(&data->mutex);
++
++	ret = ec_read_version(client);
++	if (ret < 0)
++		goto err_alloc;
++
++	data->version = (unsigned char)ret;
++
++	ret = gdium_laptop_input_init(data);
++	if (ret)
++		goto err_alloc;
++
++	ret = gdium_laptop_battery_init(data);
++	if (ret)
++		goto err_input;
++
++
++	if (!ec) {
++		ret = ec_write_sign(client, EC_SIGN_OS);
++		if (ret)
++			goto err_sign;
++	}
++
++	if (gpio16) {
++		ret = gpio_request(SM502_WLAN_ON, "wlan-on");
++		if (ret < 0)
++			goto err_sign;
++		gpio_set_value(SM502_WLAN_ON, ec_wlan_status(client));
++		gpio_direction_output(SM502_WLAN_ON, 1);
++	}
++
++	dev_info(&client->dev, "Found firmware 0x%02x\n", data->version);
++	data->debugfs = debugfs_create_file("gdium_laptop", S_IFREG | S_IRUGO,
++				NULL, data, &gdium_laptop_regs_fops);
++
++	return 0;
++
++err_sign:
++	gdium_laptop_battery_exit(data);
++err_input:
++	gdium_laptop_input_exit(data);
++err_alloc:
++	kfree(data);
++	return ret;
++}
++
++static int gdium_laptop_remove(struct i2c_client *client)
++{
++	struct gdium_laptop_data *data = i2c_get_clientdata(client);
++
++	if (gpio16)
++		gpio_free(SM502_WLAN_ON);
++	ec_write_sign(client, EC_SIGN_EC);
++	if (data->debugfs)
++		debugfs_remove(data->debugfs);
++
++	gdium_laptop_battery_exit(data);
++	gdium_laptop_input_exit(data);
++
++	kfree(data);
++	return 0;
++}
++
++#ifdef CONFIG_PM
++static int gdium_laptop_suspend(struct i2c_client *client, pm_message_t msg)
++{
++	struct gdium_laptop_data *data = i2c_get_clientdata(client);
++
++	if (!ec)
++		cancel_rearming_delayed_workqueue(data->workqueue, &data->work);
++	return 0;
++}
++
++static int gdium_laptop_resume(struct i2c_client *client)
++{
++	struct gdium_laptop_data *data = i2c_get_clientdata(client);
++
++	if (!ec)
++		queue_delayed_work(data->workqueue, &data->work, msecs_to_jiffies(BAT_SCAN_INTERVAL));
++	return 0;
++}
++#else
++#define gdium_laptop_suspend NULL
++#define gdium_laptop_resume NULL
++#endif
++static const struct i2c_device_id gdium_id[] = {
++	{ "gdium-laptop" },
++	{},
++};
++MODULE_DEVICE_TABLE(i2c, gdium_id);
++
++static struct i2c_driver gdium_laptop_driver = {
++	.driver = {
++		.name = "gdium-laptop",
++		.owner = THIS_MODULE,
++	},
++	.probe = gdium_laptop_probe,
++	.remove = gdium_laptop_remove,
++	.shutdown = gdium_laptop_remove,
++	.suspend = gdium_laptop_suspend,
++	.resume = gdium_laptop_resume,
++	.id_table = gdium_id,
++};
++
++static int __init gdium_laptop_init(void)
++{
++	return i2c_add_driver(&gdium_laptop_driver);
++}
++
++static void __exit gdium_laptop_exit(void)
++{
++	i2c_del_driver(&gdium_laptop_driver);
++}
++
++module_init(gdium_laptop_init);
++module_exit(gdium_laptop_exit);
++
++MODULE_AUTHOR("Arnaud Patard <apatard@mandriva.com>");
++MODULE_DESCRIPTION("Gdium laptop extras");
++MODULE_LICENSE("GPL");
+diff --git a/drivers/rtc/Kconfig b/drivers/rtc/Kconfig
+index 0fe4ad8..45e46d4 100644
+--- a/drivers/rtc/Kconfig
++++ b/drivers/rtc/Kconfig
+@@ -737,6 +737,7 @@ comment "Platform RTC drivers"
+ config RTC_DRV_CMOS
+ 	tristate "PC-style 'CMOS'"
+ 	depends on X86 || ARM || M32R || PPC || MIPS || SPARC64
++	depends on !DEXXON_GDIUM
+ 	default y if X86
+ 	help
+ 	  Say "yes" here to get direct support for the real time clock
+diff --git a/include/linux/sm501.h b/include/linux/sm501.h
+index 02fde50..a8677f0 100644
+--- a/include/linux/sm501.h
++++ b/include/linux/sm501.h
+@@ -27,6 +27,9 @@ extern unsigned long sm501_set_clock(struct device *dev,
+ extern unsigned long sm501_find_clock(struct device *dev,
+ 				      int clksrc, unsigned long req_freq);
+ 
++extern void sm501_configure_gpio(struct device *dev,
++				unsigned int gpio, unsigned char mode);
++
+ /* sm501_misc_control
+  *
+  * Modify the SM501's MISC_CONTROL register
+@@ -122,6 +125,7 @@ struct sm501_reg_init {
+ #define SM501_USE_AC97		(1<<7)
+ #define SM501_USE_I2S		(1<<8)
+ #define SM501_USE_GPIO		(1<<9)
++#define SM501_USE_PWM		(1<<10)
+ 
+ #define SM501_USE_ALL		(0xffffffff)
+ 
+-- 
+2.4.3
+

@@ -1,0 +1,26 @@
+From 2db1cedcf67ef5e1703069bbbdbac8483cd002e1 Mon Sep 17 00:00:00 2001
+From: Mark H Weaver <mhw@netris.org>
+Date: Sat, 5 Sep 2015 23:44:59 -0400
+Subject: [PATCH] yeeloong: Change "ec issued command" from KERN_INFO to
+ KERN_DEBUG.
+
+---
+ arch/mips/loongson64/lemote-2f/ec_kb3310b.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/mips/loongson/lemote-2f/ec_kb3310b.c b/arch/mips/loongson/lemote-2f/ec_kb3310b.c
+index 2b666d3..c5f4b82 100644
+--- a/arch/mips/loongson/lemote-2f/ec_kb3310b.c
++++ b/arch/mips/loongson/lemote-2f/ec_kb3310b.c
+@@ -79,7 +79,7 @@ int ec_query_seq(unsigned char cmd)
+ 		printk(KERN_ERR "%s: deadable error : timeout...\n", __func__);
+ 		ret = -EINVAL;
+ 	} else
+-		printk(KERN_INFO
++		printk(KERN_DEBUG
+ 			   "(%x/%d)ec issued command %d status : 0x%x\n",
+ 			   timeout, EC_CMD_TIMEOUT - timeout, cmd, status);
+ 
+-- 
+2.5.0
+

@@ -1,0 +1,66 @@
+From 5e207ff6fc01f129a3e0ef6c33b141e4315ac633 Mon Sep 17 00:00:00 2001
+From: Mark H Weaver <mhw@netris.org>
+Date: Thu, 6 Aug 2015 01:25:50 -0400
+Subject: [PATCH 2/9] Fix handling of prefx instruction in mips/math-emu
+
+* Add prefx opcode.
+
+* Recognize the prefx instruction regardless of what bits happen to be
+  in bits 21-25, which is the format field of the floating-point ops,
+  but holds the base register of the prefx instruction.
+---
+ arch/mips/include/uapi/asm/inst.h | 3 ++-
+ arch/mips/math-emu/cp1emu.c       | 9 +++++++--
+ 2 files changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/arch/mips/include/uapi/asm/inst.h b/arch/mips/include/uapi/asm/inst.h
+index fc0cf5a..9b6ccbd 100644
+--- a/arch/mips/include/uapi/asm/inst.h
++++ b/arch/mips/include/uapi/asm/inst.h
+@@ -180,7 +180,8 @@ enum cop1_sdw_func {
+ enum cop1x_func {
+ 	lwxc1_op     =	0x00, ldxc1_op	   =  0x01,
+ 	swxc1_op     =  0x08, sdxc1_op	   =  0x09,
+-	pfetch_op    =	0x0f, madd_s_op	   =  0x20,
++	pfetch_op    =	0x0f,
++	prefx_op     =  0x17, madd_s_op    =  0x20,
+ 	madd_d_op    =	0x21, madd_e_op	   =  0x22,
+ 	msub_s_op    =	0x28, msub_d_op	   =  0x29,
+ 	msub_e_op    =	0x2a, nmadd_s_op   =  0x30,
+diff --git a/arch/mips/math-emu/cp1emu.c b/arch/mips/math-emu/cp1emu.c
+index 139af11..ed82f0e 100644
+--- a/arch/mips/math-emu/cp1emu.c
++++ b/arch/mips/math-emu/cp1emu.c
+@@ -1545,7 +1545,7 @@ static int fpux_emu(struct pt_regs *xcp, struct mips_fpu_struct *ctx,
+ 			break;
+ 
+ 		default:
+-			return SIGILL;
++			goto SIGILL_unless_prefx_op;
+ 		}
+ 		break;
+ 	}
+@@ -1615,7 +1615,7 @@ static int fpux_emu(struct pt_regs *xcp, struct mips_fpu_struct *ctx,
+ 			goto copcsr;
+ 
+ 		default:
+-			return SIGILL;
++			goto SIGILL_unless_prefx_op;
+ 		}
+ 		break;
+ 	}
+@@ -1628,6 +1628,11 @@ static int fpux_emu(struct pt_regs *xcp, struct mips_fpu_struct *ctx,
+ 		break;
+ 
+ 	default:
++	      SIGILL_unless_prefx_op:
++		if (MIPSInst_FUNC(ir) == prefx_op) {
++			/* ignore prefx operation */
++			break;
++		}
+ 		return SIGILL;
+ 	}
+ 
+-- 
+2.4.3
+

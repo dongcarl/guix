@@ -1,0 +1,35 @@
+From 58f2873fbfd3b6734e4affedfcba569e3369f646 Mon Sep 17 00:00:00 2001
+From: Mark H Weaver <mhw@netris.org>
+Date: Thu, 6 Aug 2015 01:22:42 -0400
+Subject: [PATCH 1/9] Don't process empty cause flags after simple fp move on
+ MIPS.
+
+---
+ arch/mips/math-emu/cp1emu.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/mips/math-emu/cp1emu.c b/arch/mips/math-emu/cp1emu.c
+index 22b9b2c..139af11 100644
+--- a/arch/mips/math-emu/cp1emu.c
++++ b/arch/mips/math-emu/cp1emu.c
+@@ -1746,7 +1746,7 @@ static int fpu_emu(struct pt_regs *xcp, struct mips_fpu_struct *ctx,
+ 		case fmov_op:
+ 			/* an easy one */
+ 			SPFROMREG(rv.s, MIPSInst_FS(ir));
+-			goto copcsr;
++			break;
+ 
+ 			/* binary op on handler */
+ scopbop:
+@@ -1943,7 +1943,7 @@ copcsr:
+ 		case fmov_op:
+ 			/* an easy one */
+ 			DPFROMREG(rv.d, MIPSInst_FS(ir));
+-			goto copcsr;
++			break;
+ 
+ 			/* binary op on handler */
+ dcopbop:
+-- 
+2.4.3
+

@@ -1,0 +1,36 @@
+From 8d7280c9ee3d7de6f129b9c3112faffb20841154 Mon Sep 17 00:00:00 2001
+From: Alexandre Oliva <lxoliva@fsfla.org>
+Date: Wed, 15 Oct 2014 02:00:28 -0300
+Subject: [PATCH 5/9] Loongson2: restore working MAX_PHYSMEM_BITS definition
+
+Commit c461731836 bumped MAX_PHYSMEM_BITS up unconditionally, but
+this causes Loongson2 machines to freeze very early on boot.
+
+To restore Loongson2 to a functional state, I have restored the
+original definition, for Loongson2 only.
+
+Signed-off-by: Alexandre Oliva <oliva@gnu.org>
+---
+ arch/mips/include/asm/sparsemem.h | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/arch/mips/include/asm/sparsemem.h b/arch/mips/include/asm/sparsemem.h
+index b1071c1..8b8e551 100644
+--- a/arch/mips/include/asm/sparsemem.h
++++ b/arch/mips/include/asm/sparsemem.h
+@@ -11,7 +11,11 @@
+ #else
+ # define SECTION_SIZE_BITS	28
+ #endif
+-#define MAX_PHYSMEM_BITS	48
++#if !defined(CONFIG_MACH_LOONGSON) || !defined(CONFIG_CPU_LOONGSON2)	/* Commit c461731836 broke Loongson2.  */
++# define MAX_PHYSMEM_BITS	48
++#else
++# define MAX_PHYSMEM_BITS	35
++#endif
+ 
+ #endif /* CONFIG_SPARSEMEM */
+ #endif /* _MIPS_SPARSEMEM_H */
+-- 
+2.4.3
+

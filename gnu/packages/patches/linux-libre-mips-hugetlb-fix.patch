@@ -1,0 +1,15 @@
+Fix Huge TLB support on some MIPS machines including Loongson 2F.
+
+Patch by Mark H Weaver <mhw@netris.org>
+
+--- linux-4.1.6/arch/mips/include/asm/pgtable-bits.h	2015-08-16 23:52:51.000000000 -0400
++++ linux-4.1.6/arch/mips/include/asm/pgtable-bits.h	2015-08-22 16:42:06.589995600 -0400
+@@ -160,7 +160,7 @@
+ #define _PAGE_GLOBAL_SHIFT	(_PAGE_NO_READ_SHIFT + 1)
+ #define _PAGE_GLOBAL		(1 << _PAGE_GLOBAL_SHIFT)
+ 
+-#else	/* !CONFIG_CPU_MIPSR2 && !CONFIG_CPU_MIPSR6 */
++#elif !defined(CONFIG_64BIT) || !defined(CONFIG_MIPS_HUGE_TLB_SUPPORT)
+ #define _PAGE_GLOBAL_SHIFT	(_PAGE_MODIFIED_SHIFT + 1)
+ #define _PAGE_GLOBAL		(1 << _PAGE_GLOBAL_SHIFT)
+ #endif	/* CONFIG_CPU_MIPSR2 || CONFIG_CPU_MIPSR6 */

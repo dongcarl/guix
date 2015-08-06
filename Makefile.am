@@ -176,7 +176,8 @@ KCONFIGS =					\
   gnu/packages/linux-libre-4.4-i686.conf	\
   gnu/packages/linux-libre-4.4-x86_64.conf	\
   gnu/packages/linux-libre-4.1-i686.conf	\
-  gnu/packages/linux-libre-4.1-x86_64.conf
+  gnu/packages/linux-libre-4.1-x86_64.conf	\
+  gnu/packages/linux-libre-loongson2f.conf
 
 # Templates, examples.
 EXAMPLES =					\

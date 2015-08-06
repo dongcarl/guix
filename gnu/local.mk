@@ -644,6 +644,18 @@ dist_patch_DATA =						\
   %D%/packages/patches/libwmf-CVE-2015-4695.patch		\
   %D%/packages/patches/libwmf-CVE-2015-4696.patch		\
   %D%/packages/patches/libxslt-generated-ids.patch		\
+  %D%/packages/patches/linux-libre-export-loongson-chipcfg.patch \
+  %D%/packages/patches/linux-libre-gdium.patch			\
+  %D%/packages/patches/linux-libre-loongson2-cpufreq-fix.patch	\
+  %D%/packages/patches/linux-libre-loongson2-math-emu.patch	\
+  %D%/packages/patches/linux-libre-loongson2-max-physmem-bits.patch \
+  %D%/packages/patches/linux-libre-mips-ftrace-fix.patch	\
+  %D%/packages/patches/linux-libre-mips-hugetlb-fix.patch	\
+  %D%/packages/patches/linux-libre-mips-math-emu-fix-pt1.patch	\
+  %D%/packages/patches/linux-libre-mips-math-emu-fix-pt2.patch	\
+  %D%/packages/patches/linux-libre-yeeloong-rfkill-key-fix.patch \
+  %D%/packages/patches/linux-libre-yeeloong-silence-ec-messages.patch \
+  %D%/packages/patches/linux-libre-yeeloong.patch		\
   %D%/packages/patches/lirc-localstatedir.patch			\
   %D%/packages/patches/lm-sensors-hwmon-attrs.patch		\
   %D%/packages/patches/lua-CVE-2014-5461.patch                      \
