@@ -108,7 +108,6 @@ Section \"Files\"
   ModulePath \"" xf86-video-fbdev "/lib/xorg/modules/drivers\"
   ModulePath \"" xf86-video-modesetting "/lib/xorg/modules/drivers\"
   ModulePath \"" xf86-video-cirrus "/lib/xorg/modules/drivers\"
-  ModulePath \"" xf86-video-intel "/lib/xorg/modules/drivers\"
   ModulePath \"" xf86-video-mach64 "/lib/xorg/modules/drivers\"
   ModulePath \"" xf86-video-nouveau "/lib/xorg/modules/drivers\"
   ModulePath \"" xf86-video-nv "/lib/xorg/modules/drivers\"
@@ -145,7 +144,7 @@ EndSection
         xf86-video-fbdev
         xf86-video-modesetting
         xf86-video-cirrus
-        xf86-video-intel
+        ;; xf86-video-intel
         xf86-video-mach64
         xf86-video-nouveau
         xf86-video-nv
