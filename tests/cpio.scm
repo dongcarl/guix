@@ -80,6 +80,3 @@
                                (stat:size (stat file))))))))))))))
 
 (test-end "cpio")
-
-
-(exit (= (test-runner-fail-count (test-runner-current)) 0))
