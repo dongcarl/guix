@@ -567,6 +567,33 @@ line of code.")
     ;; of the Expat license.
     (license license:bsd-3)))
 
+(define-public ruby-asciimath
+  (package
+    (name "ruby-asciimath")
+    (version "1.0.2")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (rubygems-uri "asciimath" version))
+       (sha256
+        (base32
+         "0dzwkjn0q4f1vd5v8wr8azzh4b94yrs7ycq7s0r1g9ijdxdlii6k"))))
+    (build-system ruby-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (replace 'check
+           (lambda* _ (zero? (system* "rspec" "test/parser_spec.rb")))))))
+    (native-inputs
+     `(("bundler" ,bundler)
+       ("ruby-rspec" ,ruby-rspec)))
+    (synopsis "AsciiMath parsing and conversion library")
+    (description
+     "A pure Ruby AsciiMath parsing and conversion library.  AsciiMath is an
+easy-to-write markup language for mathematics.")
+    (home-page "https://github.com/pepijnve/asciimath")
+    (license license:expat)))
+
 (define-public ruby-ci-reporter
   (package
     (name "ruby-ci-reporter")
