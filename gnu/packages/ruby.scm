@@ -3045,6 +3045,34 @@ testing libraries to build on.")
     (home-page "http://github.com/brynary/rack-test")
     (license license:expat)))
 
+(define-public ruby-rack-protection
+  (package
+    (name "ruby-rack-protection")
+    (version "1.5.3")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (rubygems-uri "rack-protection" version))
+       (sha256
+        (base32
+         "0cvb21zz7p9wy23wdav63z5qzfn4nialik22yqp6gihkgfqqrh5r"))))
+    (build-system ruby-build-system)
+    (propagated-inputs
+     `(("ruby-rack" ,ruby-rack)))
+    (native-inputs
+     `(("bundler" ,bundler)
+       ("ruby-rspec" ,ruby-rspec-2)
+       ("ruby-rack-test" ,ruby-rack-test)))
+    (synopsis "Rack middleware that protects against typical web attacks")
+    (description "This library is rack middleware that can be used to protect
+against typical web attacks.  It can protect all Rack apps, including Rails.
+For instance, it protects against cross site request forgery, cross site
+scripting, clickjacking, directory traversal, session hijacking and IP
+spoofing.")
+    (home-page
+     "http://github.com/rkh/rack-protection")
+    (license license:expat)))
+
 (define-public ruby-docile
   (package
     (name "ruby-docile")
