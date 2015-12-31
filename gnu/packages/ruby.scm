@@ -594,6 +594,41 @@ easy-to-write markup language for mathematics.")
     (home-page "https://github.com/pepijnve/asciimath")
     (license license:expat)))
 
+(define-public ruby-asciidoctor
+  (package
+  (name "ruby-asciidoctor")
+  (version "1.5.3")
+  (source
+    (origin
+      (method url-fetch)
+      (uri (rubygems-uri "asciidoctor" version))
+      (sha256
+        (base32
+          "0q9yhan2mkk1lh15zcfd9g2fn6faix9yrf5skg23dp1y77jv7vm0"))))
+  (build-system ruby-build-system)
+  (arguments
+   `(#:test-target "test:all"
+     #:phases
+     (modify-phases %standard-phases
+       (add-before 'check 'remove-circular-tests
+         (lambda _
+           ;; Remove tests that require circular dependencies to load or pass.
+           (delete-file "test/invoker_test.rb")
+           (delete-file "test/converter_test.rb")
+           (delete-file "test/options_test.rb")
+           #t)))))
+  (native-inputs
+   `(("ruby-minitest" ,ruby-minitest)
+     ("ruby-nokogiri" ,ruby-nokogiri)
+     ("ruby-asciimath" ,ruby-asciimath)
+     ("ruby-coderay" ,ruby-coderay)))
+  (synopsis "Converter from AsciiDoc content to other formats")
+  (description
+    "Asciidoctor is a text processor and publishing toolchain for converting
+AsciiDoc content to HTML5, DocBook 5 (or 4.5) and other formats.")
+  (home-page "http://asciidoctor.org")
+  (license license:expat)))
+
 (define-public ruby-ci-reporter
   (package
     (name "ruby-ci-reporter")
