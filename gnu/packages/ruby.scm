@@ -3093,6 +3093,27 @@ contexts without performance penalties.")
      "http://github.com/citrusbyte/contest")
     (license license:expat)))
 
+(define-public ruby-creole
+  (package
+    (name "ruby-creole")
+    (version "0.5.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (rubygems-uri "creole" version))
+       (sha256
+        (base32
+         "00rcscz16idp6dx0dk5yi5i0fz593i3r6anbn5bg2q07v3i025wm"))))
+    (build-system ruby-build-system)
+    (native-inputs
+     `(("ruby-bacon" ,ruby-bacon)))
+    (synopsis "Creole markup language converter")
+    (description
+     "Creole is a lightweight markup language and this library for converting
+creole to @code{HTML}.")
+    (home-page "http://github.com/minad/creole")
+    (license license:ruby)))
+
 (define-public ruby-docile
   (package
     (name "ruby-docile")
