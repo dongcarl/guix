@@ -1,0 +1,254 @@
+Revert two upstream commits that cause GRUB to hang early during boot on
+Loongson 2F.
+
+From 2062ea983468e257442763a7ac26877a6a88ee2f Mon Sep 17 00:00:00 2001
+From: Mark H Weaver <mhw@netris.org>
+Date: Fri, 12 Aug 2016 05:23:36 -0400
+Subject: [PATCH 1/2] Revert "ehci: Fix memory coherence"
+
+This reverts commit 0f076d75d04d76ab83e8472715eec71da0cb55ff.
+---
+ grub-core/bus/usb/ehci.c | 41 -----------------------------------------
+ 1 file changed, 41 deletions(-)
+
+diff --git a/grub-core/bus/usb/ehci.c b/grub-core/bus/usb/ehci.c
+index 5f4297b..ae1efb2 100644
+--- a/grub-core/bus/usb/ehci.c
++++ b/grub-core/bus/usb/ehci.c
+@@ -29,7 +29,6 @@
+ #include <grub/loader.h>
+ #include <grub/cs5536.h>
+ #include <grub/disk.h>
+-#include <grub/cache.h>
+ 
+ GRUB_MOD_LICENSE ("GPLv3+");
+ 
+@@ -338,21 +337,6 @@ struct grub_ehci
+ 
+ static struct grub_ehci *ehci;
+ 
+-static void
+-sync_all_caches (struct grub_ehci *e)
+-{
+-  if (!e)
+-    return;
+-  if (e->td_virt)
+-    grub_arch_sync_dma_caches (e->td_virt, sizeof (struct grub_ehci_td) *
+-			       GRUB_EHCI_N_TD);
+-  if (e->qh_virt)
+-    grub_arch_sync_dma_caches (e->qh_virt, sizeof (struct grub_ehci_qh) *
+-			       GRUB_EHCI_N_QH);
+-  if (e->framelist_virt)
+-    grub_arch_sync_dma_caches (e->framelist_virt, 4096);
+-}
+-
+ /* EHCC registers access functions */
+ static inline grub_uint32_t
+ grub_ehci_ehcc_read32 (struct grub_ehci *e, grub_uint32_t addr)
+@@ -453,8 +437,6 @@ grub_ehci_reset (struct grub_ehci *e)
+ {
+   grub_uint64_t maxtime;
+ 
+-  sync_all_caches (e);
+-
+   grub_ehci_oper_write32 (e, GRUB_EHCI_COMMAND,
+ 			  GRUB_EHCI_CMD_HC_RESET
+ 			  | grub_ehci_oper_read32 (e, GRUB_EHCI_COMMAND));
+@@ -858,8 +840,6 @@ grub_ehci_pci_iter (grub_pci_device_t dev, grub_pci_id_t pciid,
+   e->next = ehci;
+   ehci = e;
+ 
+-  sync_all_caches (e);
+-
+   grub_dprintf ("ehci", "EHCI grub_ehci_pci_iter: OK at all\n");
+ 
+   grub_dprintf ("ehci",
+@@ -1040,7 +1020,6 @@ grub_ehci_find_qh (struct grub_ehci *e, grub_usb_transfer_t transfer)
+ 	  /* Found proper existing (and linked) QH, do setup of QH */
+ 	  grub_dprintf ("ehci", "find_qh: found, QH=%p\n", qh_iter);
+ 	  grub_ehci_setup_qh (qh_iter, transfer);
+-	  sync_all_caches (e);
+ 	  return qh_iter;
+ 	}
+ 
+@@ -1312,8 +1291,6 @@ grub_ehci_setup_transfer (grub_usb_controller_t dev,
+   struct grub_ehci_transfer_controller_data *cdata;
+   grub_uint32_t status;
+ 
+-  sync_all_caches (e);
+-
+   /* Check if EHCI is running and AL is enabled */
+   status = grub_ehci_oper_read32 (e, GRUB_EHCI_STATUS);
+   if ((status & GRUB_EHCI_ST_HC_HALTED) != 0)
+@@ -1422,8 +1399,6 @@ grub_ehci_setup_transfer (grub_usb_controller_t dev,
+    * i.e. reset token */
+   cdata->qh_virt->td_overlay.token = grub_cpu_to_le32_compile_time (0);
+ 
+-  sync_all_caches (e);
+-
+   /* Finito */
+   transfer->controller_data = cdata;
+ 
+@@ -1472,8 +1447,6 @@ grub_ehci_parse_notrun (grub_usb_controller_t dev,
+   grub_ehci_free_td (e, cdata->td_alt_virt);
+   grub_free (cdata);
+ 
+-  sync_all_caches (e);
+-
+   /* Additionally, do something with EHCI to make it running (what?) */
+   /* Try enable EHCI and AL */
+   grub_ehci_oper_write32 (e, GRUB_EHCI_COMMAND,
+@@ -1509,8 +1482,6 @@ grub_ehci_parse_halt (grub_usb_controller_t dev,
+   grub_ehci_free_td (e, cdata->td_alt_virt);
+   grub_free (cdata);
+ 
+-  sync_all_caches (e);
+-
+   /* Evaluation of error code - currently we don't have GRUB USB error
+    * codes for some EHCI states, GRUB_USB_ERR_DATA is used for them.
+    * Order of evaluation is critical, specially bubble/stall. */
+@@ -1544,8 +1515,6 @@ grub_ehci_parse_success (grub_usb_controller_t dev,
+   grub_ehci_free_td (e, cdata->td_alt_virt);
+   grub_free (cdata);
+ 
+-  sync_all_caches (e);
+-
+   return GRUB_USB_ERR_NONE;
+ }
+ 
+@@ -1559,8 +1528,6 @@ grub_ehci_check_transfer (grub_usb_controller_t dev,
+     transfer->controller_data;
+   grub_uint32_t token, token_ftd;
+ 
+-  sync_all_caches (e);
+-
+   grub_dprintf ("ehci",
+ 		"check_transfer: EHCI STATUS=%08x, cdata=%p, qh=%p\n",
+ 		grub_ehci_oper_read32 (e, GRUB_EHCI_STATUS),
+@@ -1627,9 +1594,6 @@ grub_ehci_cancel_transfer (grub_usb_controller_t dev,
+   int i;
+   grub_uint64_t maxtime;
+   grub_uint32_t qh_phys;
+-
+-  sync_all_caches (e);
+-
+   grub_uint32_t interrupt =
+     cdata->qh_virt->ep_cap & GRUB_EHCI_SMASK_MASK;
+ 
+@@ -1649,7 +1613,6 @@ grub_ehci_cancel_transfer (grub_usb_controller_t dev,
+       grub_ehci_free_tds (e, cdata->td_first_virt, transfer, &actual);
+       grub_ehci_free_td (e, cdata->td_alt_virt);
+       grub_free (cdata);
+-      sync_all_caches (e);
+       grub_dprintf ("ehci", "cancel_transfer: end - EHCI not running\n");
+       return GRUB_USB_ERR_NONE;
+     }
+@@ -1672,8 +1635,6 @@ grub_ehci_cancel_transfer (grub_usb_controller_t dev,
+   /* Unlink QH from AL */
+   e->qh_virt[i].qh_hptr = cdata->qh_virt->qh_hptr;
+ 
+-  sync_all_caches (e);
+-
+   /* If this is an interrupt transfer, we just wait for the periodic
+    * schedule to advance a few times and then assume that the EHCI
+    * controller has read the updated QH. */
+@@ -1728,8 +1689,6 @@ grub_ehci_cancel_transfer (grub_usb_controller_t dev,
+ 
+   grub_dprintf ("ehci", "cancel_transfer: end\n");
+ 
+-  sync_all_caches (e);
+-
+   return GRUB_USB_ERR_NONE;
+ }
+ 
+-- 
+2.9.2
+
+From b3882275ae73cbde96ddc177f37c3ba42f92ae29 Mon Sep 17 00:00:00 2001
+From: Mark H Weaver <mhw@netris.org>
+Date: Fri, 12 Aug 2016 12:16:09 -0400
+Subject: [PATCH 2/2] Revert "usbtrans: Fix memory coherence and
+ use-after-free."
+
+This reverts commit ca028db3d47387bbbd24b40f085751ca98a09183.
+---
+ grub-core/bus/usb/usbtrans.c | 24 +++++-------------------
+ 1 file changed, 5 insertions(+), 19 deletions(-)
+
+diff --git a/grub-core/bus/usb/usbtrans.c b/grub-core/bus/usb/usbtrans.c
+index 9266e49..ee86808 100644
+--- a/grub-core/bus/usb/usbtrans.c
++++ b/grub-core/bus/usb/usbtrans.c
+@@ -24,7 +24,6 @@
+ #include <grub/usb.h>
+ #include <grub/usbtrans.h>
+ #include <grub/time.h>
+-#include <grub/cache.h>
+ 
+ 
+ static inline unsigned int
+@@ -102,8 +101,6 @@ grub_usb_control_msg (grub_usb_device_t dev,
+   data_addr = grub_dma_get_phys (data_chunk);
+   grub_memcpy ((char *) data, data_in, size);
+ 
+-  grub_arch_sync_dma_caches (data, size);
+-
+   grub_dprintf ("usb",
+ 		"control: reqtype=0x%02x req=0x%02x val=0x%02x idx=0x%02x size=%lu\n",
+ 		reqtype, request,  value, index, (unsigned long)size);
+@@ -164,8 +161,6 @@ grub_usb_control_msg (grub_usb_device_t dev,
+   setupdata->value = value;
+   setupdata->index = index;
+   setupdata->length = size;
+-  grub_arch_sync_dma_caches (setupdata, sizeof (*setupdata));
+-
+   transfer->transactions[0].size = sizeof (*setupdata);
+   transfer->transactions[0].pid = GRUB_USB_TRANSFER_TYPE_SETUP;
+   transfer->transactions[0].data = setupdata_addr;
+@@ -207,13 +202,11 @@ grub_usb_control_msg (grub_usb_device_t dev,
+   grub_free (transfer->transactions);
+   
+   grub_free (transfer);
++  grub_dma_free (data_chunk);
+   grub_dma_free (setupdata_chunk);
+ 
+-  grub_arch_sync_dma_caches (data, size0);
+   grub_memcpy (data_in, (char *) data, size0);
+ 
+-  grub_dma_free (data_chunk);
+-
+   return err;
+ }
+ 
+@@ -243,10 +236,7 @@ grub_usb_bulk_setup_readwrite (grub_usb_device_t dev,
+   data = grub_dma_get_virt (data_chunk);
+   data_addr = grub_dma_get_phys (data_chunk);
+   if (type == GRUB_USB_TRANSFER_TYPE_OUT)
+-    {
+-      grub_memcpy ((char *) data, data_in, size);
+-      grub_arch_sync_dma_caches (data, size);
+-    }
++    grub_memcpy ((char *) data, data_in, size);
+ 
+   /* Create a transfer.  */
+   transfer = grub_malloc (sizeof (struct grub_usb_transfer));
+@@ -316,13 +306,9 @@ grub_usb_bulk_finish_readwrite (grub_usb_transfer_t transfer)
+   dev->toggle[transfer->endpoint] = toggle;
+ 
+   if (transfer->dir == GRUB_USB_TRANSFER_TYPE_IN)
+-    {
+-      grub_arch_sync_dma_caches (grub_dma_get_virt (transfer->data_chunk),
+-				 transfer->size + 1);
+-      grub_memcpy (transfer->data, (void *)
+-		   grub_dma_get_virt (transfer->data_chunk),
+-		   transfer->size + 1);
+-    }
++    grub_memcpy (transfer->data, (void *)
++		 grub_dma_get_virt (transfer->data_chunk),
++		 transfer->size + 1);
+ 
+   grub_free (transfer->transactions);
+   grub_dma_free (transfer->data_chunk);
+-- 
+2.9.2
+

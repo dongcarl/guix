@@ -87,10 +87,23 @@
              (file-name (string-append name "-" version ".tar.xz"))
              (sha256
               (base32
-               "18ddwnw0vxs7zigvah0g6a5z5vvlz0p8fjglxv1h59sjbrakvv1h"))))
+               "18ddwnw0vxs7zigvah0g6a5z5vvlz0p8fjglxv1h59sjbrakvv1h"))
+             (patches
+              (map search-patch
+                   `(;; Apply the following patch _only_ on mips64
+                     ,@(if (string-prefix? "mips64" (or (%current-target-system)
+                                                        (%current-system)))
+                           '("grub-fix-loongson2f.patch")
+                           '()))))))
     (build-system gnu-build-system)
     (arguments
-     '(;; Two warnings: suggest braces, signed/unsigned comparison.
+     `(,@(if (string-prefix? "mips" (or (%current-target-system)
+                                        (%current-system)))
+             ;; XXX Disable tests on MIPS, to work around the fact that our
+             ;; QEMU package is currently broken on MIPS.
+             '(#:tests? #f)
+             '())
+       ;; Two warnings: suggest braces, signed/unsigned comparison.
        #:configure-flags '("--disable-werror")
        #:phases (modify-phases %standard-phases
                   (add-after
@@ -126,9 +139,15 @@
 
        ;; Dependencies for the test suite.  The "real" QEMU is needed here,
        ;; because several targets are used.
-       ("parted" ,parted)
-       ("qemu" ,qemu-for-tests)
-       ("xorriso" ,xorriso)))
+       ;;
+       ;; XXX Don't add these on MIPS, since our QEMU package is currently
+       ;; broken on MIPS.
+       ,@(if (not (string-prefix? "mips" (or (%current-target-system)
+                                             (%current-system))))
+             `(("parted" ,parted)
+               ("qemu" ,qemu-for-tests)
+               ("xorriso" ,xorriso))
+             '())))
     (home-page "http://www.gnu.org/software/grub/")
     (synopsis "GRand Unified Boot loader")
     (description

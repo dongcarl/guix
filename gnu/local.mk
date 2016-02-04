@@ -541,6 +541,7 @@ dist_patch_DATA =						\
   %D%/packages/patches/grep-timing-sensitive-test.patch		\
   %D%/packages/patches/grub-CVE-2015-8370.patch			\
   %D%/packages/patches/grub-gets-undeclared.patch		\
+  %D%/packages/patches/grub-fix-loongson2f.patch		\
   %D%/packages/patches/grub-freetype.patch			\
   %D%/packages/patches/guile-1.8-cpp-4.5.patch			\
   %D%/packages/patches/guile-arm-fixes.patch			\
