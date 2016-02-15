@@ -8242,3 +8242,107 @@ introspection of @code{zope.interface} instances in code.")
 
 (define-public python2-sphinx-repoze-autointerface
   (package-with-python2 python-sphinx-repoze-autointerface))
+
+;;pyversion_install_requires = []
+;;if PY2:
+;;    pyversion_install_requires.append('argparse')  # only for < 2.7
+;;    pyversion_install_requires.append('PasteScript')
+;;    # newer sqlalchemy-migrate requires pbr which BREAKS EVERYTHING AND IS
+;;    # TERRIBLE AND IS THE END OF ALL THINGS
+;;    # I'd love to remove this restriction.
+;;    pyversion_install_requires.append('sqlalchemy-migrate<0.8')
+;;    # # Annoying.  Please remove once we can!  We only indirectly
+;;    # # use pbr, and currently it breaks things, presumably till
+;;    # # their next release.
+;;    # pyversion_install_requires.append('pbr==0.5.22')
+;;    pyversion_install_requires.append('mock==1.0.1')  # mock is in the stdlib for 3.3+
+;;    # PyPI version (1.4.2) does not have proper Python 3 support
+;;    pyversion_install_requires.append('ExifRead')
+;;    pyversion_install_requires.append('PasteScript')
+;;    # Paste 2.0 is breaking wsgi, see:
+;;    #  https://bitbucket.org/ianb/paste/issue/4/wsgi-environ-totally-borked
+;;    pyversion_install_requires.append('Paste')
+;;else:
+;;    [ ] pyversion_install_requires.append('gunicorn')
+;;
+;;install_requires = [
+;;    [X] 'alembic==0.6.6',
+;;    [X] 'python-dateutil',
+;;    [X] 'wtforms',
+;;    [X] 'py-bcrypt',
+;;    [X] 'pytest>=2.3.1',
+;;    [X] 'pytest-xdist',
+;;    [X] 'werkzeug>=0.7',
+;;    [X] 'celery>=3.0',
+;;    [X] 'kombu',
+;;    [X] 'jinja2',
+;;    [X] 'Babel>=1.3',
+;;    [X] 'WebTest>=2.0.18',
+;;    [X] 'ConfigObj',
+;;    [X] 'Markdown',
+;;    [X] 'sqlalchemy<0.9.0, >0.8.0',
+;;    [X] 'itsdangerous',
+;;    [X] 'pytz',
+;;    [X] 'sphinx',
+;;    [X] 'six',
+;;    [X] 'oauthlib',
+;;    [X] 'unidecode',
+;;    [X] 'jsonschema',
+;;    [X] 'PasteDeploy',
+;;    [X] 'requests>=2.6.0',
+;;    [X] 'pyld',
+;;    # This is optional:
+;;    [X] 'translitcodec',
+;;    # For now we're expecting that users will install this from
+;;    # their package managers.
+;;    [X] 'lxml',
+;;    [X] 'Pillow',
+
+(define-public mediagoblin
+  (package
+    (name "mediagoblin")
+    (version "0.8.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "mediagoblin" version))
+       (sha256
+        (base32
+         "0p2gj4z351166d1zqmmd8wc9bzb69w0fjm8qq1fs8dw2yhcg2wwv"))))
+    (build-system python-build-system)
+    (native-inputs
+     `(("python-pytest" ,python-pytest)))
+    (inputs
+     `(("python-alembic" ,python-alembic)
+       ("python-pytest-xdist" ,python-pytest-xdist)
+       ("python-celery" ,python-celery)
+       ("python-kombu" ,python-kombu)
+       ("python-webtest" ,python-webtest)
+       ("python-pastedeploy" ,python-pastedeploy)
+       ("python-translitcodec" ,python-translitcodec)
+       ("python-babel" ,python-babel)
+       ("python-configobj" ,python-configobj)
+       ("python-dateutil" ,python-dateutil)
+       ("python-itsdangerous" ,python-itsdangerous)
+       ("python-jinja2" ,python-jinja2)
+       ("python-jsonschema" ,python-jsonschema)
+       ("python-lxml" ,python-lxml)
+       ("python-markdown" ,python-markdown)
+       ("python-oauthlib" ,python-oauthlib)
+       ("python-pillow" ,python-pillow)
+       ("python-py-bcrypt" ,python-py-bcrypt)
+       ("python-pyld" ,python-pyld)
+       ("python-pytz" ,python-pytz)
+       ("python-requests" ,python-requests)
+       ("python-setuptools" ,python-setuptools)
+       ("python-six" ,python-six)
+       ("python-sphinx" ,python-sphinx)
+       ("python-sqlalchemy" ,python-sqlalchemy)
+       ("python-unidecode" ,python-unidecode)
+       ("python-werkzeug" ,python-werkzeug)
+       ("python-wtforms" ,python-wtforms)))
+    (home-page "http://mediagoblin.org/")
+    (synopsis "Web application for media publishing")
+    (description "MediaGoblin is a web application for publishing all kinds of
+media.")
+    (license agpl3+)))
