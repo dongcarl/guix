@@ -3,6 +3,7 @@
 ;;; Copyright © 2014 John Darrington <jmd@gnu.org>
 ;;; Copyright © 2015 Sou Bunnbu <iyzsong@gmail.com>
 ;;; Copyright © 2015 Mark H Weaver <mhw@netris.org>
+;;; Copyright © 2016 Christopher Allan Webber <cwebber@dustycloud.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -41,6 +42,7 @@
   #:use-module (gnu packages image)
   #:use-module (gnu packages libusb)
   #:use-module (gnu packages linux)
+  #:use-module (gnu packages libffi)
   #:use-module (gnu packages mp3)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages pulseaudio)
@@ -400,3 +402,31 @@ distribution problems in some jurisdictions, e.g. due to patent threats.")
      "This GStreamer plugin supports a large number of audio and video
 compression formats through the use of the libav library.")
     (license gpl2+)))
+
+(define-public python-gst
+  (package
+    (name "python-gst")
+    (version "1.6.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "https://gstreamer.freedesktop.org/src/" name "/"
+                    name "-" version ".tar.xz"))
+              (sha256
+               (base32
+                "1w84pmvzki8fza10b6bx5zf1xb3r9x0nrsgfvlisybpx30p37giw"))))
+    (build-system gnu-build-system)
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (inputs
+     `(("python" ,python)
+       ("gstreamer" ,gstreamer)
+       ("libffi" ,libffi)
+       ("gobject-introspection" ,gobject-introspection)))
+    (propagated-inputs
+     `(("python-pygobject" ,python-pygobject)))
+    (home-page "https://gstreamer.freedesktop.org/modules/gst-python.html")
+    (synopsis "GStreamer Python bindings supplement")
+    (description "GStreamer Python overrides for the gobject-introspection-based
+pygst bindings.")
+    (license lgpl2.0+)))
