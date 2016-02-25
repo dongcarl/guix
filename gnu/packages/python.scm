@@ -8163,6 +8163,33 @@ ISO 8859, etc.).")
               (strip-python2-variant python-translitcodec)))
     (native-inputs `(("python2-setuptools" ,python2-setuptools)))))
 
+(define-public python-chardet
+  (package
+    (name "python-chardet")
+    (version "2.3.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "chardet" version))
+       (sha256
+        (base32
+         "1ak87ikcw34fivcgiz2xvi938dmclh078az65l9x3rmgljrkhgp5"))))
+    (build-system python-build-system)
+    (home-page "https://github.com/chardet/chardet")
+    (synopsis
+     "Universal encoding detector for Python 2 and 3")
+    (description
+     "Character encoding auto-detection in Python.  Effectively determines what
+character set to use for input with a high degree of accuracy.")
+    (license lgpl2.1+)
+    (properties `((python2-variant . ,(delay python2-chardet))))))
+
+(define-public python2-chardet
+  (package
+    (inherit (package-with-python2
+              (strip-python2-variant python-chardet)))
+    (native-inputs `(("python2-setuptools" ,python2-setuptools)))))
+
 (define-public python-editor
   (package
   (name "python-editor")
