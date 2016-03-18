@@ -1,6 +1,6 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2014, 2015 Sou Bunnbu <iyzsong@gmail.com>
-;;; Copyright © 2014, 2015 Mark H Weaver <mhw@netris.org>
+;;; Copyright © 2014, 2015, 2016 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2016 Andreas Enge <andreas@enge.fr>
 ;;; Copyright © 2016 Florian Paul Schmidt <mista.tapas@gmx.net>
 ;;; Copyright © 2016 Kei Kebreau <kei@openmailbox.org>
@@ -490,7 +490,10 @@ your system in categories, so you can quickly find and launch them.")
     (inputs
      `(("iceauth" ,iceauth)
        ("upower" ,upower)
-       ("polkit" ,polkit)
+       ,@(if (not (string-prefix? "mips" (or (%current-target-system)
+                                             (%current-system))))
+             `(("polkit" ,polkit))
+             '())
        ("libsm" ,libsm)
        ("libwnck" ,libwnck-2)
        ("libxfce4ui" ,libxfce4ui)))
