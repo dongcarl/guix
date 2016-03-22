@@ -2,6 +2,7 @@
 
 # GNU Guix --- Functional package management for GNU
 # Copyright © 2012, 2013, 2014, 2015, 2016 Ludovic Courtès <ludo@gnu.org>
+# Copyright © 2016 Mathieu Lirzin <mthl@gnu.org>
 #
 # This file is part of GNU Guix.
 #
@@ -96,7 +97,7 @@ then
     # unavailable, for instance if we're not running as root.
     "@abs_top_builddir@/pre-inst-env"				\
 	"@abs_top_builddir@/guix-daemon" --disable-chroot	\
-	--substitute-urls="$GUIX_BINARY_SUBSTITUTE_URL" &
+	--substitute-urls="$GUIX_BINARY_SUBSTITUTE_URL" 2>/dev/null &
 
     daemon_pid=$!
     trap "kill $daemon_pid ; rm -rf $NIX_STATE_DIR" EXIT
