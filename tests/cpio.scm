@@ -1,5 +1,6 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2015 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2016 Mathieu Lirzin <mthl@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -63,7 +64,7 @@
        (call-with-temporary-output-file
         (lambda (ref-file _)
           (let ((pipe (open-pipe* OPEN_WRITE %cpio-program "-o" "-O" ref-file
-                                  "-H" "newc" "--null")))
+                                  "-H" "newc" "--null" "--quiet")))
             (for-each (lambda (file)
                         (format pipe "~a\0" file))
                       files)
