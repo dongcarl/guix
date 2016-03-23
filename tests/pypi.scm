@@ -1,5 +1,6 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2014 David Thompson <davet@gnu.org>
+;;; Copyright © 2016 Mathieu Lirzin <mthl@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -73,7 +74,7 @@ baz > 13.37")
                  (with-output-to-file "foo-1.0.0/requirements.txt"
                    (lambda ()
                      (display test-requirements)))
-                 (system* "tar" "czvf" file-name "foo-1.0.0/")
+                 (system* "tar" "czf" file-name "foo-1.0.0/")
                  (delete-file-recursively "foo-1.0.0")
                  (set! test-source-hash
                        (call-with-input-file file-name port-sha256))))
