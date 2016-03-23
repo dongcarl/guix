@@ -1,5 +1,6 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2012, 2013, 2015 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2016 Mathieu Lirzin <mthl@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -19,6 +20,7 @@
 (define-module (test-base32)
   #:use-module (guix hash)
   #:use-module (guix base32)
+  #:use-module (guix build utils)
   #:use-module (guix utils)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-34)
@@ -39,9 +41,7 @@
       "nix-hash"))
 
 (define %have-nix-hash?
-  ;; Note: Use `system', not `system*', because of <http://bugs.gnu.org/13166>.
-  (false-if-exception
-   (zero? (system (string-append %nix-hash " --version")))))
+  (which %nix-hash))
 
 (test-begin "base32")
 
