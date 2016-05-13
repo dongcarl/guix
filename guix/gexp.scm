@@ -468,20 +468,19 @@ whether this should be considered a \"native\" input or not."
 (define (gexp-modules gexp)
   "Return the list of Guile module names GEXP relies on.  If (gexp? GEXP) is
 false, meaning that GEXP is a plain Scheme object, return the empty list."
+  (define reference-modules
+    (match-lambda
+      (($ <gexp-input> (? gexp? exp))
+       (gexp-modules exp))
+      (($ <gexp-input> (lst ...))
+       (append-map reference-modules lst))
+      (_
+       '())))
+
   (if (gexp? gexp)
       (delete-duplicates
        (append (gexp-self-modules gexp)
-               (append-map (match-lambda
-                             (($ <gexp-input> (? gexp? exp))
-                              (gexp-modules exp))
-                             (($ <gexp-input> (lst ...))
-                              (append-map (lambda (item)
-                                            (if (gexp? item)
-                                                (gexp-modules item)
-                                                '()))
-                                          lst))
-                             (_
-                              '()))
+               (append-map reference-modules
                            (gexp-references gexp))))
       '()))                                       ;plain Scheme data type
 
@@ -723,13 +722,7 @@ references; otherwise, return only non-native references."
            result))
       (($ <gexp-input> (lst ...) output n?)
        (if (eqv? native? n?)
-           (fold-right add-reference-inputs result
-                       ;; XXX: For now, automatically convert LST to a list of
-                       ;; gexp-inputs.
-                       (map (match-lambda
-                              ((? gexp-input? x) x)
-                              (x (%gexp-input x "out" (or n? native?))))
-                            lst))
+           (fold-right add-reference-inputs result lst)
            result))
       (_
        ;; Ignore references to other kinds of objects.
@@ -751,12 +744,7 @@ references; otherwise, return only non-native references."
       (($ <gexp-input> (? gexp? exp))
        (append (gexp-outputs exp) result))
       (($ <gexp-input> (lst ...) output native?)
-       ;; XXX: Automatically convert LST.
-       (add-reference-output (map (match-lambda
-                                   ((? gexp-input? x) x)
-                                   (x (%gexp-input x "out" native?)))
-                                  lst)
-                             result))
+       (add-reference-output lst result))
       ((lst ...)
        (fold-right add-reference-output result lst))
       (_
@@ -785,12 +773,7 @@ and in the current monad setting (system type, etc.)"
         (($ <gexp-input> (refs ...) output n?)
          (sequence %store-monad
                    (map (lambda (ref)
-                          ;; XXX: Automatically convert REF to an gexp-input.
-                          (reference->sexp
-                           (if (gexp-input? ref)
-                               ref
-                               (%gexp-input ref "out" n?))
-                           (or n? native?)))
+                          (reference->sexp ref (or n? native?)))
                         refs)))
         (($ <gexp-input> (? struct? thing) output n?)
          (let ((target (if (or n? native?) #f target))
@@ -833,6 +816,17 @@ environment."
                          (identifier-syntax modules)))
     body ...))
 
+(define (ensure-input-list lst native?)
+  "Make sure LST is a list of <gexp-input> objects.  If LST is not a list (for
+instance, it could be a gexp), return it."
+  (if (pair? lst)
+      (map (lambda (x)
+             (if (gexp-input? x)
+                 x
+                 (%gexp-input x "out" native?)))
+           lst)
+      lst))
+
 (define-syntax gexp
   (lambda (s)
     (define (collect-escapes exp)
@@ -873,13 +867,15 @@ environment."
         ((ungexp drv-or-pkg out)
          #'(%gexp-input drv-or-pkg out #f))
         ((ungexp-splicing lst)
-         #'(%gexp-input lst "out" #f))
+         #'(%gexp-input (ensure-input-list lst #f)
+                        "out" #f))
         ((ungexp-native thing)
          #'(%gexp-input thing "out" #t))
         ((ungexp-native drv-or-pkg out)
          #'(%gexp-input drv-or-pkg out #t))
         ((ungexp-native-splicing lst)
-         #'(%gexp-input lst "out" #t))))
+         #'(%gexp-input (ensure-input-list lst #t)
+                        "out" #t))))
 
     (define (substitute-ungexp exp substs)
       ;; Given EXP, an 'ungexp' or 'ungexp-native' form, substitute it with
@@ -969,14 +965,13 @@ as returned by 'local-file' for example."
       (gexp
        (begin
          (primitive-load (ungexp %utils-module))  ;for 'mkdir-p'
-         (use-modules (ice-9 match))
 
          (mkdir (ungexp output)) (chdir (ungexp output))
-         (for-each (match-lambda
-                    ((final-path store-path)
+         (for-each (lambda (final-path store-path)
                      (mkdir-p (dirname final-path))
-                     (symlink store-path final-path)))
-                   '(ungexp files)))))
+                     (symlink store-path final-path))
+                   '(ungexp (map first files))
+                   '((ungexp-native-splicing (map second files)))))))
 
     ;; TODO: Pass FILES as an environment variable so that BUILD remains
     ;; exactly the same regardless of FILES: less disk space, and fewer
@@ -1108,7 +1103,7 @@ of name/gexp-input tuples, and OUTPUTS, a list of strings."
           (define %build-inputs
             (map (lambda (tuple)
                    (apply cons tuple))
-                 '(ungexp inputs)))
+                 '((ungexp-splicing inputs))))
           (define %outputs
             (list (ungexp-splicing
                    (map (lambda (name)
