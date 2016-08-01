@@ -480,14 +480,17 @@ success, #f otherwise."
       ;; already quite busy, see hydra.gnu.org), compress with gzip rather
       ;; than xz: For a compression ratio 2 times larger, it is 20 times
       ;; faster.
-      (let* ((files (missing-files (topologically-sorted store files)))
-             (pipe  (remote-pipe machine OPEN_WRITE
-                                 '("gzip" "-dc" "|"
-                                   "guix" "archive" "--import")
-                                 #:quote? #f)))
+      (let* ((files     (missing-files (topologically-sorted store files)))
+             (compress? (any (negate compressed-file?) files))
+             (pipe      (remote-pipe machine OPEN_WRITE
+                                     (if compress?
+                                         '("gzip" "-dc" "|"
+                                           "guix" "archive" "--import")
+                                         '("guix archive" "--import"))
+                                     #:quote? #f)))
         (format #t (_ "sending ~a store files to '~a'...~%")
                 (length files) (build-machine-name machine))
-        (call-with-compressed-output-port 'gzip pipe
+        (call-with-compressed-output-port (and compress? 'gzip) pipe
           (lambda (compressed)
             (catch 'system-error
               (lambda ()
@@ -506,10 +509,13 @@ success, #f otherwise."
   (define host
     (build-machine-name machine))
 
-  (let ((pipe (remote-pipe machine OPEN_READ
-                           `("guix" "archive" "--export" ,@files
-                             "|" "xz" "-c")
-                           #:quote? #f)))
+  (let* ((compress? (any (negate compressed-file?) files))
+         (pipe      (remote-pipe machine OPEN_READ
+                                 (if compress?
+                                     `("guix" "archive" "--export" ,@files
+                                       "|" "xz" "-c")
+                                     `("guix" "archive" "--export" ,@files))
+                                 #:quote? #f)))
     (and pipe
          (with-store store
            (guard (c ((nix-protocol-error? c)
@@ -521,7 +527,7 @@ success, #f otherwise."
 
              ;; We cannot use the 'import-paths' RPC here because we already
              ;; hold the locks for FILES.
-             (call-with-decompressed-port 'xz pipe
+             (call-with-decompressed-port (and compress? 'xz) pipe
                (lambda (decompressed)
                  (restore-file-set decompressed
                                    #:log-port (current-error-port)
