@@ -162,11 +162,32 @@
     (call-with-compressed-output-port 'xz port
       (lambda (compressed)
         (put-bytevector compressed data)))
-    (close-port port)
 
-    (bytevector=? data
-                  (call-with-decompressed-port 'xz (open-file temp-file "r0b")
-                    get-bytevector-all))))
+    ;; PORT must not be closed yet.
+    (and (close-port port)
+         (bytevector=? data
+                       (let* ((port   (open-file temp-file "r0b"))
+                              (result (call-with-decompressed-port 'xz port
+                                        get-bytevector-all)))
+                         (and (close-port port) result))))))
+
+(false-if-exception (delete-file temp-file))
+(test-assert "compressed-output-port + decompressed-port, 'none'"
+  (let* ((file (search-path %load-path "guix/derivations.scm"))
+         (data (call-with-input-file file get-bytevector-all))
+         (port (open-file temp-file "w0b")))
+    (call-with-compressed-output-port 'none port
+      (lambda (compressed)
+        (put-bytevector compressed data)))
+
+    ;; PORT must not be closed yet.
+    (and (close-port port)
+         (bytevector=? data
+                       (let* ((port   (open-file temp-file "rb"))
+                              (result (call-with-decompressed-port 'none port
+                                        get-bytevector-all)))
+                         (and (close-port port)
+                              result))))))
 
 ;; This is actually in (guix store).
 (test-equal "store-path-package-name"

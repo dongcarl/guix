@@ -212,7 +212,7 @@ buffered data is lost."
   "Return an input port where INPUT is decompressed according to COMPRESSION,
 a symbol such as 'xz."
   (match compression
-    ((or #f 'none) (values input '()))
+    ((or #f 'none) (values (duplicate-port input "rb") '()))
     ('bzip2        (filtered-port `(,%bzip2 "-dc") input))
     ('xz           (filtered-port `(,%xz "-dc") input))
     ('gzip         (filtered-port `(,%gzip "-dc") input))
@@ -222,7 +222,7 @@ a symbol such as 'xz."
   "Return an input port where INPUT is decompressed according to COMPRESSION,
 a symbol such as 'xz."
   (match compression
-    ((or #f 'none) (values input '()))
+    ((or #f 'none) (values (duplicate-port input "rb") '()))
     ('bzip2        (filtered-port `(,%bzip2 "-c") input))
     ('xz           (filtered-port `(,%xz "-c") input))
     ('gzip         (filtered-port `(,%gzip "-c") input))
@@ -279,7 +279,7 @@ a symbol such as 'xz, and then written to OUTPUT.  In addition return a list
 of PIDs to wait for.  OPTIONS is a list of strings passed to the compression
 program--e.g., '(\"--fast\")."
   (match compression
-    ((or #f 'none) (values output '()))
+    ((or #f 'none) (values (duplicate-port output "wb") '()))
     ('bzip2        (filtered-output-port `(,%bzip2 "-c" ,@options) output))
     ('xz           (filtered-output-port `(,%xz "-c" ,@options) output))
     ('gzip         (filtered-output-port `(,%gzip "-c" ,@options) output))
