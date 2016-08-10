@@ -1,0 +1,20 @@
+diff --git a/Rakefile b/Rakefile
+index ae682dc..fdf146d 100644
+--- a/Rakefile
++++ b/Rakefile
+@@ -13,12 +13,12 @@ end
+ task default: :test
+ 
+ specname = "coffee-rails.gemspec"
+-deps = `git ls-files`.split("\n") - [specname]
++deps = `find . -type f -print0 |sort`.split("\n") - [specname]
+ 
+ file specname => deps do
+   files       = ["CHANGELOG.md", "MIT-LICENSE", "README.md"] + `git ls-files -- lib`.split("\n")
+-  test_files  = `git ls-files -- {test,spec,features}/*`.split("\n")
+-  executables = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
++  test_files  = `ls test/*`.split("\n")
++  executables = []
+ 
+   require 'erb'
+ 

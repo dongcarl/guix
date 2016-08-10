@@ -291,6 +291,7 @@ GNU_SYSTEM_MODULES =				\
   %D%/packages/qt.scm				\
   %D%/packages/ragel.scm			\
   %D%/packages/rails.scm			\
+  %D%/packages/rails-wip.scm			\
   %D%/packages/ratpoison.scm			\
   %D%/packages/rdesktop.scm			\
   %D%/packages/rdf.scm				\
