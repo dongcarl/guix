@@ -479,9 +479,10 @@ upon error."
   (call-with-error-handling
    (lambda ()
      (mount-essential-file-systems)
-     (let* ((args    (linux-command-line))
-            (to-load (find-long-option "--load" args))
-            (root    (find-long-option "--root" args)))
+     (let* ((args          (linux-command-line))
+            (to-load       (find-long-option "--load" args))
+            (root          (find-long-option "--root" args))
+            (resume-device (find-long-option "resume" args)))
 
        (when (member "--repl" args)
          (start-repl))
@@ -505,6 +506,49 @@ upon error."
          ;; return value is false.
          (unless (pre-mount)
            (error "pre-mount actions failed")))
+
+       ;;
+       ;; Attempt to resume from hibernation.
+       ;;
+       ;; IMPORTANT: This *must* happen before we mount any filesystems on
+       ;; disk.  Quoting linux-libre/Documentation/swsusp.txt:
+       ;; 
+       ;; * BIG FAT WARNING **************************************************
+       ;; *
+       ;; * If you touch anything on disk between suspend and resume...
+       ;; *				...kiss your data goodbye.
+       ;; *
+       ;; * If you do resume from initrd after your filesystems are mounted...
+       ;; *				...bye bye root partition.
+       ;; *			[this is actually same case as above]
+       ;; *
+       (when (and resume-device
+                  (file-exists? resume-device)
+                  (file-exists? "/sys/power/resume"))
+         (false-if-exception
+          (let* ((device-base-name
+                  ;; The base name of the device file, after resolving
+                  ;; symlinks.
+                  (let loop ((file resume-device))
+                    (match (stat:type (lstat file))
+                      ('symlink
+                       (let ((target (readlink file)))
+                         (if (string-prefix? "/" target)
+                             (loop target)
+                             (loop (string-append (dirname file) "/" target)))))
+                      (_ (basename file)))))
+                 (major+minor
+                  ;; The major:minor string (e.g. "8:2") corresponding
+                  ;; to the resume device.
+                  (call-with-input-file (string-append "/sys/class/block/"
+                                                       device-base-name
+                                                       "/dev")
+                    read-line)))
+            ;; Write the major:minor string to /sys/power/resume
+            ;; to attempt resume from hibernation.
+            (when major+minor
+              (call-with-output-file "/sys/power/resume"
+                (cut display major+minor <>))))))
 
        (if root
            (mount-root-file-system (canonicalize-device-spec root)
