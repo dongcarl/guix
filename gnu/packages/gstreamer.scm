@@ -2,7 +2,7 @@
 ;;; Copyright © 2013, 2015 Andreas Enge <andreas@enge.fr>
 ;;; Copyright © 2014 John Darrington <jmd@gnu.org>
 ;;; Copyright © 2015, 2016 Sou Bunnbu <iyzsong@gmail.com>
-;;; Copyright © 2015 Mark H Weaver <mhw@netris.org>
+;;; Copyright © 2015, 2016 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
 ;;;
 ;;; This file is part of GNU Guix.
@@ -82,7 +82,15 @@
                     (substitute* '("testsuite/test-limits.c"
                                    "testsuite/exec_opcodes_sys.c")
                       (("if \\(error\\) return 1;")
-                       "if (error) return 77;")))
+                       "if (error) return 77;"))
+
+                    ;; On MIPS, disable the 'test_parse' test, which assumes
+                    ;; that compilation is supported.  As of orc-0.4.25,
+                    ;; compilation is not supported on MIPS.
+                    ,@(if (string-prefix? "mips" (%current-system))
+                          '((substitute* "testsuite/test_parse.c"
+                              (("return 1;") "return 77;")))
+                          '()))
                   %standard-phases)))
     (home-page "http://code.entropywave.com/orc/")
     (synopsis "Oil runtime compiler")
@@ -160,7 +168,10 @@ This package provides the core library and elements.")
      `(("gstreamer" ,gstreamer))) ; required by gstreamer-plugins-base-1.0.pc
     (inputs
      `(("cdparanoia" ,cdparanoia)
-       ("orc" ,orc)
+       ,@(if (not (string-prefix? "mips" (or (%current-target-system)
+                                             (%current-system))))
+             `(("orc" ,orc))
+             '())
        ("pango" ,pango)
        ("libogg" ,libogg)
        ("libtheora" ,libtheora)
@@ -225,7 +236,10 @@ for the GStreamer multimedia library.")
        ("libshout" ,libshout)
        ("libsoup" ,libsoup)
        ("libvpx" ,libvpx)
-       ("orc" ,orc)
+       ,@(if (not (string-prefix? "mips" (or (%current-target-system)
+                                             (%current-system))))
+             `(("orc" ,orc))
+             '())
        ("pulseaudio" ,pulseaudio)
        ("speex" ,speex)
        ("taglib" ,taglib)
@@ -322,7 +336,10 @@ developers consider to have good quality code and correct functionality.")
        ("openjpeg" ,openjpeg)
        ("openssl" ,openssl)
        ("opus" ,opus)
-       ("orc" ,orc)
+       ,@(if (not (string-prefix? "mips" (or (%current-target-system)
+                                             (%current-system))))
+             `(("orc" ,orc))
+             '())
        ("qt" ,qt)
        ("soundtouch" ,soundtouch)
        ("wayland" ,wayland)))
@@ -359,7 +376,10 @@ par compared to the rest.")
        ;; TODO:
        ;; * opencore-amr (for the AMR-NB decoder and encoder and the
        ;;   AMR-WB decoder) <http://sourceforge.net/projects/opencore-amr/>
-       ("orc" ,orc)))
+       ,@(if (not (string-prefix? "mips" (or (%current-target-system)
+                                             (%current-system))))
+             `(("orc" ,orc))
+             '())))
     (native-inputs
      `(("glib:bin" ,glib "bin")
        ("pkg-config" ,pkg-config)
@@ -399,7 +419,10 @@ distribution problems in some jurisdictions, e.g. due to patent threats.")
     (inputs
      `(("gst-plugins-base" ,gst-plugins-base)
        ("ffmpeg" ,ffmpeg)
-       ("orc" ,orc)
+       ,@(if (not (string-prefix? "mips" (or (%current-target-system)
+                                             (%current-system))))
+             `(("orc" ,orc))
+             '())
        ("zlib" ,zlib)))
     (home-page "http://gstreamer.freedesktop.org/")
     (synopsis "Plugins for the GStreamer multimedia library")
