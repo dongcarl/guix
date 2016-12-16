@@ -1,0 +1,45 @@
+tune2fs 1.42.13 (17-May-2015)
+Filesystem volume name:   gambrinus-tmp
+Last mounted on:          /
+Filesystem UUID:          fffdeafe-fb95-43c8-9855-2bfaabcd4f7f
+Filesystem magic number:  0xEF53
+Filesystem revision #:    1 (dynamic)
+Filesystem features:      has_journal ext_attr resize_inode dir_index filetype needs_recovery extent flex_bg sparse_super large_file huge_file uninit_bg dir_nlink extra_isize
+Filesystem flags:         signed_directory_hash 
+Default mount options:    user_xattr acl
+Filesystem state:         clean
+Errors behavior:          Continue
+Filesystem OS type:       Linux
+Inode count:              14339376
+Block count:              57241600
+Reserved block count:     2862072
+Free blocks:              48591823
+Free inodes:              12880624
+First block:              0
+Block size:               4096
+Fragment size:            4096
+Reserved GDT blocks:      1010
+Blocks per group:         32768
+Fragments per group:      32768
+Inodes per group:         8208
+Inode blocks per group:   513
+RAID stride:              32639
+Flex block group size:    16
+Filesystem created:       Tue Aug 23 23:01:31 2016
+Last mount time:          Wed Nov  2 17:31:15 2016
+Last write time:          Wed Nov  2 17:31:15 2016
+Mount count:              299
+Maximum mount count:      -1
+Last checked:             Wed Aug 24 20:34:30 2016
+Check interval:           0 (<none>)
+Lifetime writes:          436 GB
+Reserved blocks uid:      0 (user root)
+Reserved blocks gid:      0 (group root)
+First inode:              11
+Inode size:	          256
+Required extra isize:     28
+Desired extra isize:      28
+Journal inode:            8
+Default directory hash:   half_md4
+Directory Hash Seed:      6ea7aa75-15b6-4a70-8d25-02294393f373
+Journal backup:           inode blocks

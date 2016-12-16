@@ -1,0 +1,42 @@
+BYT;
+/dev/sda:500GB:scsi:512:4096:msdos:ATA WDC WD5000LPVX-2:;
+1:1049kB:256MB:255MB:ext2::boot;
+2:257MB:500GB:500GB:::;
+5:257MB:500GB:500GB:::lvm;
+
+BYT;
+/dev/mapper/jocasta-var:2999MB:dm:512:4096:loop:Linux device-mapper (linear):;
+1:0.00B:2999MB:2999MB:ext4::;
+
+BYT;
+/dev/mapper/jocasta-scratch:107GB:dm:512:4096:loop:Linux device-mapper (linear):;
+1:0.00B:107GB:107GB:ext4::;
+
+BYT;
+/dev/mapper/jocasta-gnu:32.8GB:dm:512:4096:loop:Linux device-mapper (linear):;
+1:0.00B:32.8GB:32.8GB:ext4::;
+
+BYT;
+/dev/mapper/jocasta-swap_1:3448MB:dm:512:4096:loop:Linux device-mapper (linear):;
+1:0.00B:3448MB:3448MB:linux-swap(v1)::;
+
+BYT;
+/dev/mapper/jocasta-home:48.3GB:dm:512:4096:loop:Linux device-mapper (linear):;
+1:0.00B:48.3GB:48.3GB:ext4::;
+
+BYT;
+/dev/mapper/jocasta-tmp:12.9GB:dm:512:4096:loop:Linux device-mapper (linear):;
+1:0.00B:12.9GB:12.9GB:ext4::;
+
+BYT;
+/dev/mapper/jocasta-tmp2:12.9GB:dm:512:4096:loop:Linux device-mapper (linear):;
+1:0.00B:12.9GB:12.9GB:ext4::;
+
+BYT;
+/dev/mapper/jocasta-usr:8997MB:dm:512:4096:loop:Linux device-mapper (linear):;
+1:0.00B:8997MB:8997MB:ext4::;
+
+BYT;
+/dev/mapper/jocasta-root:688MB:dm:512:4096:loop:Linux device-mapper (linear):;
+1:0.00B:688MB:688MB:ext4::;
+

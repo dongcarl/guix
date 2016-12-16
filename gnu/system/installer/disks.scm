@@ -1,0 +1,156 @@
+;;; GNU Guix --- Functional package management for GNU
+;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;;
+;;; This file is part of GNU Guix.
+;;;
+;;; GNU Guix is free software; you can redistribute it and/or modify it
+;;; under the terms of the GNU General Public License as published by
+;;; the Free Software Foundation; either version 3 of the License, or (at
+;;; your option) any later version.
+;;;
+;;; GNU Guix is distributed in the hope that it will be useful, but
+;;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;; GNU General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with GNU Guix.  If not, see <http://www.gnu.org/licenses/>.
+
+(define-module (gnu system installer disks)
+  #:use-module (gnu system installer partition-reader)
+  #:use-module (gnu system installer page)
+  #:use-module (gnu system installer misc)
+  #:use-module (gnu system installer utils)
+  #:use-module (gurses menu)
+  #:use-module (gurses buttons)
+  #:use-module (ncurses curses)
+
+  #:export (make-disk-page))
+
+(define (volumes)
+  (filter (lambda (v) (not (equal? "dm" (disk-type v))))
+	  (disk-volumes)))
+
+(define my-buttons `((continue ,(N_ "_Continue") #t)
+		     (back     ,(N_ "Go _Back") #t)))
+
+(define (make-disk-page parent  title)
+  (make-page (page-surface parent)
+	     title
+	     disk-page-refresh
+	     disk-page-key-handler))
+
+(define (disk-page-refresh page)
+    (when (not (page-initialised? page))
+      (disk-page-init page)
+      (page-set-initialised! page #t))
+
+    (let ((win (page-datum page 'text-window))
+	  (menu (page-datum page 'menu)))
+      (clear win)
+      (addstr win
+	      (justify* (gettext "Select a disk to partition (or repartition), or choose \"Continue\" to leave the disk(s) unchanged.")
+			(getmaxx win)))
+      
+      (menu-set-items! menu (volumes))
+      (touchwin (cdr (page-wwin page)))
+      (refresh (cdr (page-wwin page)))
+      (refresh (car (page-wwin page)))
+      (menu-redraw menu)
+      (menu-refresh menu)))
+
+(define (disk-page-key-handler page ch)
+  (let ((menu (page-datum page 'menu))
+	(nav  (page-datum page 'navigation)))
+
+    (cond
+     ((eq? ch KEY_RIGHT)
+      (menu-set-active! menu #f)
+      (buttons-select-next nav))
+
+     ((eq? ch #\tab)
+      (cond
+       ((menu-active menu)
+	  (menu-set-active! menu #f)
+	  (buttons-select nav 0))
+       
+       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
+	(menu-set-active! menu #t)
+	(buttons-unselect-all nav))
+       
+       (else
+	(buttons-select-next nav))))
+     
+     ((eq? ch KEY_LEFT)
+      (menu-set-active! menu #f)
+      (buttons-select-prev nav))
+
+     ((eq? ch KEY_UP)
+      (buttons-unselect-all nav)
+      (menu-set-active! menu #t))
+
+     ((and (eq? ch #\newline)
+	   (menu-active menu))
+      (let ((i (menu-current-item menu)))
+	(endwin)
+	(system* "cfdisk"
+		 (disk-name (list-ref (menu-items menu) i)))))
+
+     ((buttons-key-matches-symbol? nav ch 'continue)
+      (delwin (cdr (page-wwin page)))
+      (set! page-stack (cdr page-stack))
+      ((page-refresh (car page-stack)) (car page-stack))))
+    
+    (std-menu-key-handler menu ch))
+
+  #f
+  )
+
+(define (truncate-string ss w)
+ (if (> (string-length ss) w)
+	  (string-append 
+	   (string-take ss (- w 3)) "...")
+	  ss))
+
+(define (disk-page-init p)
+  (let* ((s (page-surface p))
+	 (frame (make-boxed-window  #f
+	      (- (getmaxy s) 4) (- (getmaxx s) 2)
+	      2 1
+	      #:title (page-title p)))
+	 (button-window (derwin (car frame)
+		       3 (getmaxx (car frame))
+		       (- (getmaxy (car frame)) 3) 0
+			  #:panel #f))
+	 (buttons (make-buttons my-buttons 1))
+
+	 (text-window (derwin (car frame)
+			      4
+			      (getmaxx (car frame))
+			      0 0 #:panel #f))
+			      
+	 (menu-window (derwin (car frame)
+		       (- (getmaxy (car frame)) 3 (getmaxy text-window))
+		        (getmaxx (car frame))
+		       (getmaxy text-window) 0 #:panel #f))
+	 (menu (make-menu  (volumes)
+			   #:disp-proc
+			   (lambda (d row)
+			     (let ((w 23))
+			       (format #f (ngettext "~28a ~? ~6a  (~a partition)"
+						    "~28a ~? ~6a  (~a partitions)"
+						    (length (disk-partitions d)))
+				       (disk-name d)
+				       (format #f "~~~aa" (1+ w))
+				       (list (truncate-string (disk-vendor d) w))
+				       (number->size (disk-size d))
+				       (length (disk-partitions d))))))))
+    
+    (page-set-datum! p 'text-window text-window)
+    (page-set-wwin! p frame)
+    (page-set-datum! p 'menu menu)
+    (page-set-datum! p 'navigation buttons)
+    (menu-post menu menu-window)
+    (buttons-post buttons button-window)
+    (refresh (cdr frame))
+    (refresh button-window)))

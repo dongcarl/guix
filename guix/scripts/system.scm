@@ -42,6 +42,8 @@
   #:use-module (gnu system file-systems)
   #:use-module (gnu system linux-container)
   #:use-module (gnu system vm)
+  #:use-module (gnu system installer new)
+  #:use-module (gnu system grub)
   #:use-module (gnu services)
   #:use-module (gnu services shepherd)
   #:use-module (gnu services herd)
@@ -772,6 +774,8 @@ Some ACTIONS support additional ARGS.\n"))
    extension-graph  emit the service extension graph in Dot format\n"))
   (display (G_ "\
    shepherd-graph   emit the graph of shepherd services in Dot format\n"))
+  (display (G_ "\
+   installer        start the graphical GuixSD installer\n"))
 
   (show-build-options-help)
   (display (G_ "
@@ -961,6 +965,8 @@ argument list and OPTS is the option alist."
        (with-store store
          (set-build-options-from-command-line store opts)
          (roll-back-system store))))
+    ((installer)
+     (guixsd-installer))
     ;; The following commands need to use the store, and they also
     ;; need an operating system configuration file.
     (else (process-action command args opts))))
@@ -974,7 +980,7 @@ argument list and OPTS is the option alist."
           (case action
             ((build container vm vm-image disk-image reconfigure init
               extension-graph shepherd-graph list-generations roll-back
-              switch-generation)
+              switch-generation installer)
              (alist-cons 'action action result))
             (else (leave (G_ "~a: unknown action~%") action))))))
 
