@@ -23,8 +23,6 @@
 	    slurp
 	    quit-key?
 
-	    debug
-	    
 	    push-cursor
 	    pop-cursor
 
@@ -52,12 +50,6 @@
              (ncurses curses))
 
 (define (N_ str) str)
-
-(define debug-port (open "/tmp/xx" (logior O_APPEND O_CREAT O_WRONLY)))
-		    
-(define (debug str)
-  (display str debug-port)
-  (force-output debug-port))
 
 
 (define (make-window-port win)
