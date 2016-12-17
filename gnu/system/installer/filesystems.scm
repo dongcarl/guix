@@ -177,7 +177,7 @@
 			     (let* ((part (car d))
 				   (name (partition-name part)))
 
-			       (format "~30a ~7a ~16a ~a"
+			       (format #f "~30a ~7a ~16a ~a"
 				       name
 				       (number->size (partition-size part))
 				       (partition-fs part)
