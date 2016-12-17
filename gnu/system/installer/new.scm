@@ -72,8 +72,7 @@
 		 ,(lambda (page)
 		    (make-tz-browser
 		     page
-		     (string-append (getenv "tzdata_package")
-				    "/share/zoneinfo")
+                     (getenv "TZDIR")
 		     page-stack)))
     
     (hostname    ,(N_ "Set the host name")
