@@ -26,6 +26,7 @@
   #:use-module (gurses buttons)
   #:use-module (gurses menu)
   #:use-module (ncurses curses)
+  #:use-module (ice-9 format)
   #:use-module (srfi srfi-1)
   
   #:export (filesystem-task-complete?)

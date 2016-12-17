@@ -24,7 +24,7 @@
   #:use-module (gurses menu)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
-
+  #:use-module (ice-9 format)
   #:export (make-disk-page))
 
 (define (volumes)
