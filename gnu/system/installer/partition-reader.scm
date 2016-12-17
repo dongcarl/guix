@@ -42,6 +42,7 @@
   #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
   #:use-module (gnu system installer utils)
+  #:use-module (ice-9 format)
   #:use-module (ice-9 regex)
   #:use-module (srfi srfi-9))
 

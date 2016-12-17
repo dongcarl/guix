@@ -21,6 +21,7 @@
   #:use-module (gnu system installer ping)
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer utils)
+  #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (gurses menu)
   #:use-module (gurses buttons)
