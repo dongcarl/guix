@@ -37,11 +37,13 @@
 
 
 (define interfaces (delete "lo"
-			     (slurp "ip -o link"
-				    (lambda (s)
-				      (string-trim-both
-				       (cadr (string-split s #\:))
-				       char-set:whitespace)))))
+                           (slurp "ip -o link"
+                                  (lambda (s)
+                                    (match (string-split s #\:)
+                                      ((_ interface-name . _)
+                                       (string-trim-both
+                                        interface-name
+                                        char-set:whitespace)))))))
 
 (define my-buttons `((continue ,(N_ "_Continue") #t)
 		     (test     ,(N_ "_Test") #t)))
