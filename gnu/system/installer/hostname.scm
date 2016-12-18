@@ -59,15 +59,10 @@
       (set! host-name (form-get-value form 0))
       (set! page-stack (cdr page-stack))
       ((page-refresh (car page-stack)) (car page-stack)))
-     
-     ((or (eq? ch KEY_RIGHT)
-	  (eq? ch #\tab))
+
+     ((eq? ch #\tab)
       (form-set-enabled! form #f)
       (buttons-select-next nav))
-
-     ((eq? ch KEY_LEFT)
-      (form-set-enabled! form #f)
-      (buttons-select-prev nav))
 
      ((eq? ch KEY_UP)
       (buttons-unselect-all nav)
@@ -76,11 +71,28 @@
      ((eq? ch KEY_DOWN)
       (buttons-unselect-all nav)
       (form-set-enabled! form #t))
-     )
 
-    (curs-set 1)
-    (form-enter form ch))
-  #f)
+     ;; Do not allow more than 64 characters
+     ((and (char? ch)
+           (char-set-contains? char-set:printing ch)
+           (>= (field-cursor-position (get-current-field form)) 64)))
+
+     ;; The first character may not be  a hyphen
+     ((and (char? ch)
+           (eq? ch #\-)
+           (zero? (field-cursor-position (get-current-field form)))))
+
+     ;; Subsequent characters must be [-A-Za-z0-9]
+     ((and (char? ch)
+           (char-set-contains? char-set:printing ch)
+           (not (char-set-contains?
+                 (char-set-adjoin char-set:letter+digit #\-) ch))
+           (positive? (field-cursor-position (get-current-field form)))))
+
+     (else
+      (curs-set 1)
+      (form-enter form ch)))
+    #f))
 
 (define my-buttons `((continue ,(N_ "Continue") #f)))
 

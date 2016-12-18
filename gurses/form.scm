@@ -29,6 +29,7 @@
   #:export (form-enabled?)
   #:export (form-update-cursor)
   #:export (form-set-current-field)
+  #:export (get-current-field)
 
   #:use-module (ncurses curses)
   #:use-module (srfi srfi-9))
@@ -199,7 +200,6 @@ label eq? to N"
   (form-set-current-item! form which)
   (move (form-window form) which (form-tabpos form)))
 
-
 (define (form-next-field form)
   (if (< (form-current-item form) (1- (array-length (form-items form))))
       (begin
@@ -236,3 +236,6 @@ label eq? to N"
 	  (let ((f (array-ref fields pos)))
 	    (addchstr win (make-list (field-size f) (underline #\space)) #:y pos #:x xpos)
 	    (loop fields (1+ pos)))))))
+
+(define (get-current-field form)
+  (array-ref (form-items form) (form-current-item form)))
