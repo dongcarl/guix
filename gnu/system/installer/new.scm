@@ -40,94 +40,107 @@
 	     (ice-9 pretty-print)
 	     (srfi srfi-9))
 
+
+(define-record-type <task>
+  (make-task title dependencies complete init)
+  task?
+  (title task-title)
+  (dependencies task-dependencies)
+  (complete task-complete?)
+  (init task-init))
+
+(define partition-menu-title  (N_ "Partition the disk(s)"))
+(define filesystem-menu-title (N_ "Allocate disk partitions"))
+(define network-menu-title    (N_ "Setup the network"))
+(define timezone-menu-title    (N_ "Set the time zone"))
+(define hostname-menu-title    (N_ "Set the host name"))
+
 (define main-options
-  `((disk        ,(N_ "Partition the disk(s)")
-		 ()
-		 ,(lambda () #t)
-		 ,(lambda (page)
-		    (make-disk-page
-		     page
-		     (car (assq-ref main-options 'disk)))))
+  `(
+    (disk . ,(make-task partition-menu-title
+                        '()
+                        (lambda () #t)
+                        (lambda (page)
+                          (make-disk-page
+                           page
+                           partition-menu-title))))
 
-    
-    (filesystems ,(N_ "Allocate disk partitions")
-		 (disk)
-		 ,(lambda () (filesystem-task-complete?))
-		 ,(lambda (page)
-		     (make-filesystem-page
-		      page
-		      (car (assq-ref main-options 'filesystems)))))
-    
-    (network     ,(N_ "Setup the network")
-		 ()
-		 ,(lambda () #f)
-		 ,(lambda (page)
-		    (make-network-page
-		     page
-		     (car (assq-ref main-options 'network)))))
+    (filesystems . ,(make-task filesystem-menu-title
+                        '()
+                        (lambda () #t)
+                        (lambda (page)
+                          (make-filesystem-page
+                           page
+                           filesystem-menu-title))))
 
-    (timezone    ,(N_ "Set the time zone")
-		 ()
-		 ,(lambda () (not (equal? "" time-zone)))
-		 ,(lambda (page)
-		    (make-tz-browser
-		     page
+    (network . ,(make-task network-menu-title
+                        '()
+                        (lambda () #t)
+                        (lambda (page)
+                          (make-network-page
+                           page
+                           network-menu-title))))
+
+    (timezone . ,(make-task timezone-menu-title
+                        '()
+                        (lambda () #t)
+                        (lambda (page)
+                          (make-tz-browser
+                           page
                      (getenv "TZDIR")
-		     page-stack)))
-    
-    (hostname    ,(N_ "Set the host name")
-		 ()
-		 ,(lambda () #t)
-		 ,(lambda (page)
-		    (make-host-name-page
-		     page
-		     (car (assq-ref main-options 'hostname)))))
-    
-    (generate    ,(N_ "Generate the configuration")
-		 (filesystems timezone)
-		 ,(lambda () #t)
-		 ,(lambda (page)
-		    (make-dialog 
-		     page
-		     (delay
-		       (generate-guix-config
-			`(operating-system
-			   (timezone ,time-zone)
-			   (host-name ,host-name)
-			   (locale "POSIX")
-			   ,(let ((grub-mount-point
-				   (find-mount-device "/boot/grub"
-						      mount-points)))
-			      (if grub-mount-point
-			      `(bootloader
-				(grub-configuration
-				 (device
-				  ,(disk-name
-				    (assoc-ref
-				     (partition-volume-pairs)
-				     (find-partition grub-mount-point))))
-				 (timeout 2)))))
+        	     page-stack))))
 
-			   (file-systems
-			    (cons*
-			     ,(map (lambda (x)
-				     (let ((z (find-partition (car x))))
-				       `(filesystem
-					 (device ,(car x))
-					 (title 'device)
-					 (mount-point ,(cdr x))
-					 (type ,(partition-fs z)))))
-				   mount-points)
-			     %base-file-systems))
-			   (users (cons* %base-user-accounts))
-			   (packages (cons* nss-certs %base-packages))
-			   (services (cons* %desktop-services))
-			   (name-service-switch %mdns-host-lookup-nss))))
-		     #:justify #f)))
 
-    
-    (configure   ,(N_ "Configure the system")
-		 (generate network))))
+    (hostname . ,(make-task hostname-menu-title
+                            '()
+                            (lambda () #t)
+                            (lambda (page)
+                              (make-host-name-page
+                               page
+                               hostname-menu-title))))
+
+    (generate .  ,(make-task
+                   (N_ "Generate the configuration")
+                   '()
+                   (lambda () #t)
+                   (lambda (page)
+                     (make-dialog
+                      page
+                      (delay
+                        (generate-guix-config
+                         `(operating-system
+                            (timezone ,time-zone)
+                            (host-name ,host-name)
+                            (locale "POSIX")
+                            ,(let ((grub-mount-point
+                                    (find-mount-device "/boot/grub"
+                                                       mount-points)))
+                               (if grub-mount-point
+                                   `(bootloader
+                                     (grub-configuration
+                                      (device
+                                       ,(disk-name
+                                         (assoc-ref
+                                          (partition-volume-pairs)
+                                          (find-partition grub-mount-point))))
+                                      (timeout 2)))))
+
+                            (file-systems
+                             (cons*
+                              ,(map (lambda (x)
+                                      (let ((z (find-partition (car x))))
+                                        `(filesystem
+                                          (device ,(car x))
+                                          (title 'device)
+                                          (mount-point ,(cdr x))
+                                          (type ,(partition-fs z)))))
+                                    mount-points)
+                              %base-file-systems))
+                            (users (cons* %base-user-accounts))
+                            (packages (cons* nss-certs %base-packages))
+                            (services (cons* %desktop-services))
+                            (name-service-switch %mdns-host-lookup-nss))))
+                      #:justify #f))))))
 
 (define (generate-guix-config cfg)
   (call-with-output-string
@@ -165,11 +178,11 @@
   (let ((main-menu (page-datum page 'menu)))
     (std-menu-key-handler main-menu ch)
     (cond
-     
      ((eq? ch #\newline)
       (let ((mi (menu-current-item main-menu))
 	    (item (menu-get-current-item main-menu)))
-	  (let ((direct-page ((cadddr (cdr item)) page)))
+
+        (let ((direct-page ((task-init (cdr item)) page)))
 	    (set! page-stack (cons direct-page page-stack))
 	    ((page-refresh (car page-stack)) (car page-stack))))))))
 
@@ -183,7 +196,8 @@
 		       (- (getmaxx background) 2) 0 1 #:panel #f))
 	  (main-menu (make-menu main-options
 				#:disp-proc (lambda (datum row)
-					      (format #f "~a" (gettext (cadr datum)))))))
+                                              (format #f "~a" (task-title (cdr datum)))))))
+
       (page-set-wwin! page frame)
       (page-set-datum! page 'menu main-menu)
       (menu-post main-menu win))
