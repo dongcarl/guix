@@ -30,5 +30,5 @@
 
 (define time-zone "")
 
-(define host-name #f)
+(define host-name "")
 

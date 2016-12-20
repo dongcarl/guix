@@ -59,15 +59,15 @@
   `(
     (disk . ,(make-task partition-menu-title
                         '()
-                        (lambda () #t)
+                        (lambda () #f)
                         (lambda (page)
                           (make-disk-page
                            page
                            partition-menu-title))))
 
     (filesystems . ,(make-task filesystem-menu-title
-                        '()
-                        (lambda () #t)
+                        '(disk)
+                        (lambda () (not (null? mount-points)))
                         (lambda (page)
                           (make-filesystem-page
                            page
@@ -75,7 +75,7 @@
 
     (network . ,(make-task network-menu-title
                         '()
-                        (lambda () #t)
+                        (lambda () #f)
                         (lambda (page)
                           (make-network-page
                            page
@@ -83,17 +83,16 @@
 
     (timezone . ,(make-task timezone-menu-title
                         '()
-                        (lambda () #t)
+                        (lambda () (not (equal? "" time-zone)))
                         (lambda (page)
                           (make-tz-browser
                            page
                      (getenv "TZDIR")
         	     page-stack))))
 
-
     (hostname . ,(make-task hostname-menu-title
                             '()
-                            (lambda () #t)
+                            (lambda () (not (equal? "" host-name)))
                             (lambda (page)
                               (make-host-name-page
                                page
@@ -101,8 +100,8 @@
 
     (generate .  ,(make-task
                    (N_ "Generate the configuration")
-                   '()
-                   (lambda () #t)
+                   '(filesystems hostname timezone)
+                   (lambda () #f)
                    (lambda (page)
                      (make-dialog
                       page
@@ -174,29 +173,42 @@
          (set! page-stack (cons p page-stack))
          ((page-refresh p) p)))))))
 
+(define (do-task task-name page)
+  "Queue the task whose name is TASK-NAME and any dependencies"
+  (let ((task (assoc-ref main-options task-name)))
+    (set! page-stack (cons ((task-init task) page) page-stack))
+    (do-task-list (task-dependencies task) page)))
+
+(define (do-task-list task-name-list page)
+  "Queue the tasks whose names are the members of TASK-NAME-LIST"
+
+  (for-each
+   (lambda (task-name)
+     (let ((task (assoc-ref main-options task-name)))
+       (if (not ((task-complete? task)))
+           (do-task task-name page))))
+   task-name-list))
+
 (define (main-page-key-handler page ch)
   (let ((main-menu (page-datum page 'menu)))
     (std-menu-key-handler main-menu ch)
     (cond
      ((eq? ch #\newline)
-      (let ((mi (menu-current-item main-menu))
-	    (item (menu-get-current-item main-menu)))
-
-        (let ((direct-page ((task-init (cdr item)) page)))
-	    (set! page-stack (cons direct-page page-stack))
-	    ((page-refresh (car page-stack)) (car page-stack))))))))
-
+      (let ((item (menu-get-current-item main-menu)))
+        (do-task (car item) page)
+        ((page-refresh (car page-stack)) (car page-stack)))))))
 
 (define (main-page-init page)
   (let* ((frame (make-boxed-window (page-surface page) (lines) (cols) 0 0
-				  #:title (page-title page)))
-	(background (car frame)))
+                                   #:title (page-title page)))
+         (background (car frame)))
 
     (let ((win (derwin background (- (getmaxy background) 3)
 		       (- (getmaxx background) 2) 0 1 #:panel #f))
 	  (main-menu (make-menu main-options
 				#:disp-proc (lambda (datum row)
-                                              (format #f "~a" (task-title (cdr datum)))))))
+                                              (format #f "~a"
+                                                      (task-title (cdr datum)))))))
 
       (page-set-wwin! page frame)
       (page-set-datum! page 'menu main-menu)
@@ -240,7 +252,6 @@
   (init-pair! livery-title COLOR_RED COLOR_BLACK)
 
   (curs-set 0)
-
 
   (let ((page (make-page
                stdscr (gettext "GuixSD Installer")
