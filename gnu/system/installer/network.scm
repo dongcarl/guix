@@ -36,7 +36,7 @@
 	     network-page-key-handler))
 
 
-(define interfaces (delete "lo"
+(define (interfaces) (delete "lo"
                            (slurp "ip -o link"
                                   (lambda (s)
                                     (match (string-split s #\:)
@@ -133,7 +133,7 @@
 		       (getmaxy text-window) 0 #:panel #f))
 	 
 	 (menu (make-menu
-		interfaces
+		(interfaces)
 		#:disp-proc
 		(lambda (datum row)
 		  ;; Convert a network device name such as "enp0s25" to
