@@ -34,6 +34,7 @@
 	     (gnu system installer dialog)
 
              (guix build utils)
+             (guix utils)
              
 	     (ice-9 format)
              (ice-9 match)
@@ -149,13 +150,14 @@
 (define (base-page-key-handler page ch)
   (cond
    ((eqv? ch (key-f 1))
-    (endwin)
-    (let* ((p (mkstemp! (string-copy "/tmp/installer.XXXXXX")))
-           (file-name (port-filename p)))
-      (format p "echo '~a'\n" (gettext "Type \"exit\" to return to the GuixSD installer."))
-      (close p)
-      (system* "bash" "--rcfile" file-name)
-      (delete-file file-name)))
+
+    (call-with-temporary-output-file
+     (lambda (file-name port)
+       (endwin)
+       (format port "echo '~a'\n"
+               (gettext "Type \"exit\" to return to the GuixSD installer."))
+       (close port)
+       (system* "bash" "--rcfile" file-name))))
 
    ((eqv? ch (key-f 9))
     (setlocale LC_ALL "de_DE.UTF-8")
