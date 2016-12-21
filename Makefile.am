@@ -30,6 +30,9 @@ nodist_noinst_SCRIPTS =				\
 include gnu/local.mk
 
 MODULES =					\
+  gurses/buttons.scm                            \
+  gurses/form.scm                               \
+  gurses/menu.scm                               \
   guix/base32.scm				\
   guix/base64.scm				\
   guix/cpio.scm					\
