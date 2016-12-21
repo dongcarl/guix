@@ -88,7 +88,10 @@
                         (lambda (page)
                           (make-tz-browser
                            page
-                     (getenv "TZDIR")
+                           (or
+                            (getenv "TZDIR")
+                            (string-append (car (slurp "guix build tzdata" #f))
+                                           "/share/zoneinfo"))
         	     page-stack))))
 
     (hostname . ,(make-task hostname-menu-title
@@ -101,7 +104,7 @@
 
     (generate .  ,(make-task
                    (N_ "Generate the configuration")
-                   '(filesystems hostname timezone)
+                   '(filesystems timezone hostname)
                    (lambda () #f)
                    (lambda (page)
                      (make-dialog
