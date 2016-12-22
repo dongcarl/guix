@@ -36,7 +36,7 @@
 
 	    find-partition
 	    
-	    disk-volumes)
+            volumes)
   
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 match)
@@ -177,6 +177,11 @@ number of Megabytes"
 (define (disk-volumes)
   "Return a list of disk volumes on the current machine"
   (assemble-partitions (read-partition-info) '() '()))
+
+(define (volumes)
+  "Return a list of disk volumes on the current machine, excluding mappers"
+  (filter (lambda (v) (not (equal? "dm" (disk-type v))))
+	  (disk-volumes)))
 
 
 
