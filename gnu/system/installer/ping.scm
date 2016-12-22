@@ -21,15 +21,13 @@
   #:use-module (gnu system installer page)
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer utils)
+  #:use-module (guix store)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
 
-  #:export (substitution-servers)
   #:export (ping-page-refresh)
   #:export (ping-page-key-handler))
 
-
-(define substitution-servers '("mirror.hydra.gnu.org"))
 
 (define my-buttons `((test ,(N_ "_Test") #t)
 		     (continue  ,(N_ "_Continue") #t)
@@ -67,9 +65,9 @@
      
      ((buttons-key-matches-symbol? nav ch 'test)
 
-      (let* ((windowp (make-window-port test-window)))
+      (let* ();;(windowp (make-window-port test-window)))
 	(if (zero?
-	     (window-pipe test-window  "ping" "ping" "-c" "3" (car substitution-servers)))
+	     (window-pipe test-window  "ping" "ping" "-c" "3" (car %default-substitute-urls)))
 	    (addstr test-window
 		    (gettext "Test successful.  Network is working."))
 	    (addstr test-window

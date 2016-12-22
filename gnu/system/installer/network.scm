@@ -26,6 +26,7 @@
   #:use-module (gurses menu)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
+  #:use-module (guix store)
 
   #:export (make-network-page))
 
@@ -158,7 +159,7 @@
 
     (addstr*   text-window  (format #f
 	      (gettext
-	       "To install GuixSD a connection to ~a must be available.  The following network devices exist on the system.  Select one to configure or \"Continue\" to proceeed.") (car substitution-servers)))
+	       "To install GuixSD a connection to one of ~s must be available.  The following network devices exist on the system.  Select one to configure or \"Continue\" to proceeed.") %default-substitute-urls))
     
     (page-set-wwin! p pr)
     (page-set-datum! p 'menu menu)
