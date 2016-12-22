@@ -207,6 +207,7 @@
      `(("gnutls" ,gnutls)                         ;for 'guix download' & co.
        ("guile-json" ,guile-json)
        ("guile-ssh" ,guile-ssh)
+       ("guile-ncurses" ,guile-ncurses)           ;for 'guix system installer'
        ("geiser" ,geiser)                         ;for guix.el
        ("emacs-magit-popup" ,emacs-magit-popup))) ;for "M-x guix" command
 
