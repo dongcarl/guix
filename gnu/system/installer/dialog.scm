@@ -52,8 +52,8 @@
 	(buttons-select-next nav))))
 
      ((buttons-key-matches-symbol? nav ch 'ok)
-      (delwin (cdr (page-wwin page)))
-      (delwin (car (page-wwin page)))
+      (delwin (outer (page-wwin page)))
+      (delwin (inner (page-wwin page)))
 
       (delwin (page-datum page 'text-window))
       (set! page-stack (cdr page-stack))
@@ -72,15 +72,15 @@
 				    (- (getmaxy s) 5) (- (getmaxx s) 2)
 				    2 1
 				    #:title (page-title p)))
-	 (button-window (derwin (car frame)
-				3 (getmaxx (car frame))
-				(- (getmaxy (car frame)) 3) 0
+	 (button-window (derwin (inner frame)
+				3 (getmaxx (inner frame))
+				(- (getmaxy (inner frame)) 3) 0
 				#:panel #f))
 	 (buttons (make-buttons my-buttons 1))
 
-	 (text-window (derwin (car frame)
-			      (- (getmaxy (car frame)) (getmaxy button-window))
-			      (getmaxx (car frame))
+	 (text-window (derwin (inner frame)
+			      (- (getmaxy (inner frame)) (getmaxy button-window))
+			      (getmaxx (inner frame))
 			      0 0 #:panel #f)))
 
     (let ((m (page-datum p 'message))
@@ -96,8 +96,8 @@
   (page-set-datum! p 'navigation buttons)
   (buttons-post buttons button-window)
   (buttons-select buttons 0)
-  (refresh (cdr frame))
-  (refresh (car frame))
+  (refresh (outer frame))
+  (refresh (inner frame))
   (refresh text-window)
   (refresh button-window)))
 

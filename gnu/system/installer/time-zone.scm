@@ -55,8 +55,8 @@
 	(buttons-select-next nav))))
 
      ((buttons-key-matches-symbol? nav ch 'back)
-      (delwin (cdr (page-wwin page)))
-      (delwin (car (page-wwin page)))
+      (delwin (outer (page-wwin page)))
+      (delwin (inner (page-wwin page)))
 
       (set! page-stack (cdr page-stack)))
 
@@ -91,9 +91,9 @@
   (when (not (page-initialised? page))
     (file-browser-page-init page)
     (page-set-initialised! page #t))
-  (touchwin (cdr (page-wwin page)))
-  (refresh (cdr (page-wwin page)))
-  (refresh (car (page-wwin page)))
+  (touchwin (outer (page-wwin page)))
+  (refresh (outer (page-wwin page)))
+  (refresh (inner (page-wwin page)))
   (menu-refresh (page-datum page 'menu)))
 
 (define (file-browser-page-init p)
@@ -102,20 +102,20 @@
 	      (- (getmaxy s) 5) (- (getmaxx s) 2)
 	      2 1
 	      #:title (page-title p)))
-	 (button-window (derwin (car frame)
-		       3 (getmaxx (car frame))
-		       (- (getmaxy (car frame)) 3) 0
+	 (button-window (derwin (inner frame)
+		       3 (getmaxx (inner frame))
+		       (- (getmaxy (inner frame)) 3) 0
 			  #:panel #f))
 	 (buttons (make-buttons my-buttons 1))
 
-	 (text-window (derwin (car frame)
+	 (text-window (derwin (inner frame)
 			      4
-			      (getmaxx (car frame))
+			      (getmaxx (inner frame))
 			      0 0 #:panel #f))
 
-	 (menu-window (derwin (car frame)
-			      (- (getmaxy (car frame)) 3 (getmaxy text-window))
-			      (getmaxx (car frame))
+	 (menu-window (derwin (inner frame)
+			      (- (getmaxy (inner frame)) 3 (getmaxy text-window))
+			      (getmaxx (inner frame))
 			      (getmaxy text-window) 0 #:panel #f))
 	 
 	 (menu (make-menu
@@ -143,7 +143,7 @@
     (page-set-datum! p 'menu menu)
     (page-set-datum! p 'navigation  buttons)
     (buttons-post buttons button-window)
-    (refresh (cdr frame))
-    (refresh (car frame))
+    (refresh (outer frame))
+    (refresh (inner frame))
     (refresh text-window)
     (refresh button-window)))

@@ -49,7 +49,7 @@
     (mount-point-page-init page)
     (page-set-initialised! page #t))
   (let ((form  (page-datum page 'form)))
-    (refresh (cdr (page-wwin page)))
+    (refresh (outer (page-wwin page)))
     (refresh (form-window form))))
 
 (define (mount-point-page-key-handler page ch)
@@ -124,25 +124,25 @@
 	      2 1
 	      #:title (page-title p)))
 	 
-	 (text-window (derwin (car pr) 3 (getmaxx (car pr))
+	 (text-window (derwin (inner pr) 3 (getmaxx (inner pr))
 			      0 0))
 	 
-	 (bwin (derwin (car pr)
-		       3 (getmaxx (car pr))
-		       (- (getmaxy (car pr)) 3) 0
+	 (bwin (derwin (inner pr)
+		       3 (getmaxx (inner pr))
+		       (- (getmaxy (inner pr)) 3) 0
 		       #:panel #f))
 	 
 	 (nav (make-buttons my-buttons 1))
 	 
-	 (fw (derwin (car pr)
+	 (fw (derwin (inner pr)
 		     2
-		     (getmaxx (car pr))
+		     (getmaxx (inner pr))
 		     (getmaxy text-window) 0))
 
 
-	 (out (derwin (car pr)
-		     (- (getmaxy (car pr)) (getmaxy bwin) (getmaxy text-window) (getmaxy fw))
-		     (getmaxx (car pr))
+	 (out (derwin (inner pr)
+		     (- (getmaxy (inner pr)) (getmaxy bwin) (getmaxy text-window) (getmaxy fw))
+		     (getmaxx (inner pr))
 		     (+ (getmaxy text-window) (getmaxy fw))
 		     0))
 	 
@@ -174,5 +174,5 @@
     (page-set-datum! p 'form form)
 
     (page-set-wwin! p pr)
-    (refresh (cdr pr))))
+    (refresh (outer pr))))
 

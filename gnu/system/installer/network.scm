@@ -81,7 +81,7 @@
  
 
      ((buttons-key-matches-symbol? nav ch 'continue)
-	(delwin (cdr (page-wwin page)))
+	(delwin (outer (page-wwin page)))
 	(set! page-stack (cdr page-stack))
 	((page-refresh (car page-stack)) (car page-stack)))
 
@@ -103,9 +103,9 @@
   (when (not (page-initialised? page))
     (network-page-init page)
     (page-set-initialised! page #t))
-  (touchwin (cdr (page-wwin page)))
-  (refresh (cdr (page-wwin page)))
-  (refresh (car (page-wwin page)))
+  (touchwin (outer (page-wwin page)))
+  (refresh (outer (page-wwin page)))
+  (refresh (inner (page-wwin page)))
   (menu-refresh (page-datum page 'menu)))
 
 
@@ -117,19 +117,19 @@
 	      #:title (page-title p)))
 	 (text-window (derwin
 		       (car pr)
-		       5 (getmaxx (car pr))
+		       5 (getmaxx (inner pr))
 		       0 0
 		       #:panel #f))
 			      
-	 (bwin (derwin (car pr)
-		       3 (getmaxx (car pr))
-		       (- (getmaxy (car pr)) 3) 0
+	 (bwin (derwin (inner pr)
+		       3 (getmaxx (inner pr))
+		       (- (getmaxy (inner pr)) 3) 0
 			  #:panel #f))
 	 (buttons (make-buttons my-buttons 1))
 
-	 (mwin (derwin (car pr)
-		       (- (getmaxy (car pr)) (getmaxy text-window) 3)
-		       (- (getmaxx (car pr)) 0)
+	 (mwin (derwin (inner pr)
+		       (- (getmaxy (inner pr)) (getmaxy text-window) 3)
+		       (- (getmaxx (inner pr)) 0)
 		       (getmaxy text-window) 0 #:panel #f))
 	 
 	 (menu (make-menu
@@ -165,7 +165,7 @@
     (page-set-datum! p 'navigation buttons)
     (menu-post menu mwin)
     (buttons-post buttons bwin)
-    (refresh (cdr pr))
+    (refresh (outer pr))
     (refresh text-window)
     (refresh bwin)))
 			      

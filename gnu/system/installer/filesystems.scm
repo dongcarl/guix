@@ -61,9 +61,9 @@
 	    (gettext "Select a partition to change its mount point or filesystem."))
 
     (menu-set-items! menu (partition-volume-pairs))
-    (touchwin (cdr (page-wwin page)))
-    (refresh (cdr (page-wwin page)))
-    (refresh (car (page-wwin page)))
+    (touchwin (outer (page-wwin page)))
+    (refresh (outer (page-wwin page)))
+    (refresh (inner (page-wwin page)))
     (menu-refresh menu)
     (menu-redraw menu)))
 
@@ -143,7 +143,7 @@
 	  ((page-refresh next) next)))
 	
        (else
-	(delwin (cdr (page-wwin page)))
+	(delwin (outer (page-wwin page)))
 	(set! page-stack (cdr page-stack))
 	((page-refresh (car page-stack)) (car page-stack))
 	))))
@@ -158,18 +158,18 @@
 	      2 1
 	      #:title (page-title p)))
 
-	 (text-window (derwin (car pr) 3 (getmaxx (car pr))
+	 (text-window (derwin (inner pr) 3 (getmaxx (inner pr))
 			      0 0))
 	 
-	 (bwin (derwin (car pr)
-		       3 (getmaxx (car pr))
-		       (- (getmaxy (car pr)) 3) 0
+	 (bwin (derwin (inner pr)
+		       3 (getmaxx (inner pr))
+		       (- (getmaxy (inner pr)) 3) 0
 			  #:panel #f))
 	 (buttons (make-buttons my-buttons 1))
 
-	 (mwin (derwin (car pr)
-		       (- (getmaxy (car pr)) 3 (getmaxy text-window))
-		       (- (getmaxx (car pr)) 0)
+	 (mwin (derwin (inner pr)
+		       (- (getmaxy (inner pr)) 3 (getmaxy text-window))
+		       (- (getmaxx (inner pr)) 0)
 		       (getmaxy text-window)  0 #:panel #f))
 	 
 	 (menu (make-menu  (partition-volume-pairs)
@@ -192,7 +192,7 @@
     (page-set-datum! p 'text-window text-window)
     (menu-post menu mwin)
     (buttons-post buttons bwin)
-    (refresh (cdr pr))
+    (refresh (outer pr))
     (refresh bwin)))
 			      
 
