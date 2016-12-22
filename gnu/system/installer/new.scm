@@ -39,6 +39,7 @@
 	     (ice-9 format)
              (ice-9 match)
 	     (ice-9 pretty-print)
+             (srfi srfi-1)
 	     (srfi srfi-9))
 
 
@@ -56,11 +57,15 @@
 (define timezone-menu-title    (N_ "Set the time zone"))
 (define hostname-menu-title    (N_ "Set the host name"))
 
+(define (size-of-largest-disk)
+  (fold (lambda (disk prev) (max (disk-size disk) prev))
+        0 (volumes)))
+
 (define main-options
   `(
     (disk . ,(make-task partition-menu-title
                         '()
-                        (lambda () #f)
+                        (lambda () (< 12000 (size-of-largest-disk)))
                         (lambda (page)
                           (make-disk-page
                            page
