@@ -46,7 +46,7 @@
      text-window
      (gettext "Enter the host name for the new system.  Only letters, digits and hyphens are allowed. The first character may not be a hyphen.  A maximum of 64 characters are allowed."))
     (refresh text-window)
-    (refresh (cdr (page-wwin page)))
+    (refresh (outer (page-wwin page)))
     (refresh (form-window form))))
 
 (define (host-name-key-handler page ch)
@@ -104,19 +104,19 @@
 	      2 1
 	      #:title (page-title p)))
 	 
-	 (text-window (derwin (car pr) 5 (getmaxx (car pr))
+	 (text-window (derwin (inner pr) 5 (getmaxx (inner pr))
 			      0 0))
 	 
-	 (bwin (derwin (car pr)
-		       3 (getmaxx (car pr))
-		       (- (getmaxy (car pr)) 3) 0
+	 (bwin (derwin (inner pr)
+		       3 (getmaxx (inner pr))
+		       (- (getmaxy (inner pr)) 3) 0
 		       #:panel #f))
 	 
 	 (nav (make-buttons my-buttons 1))
 	 
-	 (fw (derwin (car pr)
+	 (fw (derwin (inner pr)
 		     2
-		     (getmaxx (car pr))
+		     (getmaxx (inner pr))
 		     (getmaxy text-window) 0))
 
 
@@ -129,5 +129,5 @@
     (form-post form fw)
     (buttons-post nav bwin)
     (page-set-wwin! p pr)
-    (refresh (cdr pr))))
+    (refresh (outer pr))))
 

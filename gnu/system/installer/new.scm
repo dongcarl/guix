@@ -206,7 +206,7 @@
 (define (main-page-init page)
   (let* ((frame (make-boxed-window (page-surface page) (lines) (cols) 0 0
                                    #:title (page-title page)))
-         (background (car frame)))
+         (background (inner frame)))
 
     (let ((win (derwin background (- (getmaxy background) 3)
 		       (- (getmaxx background) 2) 0 1 #:panel #f))
@@ -238,9 +238,9 @@
     (main-page-init page)
     (page-set-initialised! page #t))
   
-  (touchwin (cdr (page-wwin page)))
-  (refresh (cdr (page-wwin page)))
-  (refresh (car (page-wwin page)))
+  (touchwin (outer (page-wwin page)))
+  (refresh (outer (page-wwin page)))
+  (refresh (inner (page-wwin page)))
   (menu-refresh (page-datum page 'menu))
   (menu-redraw (page-datum page 'menu)))
 

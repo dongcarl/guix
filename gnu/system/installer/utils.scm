@@ -31,6 +31,8 @@
 	    standard-menu-keystrokes
 
 	    make-boxed-window
+            inner
+            outer
 	    
 	    open-input-pipe-with-fallback
 
@@ -44,6 +46,7 @@
 
 (use-modules (ice-9 popen)
 	     (ice-9 rdelim)
+             (ice-9 match)
 	     (ncurses menu)
 	     (gnu system installer misc)
 	     (ncurses form)
@@ -242,6 +245,21 @@ which will process each string before returning it."
 
 
 
+
+(define (inner boxed-window)
+  (match boxed-window
+    ((inside . _)
+     (if (not (window? inside))
+         (error "~s is not a window" inside))
+     inside)))
+
+(define (outer boxed-window)
+  (match boxed-window
+    ((_ . outside)
+     (if (not (window? outside))
+         (error "~s is not a window" outside))
+     outside)))
+
 
 (define* (make-boxed-window orig height width starty startx #:key (title #f))
   "Create a window with a frame around it, and optionally a TITLE.  Returns a

@@ -53,9 +53,9 @@
 			(getmaxx win)))
       
       (menu-set-items! menu (volumes))
-      (touchwin (cdr (page-wwin page)))
-      (refresh (cdr (page-wwin page)))
-      (refresh (car (page-wwin page)))
+      (touchwin (outer (page-wwin page)))
+      (refresh (outer (page-wwin page)))
+      (refresh (inner (page-wwin page)))
       (menu-redraw menu)
       (menu-refresh menu)))
 
@@ -97,7 +97,7 @@
 		 (disk-name (list-ref (menu-items menu) i)))))
 
      ((buttons-key-matches-symbol? nav ch 'continue)
-      (delwin (cdr (page-wwin page)))
+      (delwin (outer (page-wwin page)))
       (set! page-stack (cdr page-stack))
       ((page-refresh (car page-stack)) (car page-stack))))
     
@@ -118,20 +118,20 @@
 	      (- (getmaxy s) 4) (- (getmaxx s) 2)
 	      2 1
 	      #:title (page-title p)))
-	 (button-window (derwin (car frame)
-		       3 (getmaxx (car frame))
-		       (- (getmaxy (car frame)) 3) 0
+	 (button-window (derwin (inner frame)
+		       3 (getmaxx (inner frame))
+		       (- (getmaxy (inner frame)) 3) 0
 			  #:panel #f))
 	 (buttons (make-buttons my-buttons 1))
 
-	 (text-window (derwin (car frame)
+	 (text-window (derwin (inner frame)
 			      4
-			      (getmaxx (car frame))
+			      (getmaxx (inner frame))
 			      0 0 #:panel #f))
 			      
-	 (menu-window (derwin (car frame)
-		       (- (getmaxy (car frame)) 3 (getmaxy text-window))
-		        (getmaxx (car frame))
+	 (menu-window (derwin (inner frame)
+		       (- (getmaxy (inner frame)) 3 (getmaxy text-window))
+		        (getmaxx (inner frame))
 		       (getmaxy text-window) 0 #:panel #f))
 	 (menu (make-menu  (volumes)
 			   #:disp-proc
@@ -152,5 +152,5 @@
     (page-set-datum! p 'navigation buttons)
     (menu-post menu menu-window)
     (buttons-post buttons button-window)
-    (refresh (cdr frame))
+    (refresh (outer frame))
     (refresh button-window)))
