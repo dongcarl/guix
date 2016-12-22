@@ -27,10 +27,6 @@
   #:use-module (ice-9 format)
   #:export (make-disk-page))
 
-(define (volumes)
-  (filter (lambda (v) (not (equal? "dm" (disk-type v))))
-	  (disk-volumes)))
-
 (define my-buttons `((continue ,(N_ "_Continue") #t)
 		     (back     ,(N_ "Go _Back") #t)))
 
