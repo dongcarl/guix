@@ -24,7 +24,7 @@
   #:use-module (guix store)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
-
+  #:use-module (web uri)
   #:export (ping-page-refresh)
   #:export (ping-page-key-handler))
 
@@ -45,10 +45,10 @@
       (cond
        ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
 	(buttons-unselect-all nav))
-       
+
        (else
 	(buttons-select-next nav))))
-     
+
      ((eq? ch KEY_LEFT)
       (buttons-select-prev nav))
 
@@ -62,17 +62,20 @@
       (delwin (page-datum page 'test-window))
       (set! page-stack (cdr page-stack))
       )
-     
-     ((buttons-key-matches-symbol? nav ch 'test)
 
-      (let* ();;(windowp (make-window-port test-window)))
+     ((buttons-key-matches-symbol? nav ch 'test)
+      (let* ()
 	(if (zero?
-	     (window-pipe test-window  "ping" "ping" "-c" "3" (car %default-substitute-urls)))
+	     (window-pipe test-window  "ping" "ping" "-c" "3"
+                          (uri-host
+                           (string->uri
+                            (car %default-substitute-urls)))))
+
 	    (addstr test-window
 		    (gettext "Test successful.  Network is working."))
 	    (addstr test-window
 		    (gettext "Test failed. No servers reached.")))
-     
+
 	(refresh test-window)))) #f))
 
 (define (ping-page-refresh page)
@@ -113,6 +116,3 @@
     (buttons-post buttons button-window)
     (refresh text-window)
     (refresh button-window)))
-
-			      
-
