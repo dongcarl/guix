@@ -178,7 +178,7 @@ which will process each string before returning it."
   (let lp ((line-list '()))
     (let  ((l (read-line port)))
       (if (eof-object? l)
-	  line-list
+	  (reverse line-list)
 	  (lp (cons (if proc (proc l) l) line-list))))))
 
 

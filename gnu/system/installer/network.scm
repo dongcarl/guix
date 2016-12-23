@@ -151,9 +151,15 @@
 				 ((_ . (_ . (n . _)))
 				  (string->number n 10)) (_ 0))))
 		    (car (assoc-ref
-			  (slurp (format #f "lspci -vm -s~x:~x.~x" bus device func)
-				 (lambda (x)
-				   (string-split x #\tab)))
+                          (cdr
+                           ;; It seems that lspci always prints an initial
+                           ;; "Device: <bus>:<device>.<func> line.  We are not
+                           ;; interested in this, and it conflicts with the "real"
+                           ;; (descriptive) Device: line which we want.  Hence
+                           ;; the above cdr strips the first line away.
+                           (slurp (format #f "lspci -vm -s~x:~x.~x" bus device func)
+                                  (lambda (x)
+                                    (string-split x #\tab))))
 			  "Device:")))))))
     
 
