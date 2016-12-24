@@ -37,14 +37,19 @@
 	     network-page-key-handler))
 
 
-(define (interfaces) (delete "lo"
+(define (interfaces) 
                            (slurp "ip -o link"
                                   (lambda (s)
-                                    (match (string-split s #\:)
-                                      ((_ interface-name . _)
-                                       (string-trim-both
-                                        interface-name
-                                        char-set:whitespace)))))))
+                                    (match (string-split s #\space)
+                                      ((_ interface-name _ _ _ _ _ _
+                                          state _ _ _ _ _ _ _ _ _ class . _)
+                                       `((name . 
+                                              ,(string-trim-right
+                                                interface-name #\:))
+                                         (state . ,state)
+                                         (class . ,class)))))))
+
+
 
 (define my-buttons `((continue ,(N_ "_Continue") #t)
 		     (test     ,(N_ "_Test") #t)))
@@ -134,22 +139,24 @@
 		       (getmaxy text-window) 0 #:panel #f))
 	 
 	 (menu (make-menu
-		(interfaces)
+		(filter (lambda (i) (equal? "link/ether" (assq-ref i 'class)))
+                        (interfaces))
 		#:disp-proc
 		(lambda (datum row)
-		  ;; Convert a network device name such as "enp0s25" to
+                  ;; Convert a network device name such as "enp0s25" to
 		  ;; something more descriptive like
 		  ;; "82567LM Gigabit Network Connection"
-		  (let* ((addr (string-tokenize datum char-set:digit))
-			 (bus (match addr ((n . _)
-					   (string->number n 10))))
+		  (let* ((name (assq-ref datum 'name))
+                         (addr (string-tokenize name char-set:digit))
+		         (bus (match addr ((n . _)
+		        		   (string->number n 10))))
 			 
-			 (device (match addr ((_ . (n . _))
-					      (string->number n 10))))
+		         (device (match addr ((_ . (n . _))
+		        		      (string->number n 10))))
 			 
-			 (func (match addr
-				 ((_ . (_ . (n . _)))
-				  (string->number n 10)) (_ 0))))
+		         (func (match addr
+		        	 ((_ . (_ . (n . _)))
+		        	  (string->number n 10)) (_ 0))))
 		    (car (assoc-ref
                           (cdr
                            ;; It seems that lspci always prints an initial
@@ -160,7 +167,7 @@
                            (slurp (format #f "lspci -vm -s~x:~x.~x" bus device func)
                                   (lambda (x)
                                     (string-split x #\tab))))
-			  "Device:")))))))
+		          "Device:")))))))
     
 
     (addstr*   text-window  (format #f
