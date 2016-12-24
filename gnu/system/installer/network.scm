@@ -21,6 +21,7 @@
   #:use-module (gnu system installer ping)
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer utils)
+  #:use-module (gnu system installer wireless)
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (gurses menu)
@@ -37,19 +38,23 @@
 	     network-page-key-handler))
 
 
-(define (interfaces) 
-                           (slurp "ip -o link"
-                                  (lambda (s)
-                                    (match (string-split s #\space)
-                                      ((_ interface-name _ _ _ _ _ _
-                                          state _ _ _ _ _ _ _ _ _ class . _)
-                                       `((name . 
-                                              ,(string-trim-right
-                                                interface-name #\:))
-                                         (state . ,state)
-                                         (class . ,class)))))))
-
-
+(define (interfaces)
+  "Return a alist of network interfaces. Keys include 'name, 'class and 'state"
+  (slurp "ip -o link"
+         (lambda (s)
+           (match (string-split s #\space)
+             ((_ interface-name _ _ _ _ _ _
+                 state _ _ _ _ _ _ _ _ _ class . _)
+              (let ((clean-name (string-trim-right interface-name #\:)))
+              `((name .  ,clean-name)
+                (state . ,state)
+                (class . ,(cond
+                           ((equal? class "link/loopback") 'loopback)
+                           ((equal? class "link/ether")
+                            (if (zero? (system* "iw" "dev" clean-name "info"))
+                                 'wireless
+                                 'ethernet))
+                           (else 'other))))))))))
 
 (define my-buttons `((continue ,(N_ "_Continue") #t)
 		     (test     ,(N_ "_Test") #t)))
@@ -84,7 +89,14 @@
       (buttons-unselect-all nav)
       (menu-set-active! menu #t))
 
- 
+     ((and (select-key? ch)
+           (eq? 'wireless (assq-ref (menu-get-current-item menu) 'class)))
+
+      (let ((next (make-essid-page page (N_ "Wireless interface setup")
+                                   (assq-ref (menu-get-current-item menu) 'name))))
+        (set! page-stack (cons next page-stack))
+        ((page-refresh next) next)))
+    
 
      ((buttons-key-matches-symbol? nav ch 'continue)
 	(delwin (outer (page-wwin page)))
@@ -139,7 +151,9 @@
 		       (getmaxy text-window) 0 #:panel #f))
 	 
 	 (menu (make-menu
-		(filter (lambda (i) (equal? "link/ether" (assq-ref i 'class)))
+		(filter (lambda (i) (memq
+                                     (assq-ref i 'class)
+                                     '(ethernet wireless)))
                         (interfaces))
 		#:disp-proc
 		(lambda (datum row)
@@ -180,5 +194,3 @@
     (refresh (outer pr))
     (refresh text-window)
     (refresh bwin)))
-			      
-
