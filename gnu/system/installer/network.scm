@@ -147,27 +147,25 @@
 		  ;; something more descriptive like
 		  ;; "82567LM Gigabit Network Connection"
 		  (let* ((name (assq-ref datum 'name))
-                         (addr (string-tokenize name char-set:digit))
-		         (bus (match addr ((n . _)
-		        		   (string->number n 10))))
-			 
-		         (device (match addr ((_ . (n . _))
-		        		      (string->number n 10))))
-			 
-		         (func (match addr
-		        	 ((_ . (_ . (n . _)))
-		        	  (string->number n 10)) (_ 0))))
-		    (car (assoc-ref
-                          (cdr
-                           ;; It seems that lspci always prints an initial
-                           ;; "Device: <bus>:<device>.<func> line.  We are not
-                           ;; interested in this, and it conflicts with the "real"
-                           ;; (descriptive) Device: line which we want.  Hence
-                           ;; the above cdr strips the first line away.
-                           (slurp (format #f "lspci -vm -s~x:~x.~x" bus device func)
-                                  (lambda (x)
-                                    (string-split x #\tab))))
-		          "Device:")))))))
+                         (addr (string-tokenize name char-set:digit)))
+                    (match addr
+                      ((bus device . func)
+                       (car (assoc-ref
+                             (cdr
+                              ;; It seems that lspci always prints an initial
+                              ;; "Device: <bus>:<device>.<func> line.  We are
+                              ;; not interested in this, and it conflicts with
+                              ;; the "real" (descriptive) Device: line which we
+                              ;; want.  Hence the above cdr strips the first line
+                              ;; away.
+                              (slurp (format #f "lspci -vm -s~x:~x.~x"
+                                             (string->number bus 10)
+                                             (string->number device 10)
+                                             (if (null? func) 0
+                                                 (string->number func 10)))
+                                     (lambda (x)
+                                       (string-split x #\tab))))
+                             "Device:")))))))))
     
 
     (addstr*   text-window  (format #f
