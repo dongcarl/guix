@@ -461,20 +461,21 @@ GNU_SYSTEM_MODULES =				\
   %D%/system/shadow.scm				\
   %D%/system/vm.scm				\
 						\
-  %D%/system/installer/filesystems.scm         \
-  %D%/system/installer/network.scm             \
-  %D%/system/installer/dialog.scm             \
+  %D%/system/installer/filesystems.scm          \
+  %D%/system/installer/network.scm              \
+  %D%/system/installer/wireless.scm             \
+  %D%/system/installer/dialog.scm               \
   %D%/system/installer/hostname.scm             \
-  %D%/system/installer/mount-point.scm             \
-  %D%/system/installer/new.scm             \
-  %D%/system/installer/disks.scm             \
-  %D%/system/installer/ping.scm             \
-  %D%/system/installer/file-browser.scm             \
-  %D%/system/installer/utils.scm             \
-  %D%/system/installer/page.scm             \
-  %D%/system/installer/time-zone.scm             \
-  %D%/system/installer/misc.scm             \
-  %D%/system/installer/partition-reader.scm             \
+  %D%/system/installer/mount-point.scm          \
+  %D%/system/installer/new.scm                  \
+  %D%/system/installer/disks.scm                \
+  %D%/system/installer/ping.scm                 \
+  %D%/system/installer/file-browser.scm         \
+  %D%/system/installer/utils.scm                \
+  %D%/system/installer/page.scm                 \
+  %D%/system/installer/time-zone.scm            \
+  %D%/system/installer/misc.scm                 \
+  %D%/system/installer/partition-reader.scm     \
                \
   %D%/build/activation.scm			\
   %D%/build/cross-toolchain.scm			\
