@@ -90,7 +90,8 @@
       (let ((i (menu-current-item menu)))
 	(endwin)
 	(system* "cfdisk"
-		 (disk-name (list-ref (menu-items menu) i)))))
+		 (disk-name (list-ref (menu-items menu) i)))
+        (system* "partprobe")))
 
      ((buttons-key-matches-symbol? nav ch 'continue)
       (delwin (outer (page-wwin page)))
