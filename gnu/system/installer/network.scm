@@ -96,13 +96,12 @@
                                    (assq-ref (menu-get-current-item menu) 'name))))
         (set! page-stack (cons next page-stack))
         ((page-refresh next) next)))
-    
 
-     ((buttons-key-matches-symbol? nav ch 'continue)
-	(delwin (outer (page-wwin page)))
-	(set! page-stack (cdr page-stack))
-	((page-refresh (car page-stack)) (car page-stack)))
-
+     ((select-key? ch)
+      (let ((item (menu-get-current-item menu)))
+        (when (eq? (assq-ref item 'class) 'ethernet)
+          (and (zero? (system* "ip" "link" "set" (assq-ref item 'name) "up"))
+               (zero? (system* "dhclient" (assq-ref item 'name)))))))
 
      ((buttons-key-matches-symbol? nav ch 'test)
 	(let ((next  (make-page (page-surface page)
@@ -111,7 +110,12 @@
 				ping-page-key-handler)))
 	  
 	       (set! page-stack (cons next page-stack))
-	       ((page-refresh next) next))))
+	       ((page-refresh next) next)))
+
+     ((buttons-key-matches-symbol? nav ch 'continue)
+     (delwin (outer (page-wwin page)))
+     (delwin (inner (page-wwin page)))
+     (set! page-stack (cdr page-stack))))
     
     (std-menu-key-handler menu ch))
   #f)
