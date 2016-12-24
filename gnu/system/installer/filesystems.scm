@@ -32,10 +32,11 @@
   #:export (filesystem-task-complete?)
   #:export (make-filesystem-page))
 
+(define minimum-store-size 7000)
 
 (define (filesystem-task-complete?)
   (and (find-mount-device "/" mount-points)
-       (>= (sizeof-partition (find-mount-device "/gnu" mount-points)) 12000)))
+       (>= (sizeof-partition (find-mount-device "/gnu" mount-points)) minimum-store-size)))
 
 (define (make-filesystem-page parent  title)
   (make-page (page-surface parent)
@@ -88,8 +89,8 @@
      ((eq? ch #\tab)
       (cond
        ((menu-active menu)
-	  (menu-set-active! menu #f)
-	  (buttons-select nav 0))
+        (menu-set-active! menu #f)
+        (buttons-select nav 0))
        
        ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
 	(menu-set-active! menu #t)
@@ -137,16 +138,18 @@
 	  (set! page-stack (cons next page-stack))
 	  ((page-refresh next) next)))
 
-       ((< (sizeof-partition (find-mount-device "/gnu" mount-points)) 12000)
+       ((< (sizeof-partition (find-mount-device "/gnu" mount-points)) minimum-store-size)
 	(let ((next
 	       (make-dialog
 		page
 		(format #f
-		(gettext 
-		 "The filesystem for ~a needs at least ~a of disk space.") "/gnu" "12GB"))))
+                        (gettext
+                         "The filesystem for ~a needs at least ~aGB of disk space.")
+                        "/gnu"
+                        (/ minimum-store-size 1000)))))
 	  (set! page-stack (cons next page-stack))
 	  ((page-refresh next) next)))
-	
+       
        (else
 	(delwin (outer (page-wwin page)))
 	(set! page-stack (cdr page-stack))
@@ -159,9 +162,9 @@
 (define (filesystem-page-init p)
   (let* ((s (page-surface p))
 	 (pr (make-boxed-window  #f
-	      (- (getmaxy s) 4) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
+                                 (- (getmaxy s) 4) (- (getmaxx s) 2)
+                                 2 1
+                                 #:title (page-title p)))
 
 	 (text-window (derwin (inner pr) 3 (getmaxx (inner pr))
 			      0 0))
@@ -169,7 +172,7 @@
 	 (bwin (derwin (inner pr)
 		       3 (getmaxx (inner pr))
 		       (- (getmaxy (inner pr)) 3) 0
-			  #:panel #f))
+                       #:panel #f))
 	 (buttons (make-buttons my-buttons 1))
 
 	 (mwin (derwin (inner pr)
@@ -181,14 +184,14 @@
 			   #:disp-proc
 			   (lambda (d row)
 			     (let* ((part (car d))
-				   (name (partition-name part)))
+                                    (name (partition-name part)))
 
 			       (format #f "~30a ~7a ~16a ~a"
 				       name
 				       (number->size (partition-size part))
 				       (partition-fs part)
 				       (let ((x (assoc-ref mount-points name)))
-					     (if x x ""))))))))
+                                         (if x x ""))))))))
 
 
     (page-set-wwin! p pr)
@@ -199,5 +202,5 @@
     (buttons-post buttons bwin)
     (refresh (outer pr))
     (refresh bwin)))
-			      
+
 
