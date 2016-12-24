@@ -144,7 +144,9 @@ number of Megabytes"
 
 (define (read-partition-info)
   (define (read-partition-info' port l)
-    (let ((line (read-line port)))
+    ;; Under certain circumstances, it seems that parted writes
+    ;; ^M characters to stdout!  Plain read-line cannot therefore work.
+    (let ((line (read-delimited "\n\r" port)))
       (if (eof-object? line)
 	  l
 	  (if (or (zero? (string-length line))
