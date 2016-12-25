@@ -464,6 +464,7 @@ GNU_SYSTEM_MODULES =				\
   %D%/system/installer/filesystems.scm          \
   %D%/system/installer/network.scm              \
   %D%/system/installer/wireless.scm             \
+  %D%/system/installer/install.scm              \
   %D%/system/installer/dialog.scm               \
   %D%/system/installer/hostname.scm             \
   %D%/system/installer/mount-point.scm          \

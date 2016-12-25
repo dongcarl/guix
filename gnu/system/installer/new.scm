@@ -30,6 +30,7 @@
 	     (gnu system installer file-browser)
 	     (gnu system installer time-zone)
 	     (gnu system installer network)
+             (gnu system installer install)
 	     (gnu system installer page)
 	     (gnu system installer dialog)
 
@@ -51,11 +52,12 @@
   (complete task-complete?)
   (init task-init))
 
-(define partition-menu-title  (N_ "Partition the disk(s)"))
-(define filesystem-menu-title (N_ "Allocate disk partitions"))
-(define network-menu-title    (N_ "Setup the network"))
-(define timezone-menu-title    (N_ "Set the time zone"))
-(define hostname-menu-title    (N_ "Set the host name"))
+(define partition-menu-title    (N_ "Partition the disk(s)"))
+(define filesystem-menu-title   (N_ "Allocate disk partitions"))
+(define network-menu-title      (N_ "Setup the network"))
+(define timezone-menu-title     (N_ "Set the time zone"))
+(define hostname-menu-title     (N_ "Set the host name"))
+(define installation-menu-title (N_ "Install the system"))
 
 (define (size-of-largest-disk)
   (fold (lambda (disk prev) (max (disk-size disk) prev))
@@ -148,7 +150,16 @@
                             (packages (cons* nss-certs %base-packages))
                             (services (cons* %desktop-services))
                             (name-service-switch %mdns-host-lookup-nss))))
-                      #:justify #f))))))
+                      #:justify #f))))
+
+    (install .  ,(make-task installation-menu-title
+                            ;;                            '(generate network)
+                            '(filesystems)
+                            (lambda () #f)
+                            (lambda (page)
+                              (make-install-page
+                               page
+                               installation-menu-title))))))
 
 (define (generate-guix-config cfg)
   (call-with-output-string
