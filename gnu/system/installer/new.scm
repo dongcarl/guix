@@ -25,7 +25,8 @@
 	     (gnu system installer misc)
 	     (gnu system installer partition-reader)
 	     (gnu system installer disks)
-	     (gnu system installer filesystems)
+	     (gnu system installer configure)
+             (gnu system installer filesystems)
 	     (gnu system installer hostname)
 	     (gnu system installer file-browser)
 	     (gnu system installer time-zone)
@@ -58,6 +59,7 @@
 (define timezone-menu-title     (N_ "Set the time zone"))
 (define hostname-menu-title     (N_ "Set the host name"))
 (define installation-menu-title (N_ "Install the system"))
+(define generate-menu-title     (N_ "Generate the configuration"))
 
 (define (size-of-largest-disk)
   (fold (lambda (disk prev) (max (disk-size disk) prev))
@@ -109,49 +111,14 @@
                                page
                                hostname-menu-title))))
 
-    (generate .  ,(make-task
-                   (N_ "Generate the configuration")
-                   '(filesystems timezone hostname)
-                   (lambda () #f)
-                   (lambda (page)
-                     (make-dialog
-                      page
-                      (delay
-                        (generate-guix-config
-                         `(operating-system
-                            (timezone ,time-zone)
-                            (host-name ,host-name)
-                            (locale "POSIX")
-                            ,(let ((grub-mount-point
-                                    (find-mount-device "/boot/grub"
-                                                       mount-points)))
-                               (if grub-mount-point
-                                   `(bootloader
-                                     (grub-configuration
-                                      (device
-                                       ,(disk-name
-                                         (assoc-ref
-                                          (partition-volume-pairs)
-                                          (find-partition grub-mount-point))))
-                                      (timeout 2)))))
-
-                            (file-systems
-                             (cons*
-                              ,(map (lambda (x)
-                                      (let ((z (find-partition (car x))))
-                                        `(filesystem
-                                          (device ,(car x))
-                                          (title 'device)
-                                          (mount-point ,(cdr x))
-                                          (type ,(partition-fs z)))))
-                                    mount-points)
-                              %base-file-systems))
-                            (users (cons* %base-user-accounts))
-                            (packages (cons* nss-certs %base-packages))
-                            (services (cons* %desktop-services))
-                            (name-service-switch %mdns-host-lookup-nss))))
-                      #:justify #f))))
-
+    (generate . , (make-task generate-menu-title
+                             '(filesystems timezone hostname)
+                             (lambda () #f)
+                             (lambda (page)
+                               (make-configure-page
+                                page
+                                generate-menu-title))))
+                             
     (install .  ,(make-task installation-menu-title
                             ;;                            '(generate network)
                             '(filesystems)
@@ -160,11 +127,6 @@
                               (make-install-page
                                page
                                installation-menu-title))))))
-
-(define (generate-guix-config cfg)
-  (call-with-output-string
-    (lambda (p) (pretty-print cfg p))))
-
 
 (define (base-page-key-handler page ch)
   (cond

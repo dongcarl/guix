@@ -474,6 +474,7 @@ GNU_SYSTEM_MODULES =				\
   %D%/system/installer/file-browser.scm         \
   %D%/system/installer/utils.scm                \
   %D%/system/installer/page.scm                 \
+  %D%/system/installer/configure.scm            \
   %D%/system/installer/time-zone.scm            \
   %D%/system/installer/misc.scm                 \
   %D%/system/installer/partition-reader.scm     \
