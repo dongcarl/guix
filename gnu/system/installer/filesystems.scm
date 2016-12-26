@@ -28,7 +28,8 @@
   #:use-module (ncurses curses)
   #:use-module (ice-9 format)
   #:use-module (srfi srfi-1)
-  
+
+  #:export (minimum-store-size)
   #:export (filesystem-task-complete?)
   #:export (make-filesystem-page))
 

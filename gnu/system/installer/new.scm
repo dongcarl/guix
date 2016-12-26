@@ -69,7 +69,7 @@
   `(
     (disk . ,(make-task partition-menu-title
                         '()
-                        (lambda () (< 12000 (size-of-largest-disk)))
+                        (lambda () (< minimum-store-size (size-of-largest-disk)))
                         (lambda (page)
                           (make-disk-page
                            page
