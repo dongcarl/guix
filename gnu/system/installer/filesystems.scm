@@ -27,6 +27,7 @@
   #:use-module (gurses menu)
   #:use-module (ncurses curses)
   #:use-module (ice-9 format)
+  #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
 
   #:export (minimum-store-size)
@@ -36,8 +37,14 @@
 (define minimum-store-size 7000)
 
 (define (filesystem-task-complete?)
-  (and (find-mount-device "/" mount-points)
-       (>= (sizeof-partition (find-mount-device "/gnu" mount-points)) minimum-store-size)))
+  (and (find-mount-device "/" mount-points)  ; A device for / must exist
+       (>= (size-of-partition (find-mount-device "/gnu" mount-points))
+           minimum-store-size)  ; /gnu must have enough space
+
+       ;; All partitions must have a filesystem
+       (fold (lambda (x prev)
+               (and (string-prefix? "ext" (partition-fs (string->partition (car x))))
+                    prev)) #t mount-points)))
 
 (define (make-filesystem-page parent  title)
   (make-page (page-surface parent)
@@ -70,12 +77,19 @@
     (menu-redraw menu)))
 
 
-(define (sizeof-partition device)
-  "Return the size of the partition DEVICE"
-  (partition-size
-   (car (find  (lambda (x)
-		 (equal? (partition-name (car x))
-			 device)) (partition-volume-pairs)))))
+(define (size-of-partition device)
+  "Return the size of the partition whose name is DEVICE"
+  (partition-size (string->partition device)))
+
+
+(define (string->partition device)
+  (match (find  (lambda (x)
+           (equal? (partition-name (car x))
+                   device)) (partition-volume-pairs))
+    ((p . _)
+     (when (not (partition? p))
+       (error (format #f "~s is not a partition" p)))
+     p)))
 
 
 (define (filesystem-page-key-handler page ch)
@@ -139,7 +153,7 @@
 	  (set! page-stack (cons next page-stack))
 	  ((page-refresh next) next)))
 
-       ((< (sizeof-partition (find-mount-device "/gnu" mount-points)) minimum-store-size)
+       ((< (size-of-partition (find-mount-device "/gnu" mount-points)) minimum-store-size)
 	(let ((next
 	       (make-dialog
 		page
