@@ -39,6 +39,7 @@
 	    find-mount-device
 
 	    window-pipe
+            pipe-cmd
 
 	    N_
 	    
@@ -68,11 +69,17 @@
 
 (define* (window-pipe win cmd #:rest args)
   "Run CMD ARGS ... sending stdout and stderr to WIN.  Returns the exit status of CMD."
-  (let* ((windowp (make-window-port win))
+  (let* ((windowp (make-window-port win)))
+    (clear win)
+    (apply pipe-cmd windowp cmd args)
+    (close-port windowp)))
+
+(define* (pipe-cmd ipipe cmd #:rest args)
+  "Run CMD ARGS ... sending stdout and stderr to IPIPE.  Returns the exit status of CMD."
+  (let* (
 	 (pipep (pipe))
 	 (pid (primitive-fork)))
 
-    (clear win)
     (if (zero? pid)
 	(begin
 	  (redirect-port (cdr pipep) (current-output-port))
@@ -81,11 +88,10 @@
 	(begin
 	  (close (cdr pipep))
 	  (let loop ((c (read-char (car pipep))))
-	    (if (not (eof-object? c))
-		(begin
-		  (display c windowp)
-		  (force-output windowp)
-		  (loop (read-char (car pipep))))))))
+	    (unless (eof-object? c)
+              (display c ipipe)
+              (force-output ipipe)
+              (loop (read-char (car pipep)))))))
     
     (cdr (waitpid pid))))
 
