@@ -141,6 +141,7 @@ manual."
                               (string-append #$pciutils   "/sbin")
                               (string-append #$shepherd   "/bin")  ; for herd
                               (string-append #$shepherd   "/sbin") ; for reboot
+                              (string-append #$util-linux "/bin")  ; for mount
                               (string-append #$util-linux "/sbin")
                               (string-append #$wpa-supplicant-minimal   "/sbin")
                               (string-append #$which      "/bin"))
