@@ -113,7 +113,12 @@
 
     (generate . , (make-task generate-menu-title
                              '(filesystems timezone hostname)
-                             (lambda () #f)
+                             (lambda ()
+                               (let ((filename
+                                      (port-filename %temporary-configuration-file-port)))
+                                 (and (file-exists? filename)
+                                      (positive? (stat:size (stat filename))))))
+
                              (lambda (page)
                                (make-configure-page
                                 page
@@ -121,7 +126,7 @@
                              
     (install .  ,(make-task installation-menu-title
                             ;;                            '(generate network)
-                            '(filesystems)
+                            '(generate)
                             (lambda () #f)
                             (lambda (page)
                               (make-install-page
