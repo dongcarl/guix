@@ -102,39 +102,56 @@
 
 
 (define (generate-guix-config p)
-  (pretty-print
-   `(operating-system
-      (timezone ,time-zone)
-      (host-name ,host-name)
-      (locale "POSIX")
-      ,(let ((grub-mount-point
-              (find-mount-device "/boot/grub"
-                                 mount-points)))
-         (if grub-mount-point
-             `(bootloader
-               (grub-configuration
-                (device
-                 ,(disk-name
-                   (assoc-ref
-                    (partition-volume-pairs)
-                    (find-partition grub-mount-point))))
-                (timeout 2)))))
+  (let ((grub-mount-point
+         (find-mount-device "/boot/grub"
+                            mount-points)))
+    
+    (pretty-print `(use-modules
+                    (gnu)
+                    ,(when grub-mount-point
+                       `(gnu system grub))
 
-      (file-systems
-       (cons*
-        ,(map (lambda (x)
-                (let ((z (find-partition (car x))))
-                  `(filesystem
-                    (device ,(car x))
-                    (title 'device)
-                    (mount-point ,(cdr x))
-                    (type ,(partition-fs z)))))
-              mount-points)
-        %base-file-systems))
-      (users (cons* %base-user-accounts))
-      (packages (cons* nss-certs %base-packages))
-      (services (cons* %desktop-services))
-      (name-service-switch %mdns-host-lookup-nss)) p))
+                    (gnu system nss))
+                  p)
+    (newline p)
+
+    (pretty-print 
+     `(use-service-modules desktop) p)
+    (newline p)
+
+    (pretty-print
+     `(use-package-modules certs) p)
+    (newline p)
+
+    (pretty-print
+     `(operating-system
+        (timezone ,time-zone)
+        (host-name ,host-name)
+        (locale "en_US.UTF-8")
+        ,(when grub-mount-point
+           `(bootloader
+             (grub-configuration
+              (device
+               ,(disk-name
+                 (assoc-ref
+                  (partition-volume-pairs)
+                  (find-partition grub-mount-point))))
+              (timeout 2))))
+        
+        (file-systems
+         ,(append (list 'cons*)
+                  (map (lambda (x)
+                         (let ((z (find-partition (car x))))
+                           `(file-system
+                              (device ,(car x))
+                              (title 'device)
+                              (mount-point ,(cdr x))
+                              (type ,(partition-fs z))))) mount-points)
+                  (list '%base-file-systems)))
+        (users (cons* %base-user-accounts))
+        (packages (cons* nss-certs %base-packages))
+        (services (cons* %desktop-services))
+        (name-service-switch %mdns-host-lookup-nss)) p)))
 
 
 (define (configure-page-init p)
