@@ -23,10 +23,22 @@
   #:use-module (gurses form)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
+  #:use-module (ice-9 regex)
 
+  #:export (valid-hostname?)
   #:export (make-host-name-page))
 
-(define my-fields `((name   ,(N_ "Host Name") 64)))
+(define max-length ((const 63)))
+
+(define my-fields `((name   ,(N_ "Host Name") ,max-length)))
+
+(define (valid-hostname? name)
+  "Return #t iff NAME is a valid hostname as defined by RFC 1034"
+  (and
+   (positive? (string-length name))
+   (string-match "^[0-9A-Za-z-]*$" name)
+   (not (eq? (string-ref name 0) #\-))  ;; First char may not be '-'
+   (<= (string-length name) max-length)))
 
 (define (make-host-name-page parent  title)
   (make-page (page-surface parent)
@@ -44,7 +56,8 @@
     (clear text-window)
     (addstr*
      text-window
-     (gettext "Enter the host name for the new system.  Only letters, digits and hyphens are allowed. The first character may not be a hyphen.  A maximum of 64 characters are allowed."))
+     (gettext
+      (format #f "Enter the host name for the new system.  Only letters, digits and hyphens are allowed. The first character may not be a hyphen.  A maximum of ~a characters are allowed." max-length)))
     (refresh text-window)
     (refresh (outer (page-wwin page)))
     (refresh (form-window form))))
@@ -72,10 +85,10 @@
       (buttons-unselect-all nav)
       (form-set-enabled! form #t))
 
-     ;; Do not allow more than 64 characters
+     ;; Do not allow more than 63 characters
      ((and (char? ch)
            (char-set-contains? char-set:printing ch)
-           (>= (field-cursor-position (get-current-field form)) 64)))
+           (>= (field-cursor-position (get-current-field form)) max-length)))
 
      ;; The first character may not be  a hyphen
      ((and (char? ch)

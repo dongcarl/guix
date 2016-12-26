@@ -105,7 +105,7 @@
 
     (hostname . ,(make-task hostname-menu-title
                             '()
-                            (lambda () (not (equal? "" host-name)))
+                            (lambda () (valid-hostname? host-name))
                             (lambda (page)
                               (make-host-name-page
                                page
