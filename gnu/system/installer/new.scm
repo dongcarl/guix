@@ -77,7 +77,7 @@
 
     (filesystems . ,(make-task filesystem-menu-title
                         '(disk)
-                        (lambda () (not (null? mount-points)))
+                        filesystem-task-complete?
                         (lambda (page)
                           (make-filesystem-page
                            page
