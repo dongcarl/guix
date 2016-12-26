@@ -138,7 +138,7 @@
 	      2 1
 	      #:title (page-title p)))
 	 (text-window (derwin
-		       (car pr)
+		       (inner pr)
 		       5 (getmaxx (inner pr))
 		       0 0
 		       #:panel #f))
