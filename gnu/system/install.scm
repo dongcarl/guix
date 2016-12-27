@@ -133,6 +133,7 @@ manual."
                               (string-append #$bash       "/bin")
                               (string-append #$coreutils  "/bin")  ; for ls (!)
                               (string-append #$e2fsprogs  "/sbin")
+                              (string-append #$(current-guix)  "/bin") ; for guix system init
                               (string-append #$iproute    "/sbin")
                               (string-append #$isc-dhcp   "/sbin")
                               (string-append #$iw         "/sbin")
