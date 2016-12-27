@@ -154,6 +154,8 @@
                          0))
          )
 
+    ;; There will be a lot of text sent to this window!
+    (scrollok! (inner config-window) #t)
 
     (addstr* text-window
              (gettext
