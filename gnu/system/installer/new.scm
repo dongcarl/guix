@@ -230,7 +230,13 @@
 
 
 (define-public (guixsd-installer)
+
   (define stdscr (initscr))		; Start curses
+
+  ;; We don't want any nasty kernel messages damaging our beautifully
+  ;; crafted display.
+  (system* "dmesg" "--console-off")
+
   (cbreak!)				; Line buffering disabled
   (keypad! stdscr #t)			; Check for function keys
   (noecho!)
