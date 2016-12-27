@@ -174,7 +174,9 @@ network={
    "" s))
 
 (define (scan-wifi ifce)
-  (cdr (slurp (string-append "iwlist " ifce " scan") string-trim-both)))
+  (match  (slurp (string-append "iwlist " ifce " scan") string-trim-both)
+    (#f '())
+    ((_ . lines) lines))) ;; Ignore the first line
 
 (define (drop-prefix pfx s)
   "Drop PFX from S if it is the first string"
