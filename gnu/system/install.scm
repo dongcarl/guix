@@ -144,6 +144,7 @@ manual."
                               (string-append #$shepherd   "/sbin") ; for reboot
                               (string-append #$util-linux "/bin")  ; for mount
                               (string-append #$util-linux "/sbin")
+                              (string-append #$wireless-tools "/sbin") ; for iwlist
                               (string-append #$wpa-supplicant-minimal   "/sbin")
                               (string-append #$which      "/bin"))
                              ":"))
