@@ -69,10 +69,11 @@
 
 (define* (window-pipe win cmd #:rest args)
   "Run CMD ARGS ... sending stdout and stderr to WIN.  Returns the exit status of CMD."
-  (let* ((windowp (make-window-port win)))
-    (clear win)
-    (apply pipe-cmd windowp cmd args)
-    (close-port windowp)))
+  (clear win)
+  (let* ((windowp (make-window-port win))
+         (result (apply pipe-cmd windowp cmd args)))
+    (close-port windowp)
+    result))
 
 (define* (pipe-cmd ipipe cmd #:rest args)
   "Run CMD ARGS ... sending stdout and stderr to IPIPE.  Returns the exit status of CMD."
