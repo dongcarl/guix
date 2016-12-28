@@ -80,18 +80,14 @@
 
         (catch #t
           (lambda ()
-           (and
-             ;; Undo any previous attempt to install ...
-             (or (pipe-cmd window-port  "herd"
-                              "herd" "stop" "cow-store")
-                 #t)
-
-             (or (pipe-cmd window-port "umount"
-                              "umount" target) #t)
-
+            (and
              (mkdir-p target)
              (zero? (pipe-cmd window-port "mount"
                                  "mount" "-t" "ext4" root-device target))
+
+             (zero? (pipe-cmd window-port  "herd"
+                                 "herd" "start" "cow-store" target))
+
              (mkdir-p (string-append target "/etc"))
              (or (copy-file config-file
                             (string-append target "/etc/config.scm"))
@@ -99,22 +95,20 @@
 
              (file-exists? (string-append target "/etc/config.scm"))
 
-             ;; Cow store seems to mess with temporary files.
-             (zero? (pipe-cmd window-port  "herd"
-                                 "herd" "start" "cow-store" target))
-
              (zero? (pipe-cmd window-port "guix" "guix" "system" "init"
                                  (string-append target "/etc/config.scm")
-                                 target))))
+                                 target))
+
+             (display (gettext
+                       "Installation is complete.  You should reboot now.")
+                      window-port)))
           (lambda (key . args)
-            (addstr* config-window
-                     (gettext
-                      (format #f "A \"~s\" exception occured: ~s" key args))))
-          )
+            #f)
+          (lambda (key subr message args . rest)
+            (display-error (stack-ref (make-stack #t) 3)
+                           window-port subr message args rest)))
         (close-port window-port))))
-       #f
-     )
-    )
+     #f))
 
 (define (install-page-refresh page)
   (when (not (page-initialised? page))
