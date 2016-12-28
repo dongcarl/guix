@@ -230,34 +230,45 @@
 
 
 (define-public (guixsd-installer)
+  (catch #t
+    (lambda ()
 
-  (define stdscr (initscr))		; Start curses
+      (define stdscr (initscr))		; Start curses
 
-  ;; We don't want any nasty kernel messages damaging our beautifully
-  ;; crafted display.
-  (system* "dmesg" "--console-off")
+      ;; We don't want any nasty kernel messages damaging our beautifully
+      ;; crafted display.
+      (system* "dmesg" "--console-off")
 
-  (cbreak!)				; Line buffering disabled
-  (keypad! stdscr #t)			; Check for function keys
-  (noecho!)
+      (cbreak!)				; Line buffering disabled
+      (keypad! stdscr #t)			; Check for function keys
+      (noecho!)
 
-  (start-color!)
+      (start-color!)
 
-  (init-pair! livery-title COLOR_RED COLOR_BLACK)
+      (init-pair! livery-title COLOR_RED COLOR_BLACK)
 
-  (curs-set 0)
+      (curs-set 0)
 
-  (let ((page (make-page
-               stdscr (gettext "GuixSD Installer")
-               main-page-refresh main-page-key-handler)))
+      (let ((page (make-page
+                   stdscr (gettext "GuixSD Installer")
+                   main-page-refresh main-page-key-handler)))
 
-    (set! page-stack (cons page page-stack))
-    ((page-refresh page) (car page-stack))
-    (let loop ((ch (getch stdscr)))
-      (let ((current-page (car page-stack)))
-        ((page-key-handler current-page) current-page ch)
-        (base-page-key-handler current-page ch))
-      ((page-refresh (car page-stack)) (car page-stack))
-      (loop (getch stdscr)))
+        (set! page-stack (cons page page-stack))
+        ((page-refresh page) (car page-stack))
+        (let loop ((ch (getch stdscr)))
+          (let ((current-page (car page-stack)))
+            ((page-key-handler current-page) current-page ch)
+            (base-page-key-handler current-page ch))
+          ((page-refresh (car page-stack)) (car page-stack))
+          (loop (getch stdscr)))
 
-    (endwin)))
+        (endwin)))
+    (lambda (key . args)
+      (system* "dmesg" "--console-on")
+      (exit 2))
+    (lambda (key subr message args rest)
+      (let ((s (make-stack #t 3 primitive-load)))
+        (endwin)
+        (display-backtrace s (current-error-port))
+        (display-error (stack-ref s 0)
+                       (current-error-port) subr message args rest)))))
