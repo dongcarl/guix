@@ -134,7 +134,7 @@
 (define (network-page-init p)
   (let* ((s (page-surface p))
 	 (pr (make-boxed-window  #f
-	      (- (getmaxy s) 3) (- (getmaxx s) 2)
+	      (- (getmaxy s) 4) (- (getmaxx s) 2)
 	      2 1
 	      #:title (page-title p)))
 	 (text-window (derwin

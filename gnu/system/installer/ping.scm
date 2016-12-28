@@ -87,7 +87,7 @@
 (define (ping-page-init p)
   (let* ((s (page-surface p))
 	 (frame (make-boxed-window  #f
-	      (- (getmaxy s) 5) (- (getmaxx s) 2)
+	      (- (getmaxy s) 4) (- (getmaxx s) 2)
 	      2 1
 	      #:title (page-title p)))
 	 (button-window (derwin (inner frame)
