@@ -22,7 +22,7 @@
   #:export (livery-title)
   #:export (time-zone)
   #:export (host-name)
-  #:export (%temporary-configuration-file-port)
+  #:export (config-file)
   #:export (mount-points))
 
 (define livery-title 1)
@@ -33,5 +33,5 @@
 
 (define host-name "")
 
-(define %temporary-configuration-file-port
-  (mkstemp! (string-copy "/tmp/guix-config-XXXXXX")))
+(define config-file #f)
+

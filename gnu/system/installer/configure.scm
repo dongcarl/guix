@@ -79,10 +79,12 @@
 
 
      ((buttons-key-matches-symbol? nav ch 'save)
-      ;; Write the configuration
-      (truncate-file %temporary-configuration-file-port 0)
-      (generate-guix-config %temporary-configuration-file-port)
-      (force-output %temporary-configuration-file-port)
+
+      ;; Write the configuration and set the file name
+      (let ((cfg-port (mkstemp! (string-copy "/tmp/guix-config-XXXXXX"))))
+        (generate-guix-config cfg-port)
+        (set! config-file (port-filename cfg-port))
+        (close-port cfg-port))
 
       ;; Close the menu and return 
       (delwin (outer (page-wwin page)))

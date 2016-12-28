@@ -114,10 +114,9 @@
     (generate . , (make-task generate-menu-title
                              '(filesystems timezone hostname)
                              (lambda ()
-                               (let ((filename
-                                      (port-filename %temporary-configuration-file-port)))
-                                 (and (file-exists? filename)
-                                      (positive? (stat:size (stat filename))))))
+                               (and config-file
+                                    (file-exists? config-file)
+                                    (positive? (stat:size (stat config-file)))))
 
                              (lambda (page)
                                (make-configure-page
