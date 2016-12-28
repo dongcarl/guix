@@ -75,7 +75,6 @@
 
      ((buttons-key-matches-symbol? nav ch 'continue)
       (let ((target "/target")
-            (tmp-config (port-filename %temporary-configuration-file-port))
             (window-port (make-window-port config-window))
             (root-device (find-mount-device "/" mount-points)))
 
@@ -94,7 +93,7 @@
              (zero? (pipe-cmd window-port "mount"
                                  "mount" "-t" "ext4" root-device target))
              (mkdir-p (string-append target "/etc"))
-             (or (copy-file tmp-config
+             (or (copy-file config-file
                             (string-append target "/etc/config.scm"))
                  #t)
 
