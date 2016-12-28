@@ -40,7 +40,7 @@
   #:use-module (gnu system file-systems)
   #:use-module (gnu system linux-container)
   #:use-module (gnu system vm)
-  #:use-module (gnu system installer new)
+  #:use-module (gnu system installer guixsd-installer)
   #:use-module (gnu system grub)
   #:use-module (gnu services)
   #:use-module (gnu services shepherd)
