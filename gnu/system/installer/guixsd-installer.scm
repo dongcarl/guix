@@ -16,7 +16,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with GNU Guix.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (gnu system installer new))
+(define-module (gnu system installer guixsd-installer))
 
 (use-modules (ncurses curses)
 	     (gurses menu)

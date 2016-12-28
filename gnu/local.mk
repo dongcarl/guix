@@ -468,7 +468,7 @@ GNU_SYSTEM_MODULES =				\
   %D%/system/installer/dialog.scm               \
   %D%/system/installer/hostname.scm             \
   %D%/system/installer/mount-point.scm          \
-  %D%/system/installer/new.scm                  \
+  %D%/system/installer/guixsd-installer.scm     \
   %D%/system/installer/disks.scm                \
   %D%/system/installer/ping.scm                 \
   %D%/system/installer/file-browser.scm         \
