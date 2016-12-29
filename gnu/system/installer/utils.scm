@@ -77,23 +77,22 @@
 
 (define* (pipe-cmd ipipe cmd #:rest args)
   "Run CMD ARGS ... sending stdout and stderr to IPIPE.  Returns the exit status of CMD."
-  (let* (
-	 (pipep (pipe))
+  (let* ((pipep (pipe))
 	 (pid (primitive-fork)))
-
     (if (zero? pid)
 	(begin
+          (close-port (car pipep))
 	  (redirect-port (cdr pipep) (current-output-port))
 	  (redirect-port (cdr pipep) (current-error-port))
 	  (apply execlp cmd args))
 	(begin
-	  (close (cdr pipep))
+	  (close-port (cdr pipep))
 	  (let loop ((c (read-char (car pipep))))
 	    (unless (eof-object? c)
               (display c ipipe)
               (force-output ipipe)
-              (loop (read-char (car pipep)))))))
-    
+              (loop (read-char (car pipep)))))
+          (close-port (car pipep))))
     (cdr (waitpid pid))))
 
 (define (justify text width)
