@@ -53,8 +53,10 @@
 	     (ncurses form)
              (ncurses curses))
 
-(define (N_ str) str)
-
+(define-syntax N_
+  (syntax-rules ()
+    ((N_ str)
+     str)))
 
 (define (make-window-port win)
   "Return a port which writes to the curses window WIN"
