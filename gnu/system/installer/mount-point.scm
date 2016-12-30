@@ -63,9 +63,14 @@
 	     (eq? ch #\nl))
 	    (cond
 	     ((buttons-key-matches-symbol? nav ch 'continue)
-	      (set! mount-points (assoc-set! mount-points
-					     dev
-					     (form-get-value form 'mount-point)))
+              (let ((mp (form-get-value form 'mount-point)))
+                (if (equal? "" mp)
+                    (set! mount-points
+                      (assoc-remove! mount-points dev))
+                    
+                    (set! mount-points (assoc-set! mount-points
+                                                   dev mp))))
+
 	      (set! page-stack (cdr page-stack))
 	      ((page-refresh (car page-stack)) (car page-stack)))
 
