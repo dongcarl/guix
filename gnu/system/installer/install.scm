@@ -27,6 +27,7 @@
   #:use-module (ncurses curses)
   #:use-module (guix store)
   #:use-module (guix utils)
+  #:use-module ((guix build syscalls) #:select (mount umount))
   #:use-module (guix build utils)
 
   #:export (make-install-page))
@@ -37,7 +38,6 @@
                          title
                          install-page-refresh
                          install-page-key-handler)))
-
     page))
 
 
@@ -82,11 +82,10 @@
           (lambda ()
             (and
              (mkdir-p target)
-             (zero? (pipe-cmd window-port "mount"
-                                 "mount" "-t" "ext4" root-device target))
+             (mount root-device target "ext4" #:update-mtab? #f)
 
              (zero? (pipe-cmd window-port  "herd"
-                                 "herd" "start" "cow-store" target))
+                              "herd" "start" "cow-store" target))
 
              (mkdir-p (string-append target "/etc"))
              (or (copy-file config-file
@@ -107,8 +106,9 @@
           (lambda (key subr message args . rest)
             (display-error (stack-ref (make-stack #t) 3)
                            window-port subr message args rest)))
+
         (close-port window-port))))
-     #f))
+    #f))
 
 (define (install-page-refresh page)
   (when (not (page-initialised? page))
