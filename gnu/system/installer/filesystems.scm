@@ -37,14 +37,36 @@
 (define minimum-store-size 7000)
 
 (define (filesystem-task-complete?)
-  (and (find-mount-device "/" mount-points)  ; A device for / must exist
-       (>= (size-of-partition (find-mount-device "/gnu" mount-points))
-           minimum-store-size)  ; /gnu must have enough space
+  (not (filesystem-task-incomplete-reason)))
 
-       ;; All partitions must have a filesystem
-       (fold (lambda (x prev)
-               (and (string-prefix? "ext" (partition-fs (string->partition (car x))))
-                    prev)) #t mount-points)))
+(define (filesystem-task-incomplete-reason)
+  "Returns #f if the task is complete.  Otherwise a string explaining why not."
+  (or
+   (and (< (size-of-partition (find-mount-device "/gnu" mount-points))
+           minimum-store-size)
+        (format #f
+                (N_ "The filesystem for /gnu requires at least ~aGB.")
+                (/ minimum-store-size 1000)))
+
+   (and (not (find-mount-device "/" mount-points))
+        (N_ "You must specify a mount point for the root (/)."))
+
+   (let ((partitions-without-filesystems
+          (fold (lambda (x prev)
+                  (if (not (string-prefix? "ext"
+                                           (partition-fs (string->partition
+                                                          (car x)))))
+                      (cons (car x) prev)
+                      prev)) '() mount-points)))
+
+     (if (null? partitions-without-filesystems)
+         #f
+         (ngettext
+          (format #f (N_ "The partition ~a does not contain a filesystem.")
+                  (car partitions-without-filesystems))
+          (format #f (N_ "The partitions ~a do not contain filesystems.")
+                  partitions-without-filesystems)
+          (length partitions-without-filesystems))))))
 
 (define (make-filesystem-page parent  title)
   (make-page (page-surface parent)
@@ -106,14 +128,14 @@
        ((menu-active menu)
         (menu-set-active! menu #f)
         (buttons-select nav 0))
-       
+
        ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
 	(menu-set-active! menu #t)
 	(buttons-unselect-all nav))
-       
+
        (else
 	(buttons-select-next nav))))
-     
+
      ((eq? ch KEY_LEFT)
       (menu-set-active! menu #f)
       (buttons-select-prev nav))
@@ -141,35 +163,19 @@
       (delwin (inner (page-wwin page)))
       (set! page-stack (cdr page-stack)))
 
-     
-     ((buttons-key-matches-symbol? nav ch 'continue)
-      (cond
-       ((not (find-mount-device "/" mount-points))
-	(let ((next
-	       (make-dialog
-		page
-		(gettext 
-		 "You must choose a device on which to mount the root (/) of the operating system's filesystem."))))
-	  (set! page-stack (cons next page-stack))
-	  ((page-refresh next) next)))
 
-       ((< (size-of-partition (find-mount-device "/gnu" mount-points)) minimum-store-size)
-	(let ((next
-	       (make-dialog
-		page
-		(format #f
-                        (gettext
-                         "The filesystem for ~a needs at least ~aGB of disk space.")
-                        "/gnu"
-                        (/ minimum-store-size 1000)))))
-	  (set! page-stack (cons next page-stack))
-	  ((page-refresh next) next)))
-       
-       (else
-	(delwin (outer (page-wwin page)))
-	(set! page-stack (cdr page-stack))
-	((page-refresh (car page-stack)) (car page-stack))
-	))))
+     ((buttons-key-matches-symbol? nav ch 'continue)
+      (let ((errstr (filesystem-task-incomplete-reason)))
+        (if errstr
+            (let ((next (make-dialog page errstr)))
+              (set! page-stack (cons next page-stack))
+              ((page-refresh next) next))
+            (begin
+              (delwin (outer (page-wwin page)))
+              (set! page-stack (cdr page-stack))
+              ((page-refresh (car page-stack)) (car page-stack)))
+            ))))
+
     (std-menu-key-handler menu ch))
   #f
   )
@@ -183,7 +189,7 @@
 
 	 (text-window (derwin (inner pr) 3 (getmaxx (inner pr))
 			      0 0))
-	 
+
 	 (bwin (derwin (inner pr)
 		       3 (getmaxx (inner pr))
 		       (- (getmaxy (inner pr)) 3) 0
@@ -194,7 +200,7 @@
 		       (- (getmaxy (inner pr)) 3 (getmaxy text-window))
 		       (- (getmaxx (inner pr)) 0)
 		       (getmaxy text-window)  0 #:panel #f))
-	 
+
 	 (menu (make-menu  (partition-volume-pairs)
 			   #:disp-proc
 			   (lambda (d row)
