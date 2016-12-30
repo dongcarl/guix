@@ -42,14 +42,15 @@
 (define (filesystem-task-incomplete-reason)
   "Returns #f if the task is complete.  Otherwise a string explaining why not."
   (or
+   (and (not (find-mount-device "/" mount-points))
+        (N_ "You must specify a mount point for the root (/)."))
+
+
    (and (< (size-of-partition (find-mount-device "/gnu" mount-points))
            minimum-store-size)
         (format #f
                 (N_ "The filesystem for /gnu requires at least ~aGB.")
                 (/ minimum-store-size 1000)))
-
-   (and (not (find-mount-device "/" mount-points))
-        (N_ "You must specify a mount point for the root (/)."))
 
    (let loop ((ll mount-points)
               (ac '()))
