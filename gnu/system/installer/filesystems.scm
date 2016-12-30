@@ -51,6 +51,17 @@
    (and (not (find-mount-device "/" mount-points))
         (N_ "You must specify a mount point for the root (/)."))
 
+   (let loop ((ll mount-points)
+              (ac '()))
+     (match ll
+       ('() #f)
+       (((_ . directory) . rest)
+        (if (member directory ac)
+            (format #f
+                    (N_ "You have specified the mount point ~a more than once.")
+                    directory)
+            (loop rest (cons directory ac))))))
+
    (let ((partitions-without-filesystems
           (fold (lambda (x prev)
                   (if (not (string-prefix? "ext"
