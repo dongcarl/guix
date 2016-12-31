@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -37,7 +37,6 @@
 	     network-page-refresh
 	     network-page-key-handler))
 
-
 (define (interfaces)
   "Return a alist of network interfaces. Keys include 'name, 'class and 'state"
   (slurp "ip -o link"
@@ -73,14 +72,14 @@
        ((menu-active menu)
 	  (menu-set-active! menu #f)
 	  (buttons-select nav 0))
-       
+
        ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
 	(menu-set-active! menu #t)
 	(buttons-unselect-all nav))
-       
+
        (else
 	(buttons-select-next nav))))
-     
+
      ((eq? ch KEY_LEFT)
       (menu-set-active! menu #f)
       (buttons-select-prev nav))
@@ -108,15 +107,19 @@
 				"Ping"
 				ping-page-refresh
 				ping-page-key-handler)))
-	  
+
 	       (set! page-stack (cons next page-stack))
 	       ((page-refresh next) next)))
 
      ((buttons-key-matches-symbol? nav ch 'continue)
-     (delwin (outer (page-wwin page)))
-     (delwin (inner (page-wwin page)))
-     (set! page-stack (cdr page-stack))))
-    
+
+      ;; Cancel the timer
+      (setitimer ITIMER_REAL 0 0 0 0)
+
+      (delwin (outer (page-wwin page)))
+      (delwin (inner (page-wwin page)))
+      (set! page-stack (cdr page-stack))))
+
     (std-menu-key-handler menu ch))
   #f)
 
@@ -142,7 +145,7 @@
 		       5 (getmaxx (inner pr))
 		       0 0
 		       #:panel #f))
-			      
+
 	 (bwin (derwin (inner pr)
 		       3 (getmaxx (inner pr))
 		       (- (getmaxy (inner pr)) 3) 0
@@ -153,7 +156,7 @@
 		       (- (getmaxy (inner pr)) (getmaxy text-window) 3)
 		       (- (getmaxx (inner pr)) 0)
 		       (getmaxy text-window) 0 #:panel #f))
-	 
+
 	 (menu (make-menu
 		(filter (lambda (i) (memq
                                      (assq-ref i 'class)
@@ -161,6 +164,14 @@
                         (interfaces))
 		#:disp-proc
 		(lambda (datum row)
+
+                  (match (string-split
+                          (car (slurp
+                                (string-append "ip -o link show "(assq-ref datum 'name))
+                                #f)) #\space)
+                    ((_ _ flags _ _ _ _ _ state . _)
+
+
                   ;; Convert a network device name such as "enp0s25" to
 		  ;; something more descriptive like
 		  ;; "82567LM Gigabit Network Connection"
@@ -168,6 +179,7 @@
                          (addr (string-tokenize name char-set:digit)))
                     (match addr
                       ((bus device . func)
+                       (format #f "~50a ~6a ~a"
                        (car (assoc-ref
                              (cdr
                               ;; It seems that lspci always prints an initial
@@ -183,13 +195,19 @@
                                                  (string->number func 10)))
                                      (lambda (x)
                                        (string-split x #\tab))))
-                             "Device:")))))))))
-    
+                             "Device:"))
+                       state flags))))))))))
+
 
     (addstr*   text-window  (format #f
 	      (gettext
 	       "To install GuixSD a connection to one of ~s must be available.  The following network devices exist on the system.  Select one to configure or \"Continue\" to proceeed.") %default-substitute-urls))
-    
+
+
+    ;; Raise sigalarm every second to refresh the menu
+    (sigaction SIGALRM (lambda (_) (menu-redraw menu)))
+    (setitimer ITIMER_REAL 1 0 1 0)
+
     (page-set-wwin! p pr)
     (page-set-datum! p 'menu menu)
     (page-set-datum! p 'navigation buttons)
