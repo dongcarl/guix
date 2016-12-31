@@ -25,12 +25,14 @@
   #:use-module  (gnu system installer partition-reader)
   #:use-module  (gnu system installer disks)
   #:use-module (ice-9 format)
+  #:use-module (ice-9 rdelim)
   #:use-module (ice-9 match)
   #:use-module (ice-9 pretty-print)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
   #:use-module (guix store)
   #:use-module (guix utils)
+
 
   #:export (make-configure-page))
 
@@ -45,6 +47,29 @@
 
 (define my-buttons `((save ,(N_ "_Save") #t)
                      (back ,(N_ "_Back") #t)))
+
+
+;; Kludge!  For testing.
+(define tempdir
+  (if
+   ;; Try to infer whether we are running the installation image or
+   ;; if we are just testing.
+   (and (file-exists? "/etc/issue")
+        (let loop ((p (open "/etc/issue" O_RDONLY)))
+          (let ((l (read-line p)))
+            (cond
+             ((eof-object? l)
+              (close p)
+              #f)
+             ((string-contains l "installation image")
+              (close p)
+              #t)
+             (else
+              (loop p))))))
+   ;; In the installer image we cannot use /tmp because the cow-store
+   ;; does not play nicely with it.  Bug 25286 refers.
+   ""
+   "/tmp"))
 
 (define (configure-page-key-handler page ch)
 
@@ -81,7 +106,8 @@
      ((buttons-key-matches-symbol? nav ch 'save)
 
       ;; Write the configuration and set the file name
-      (let ((cfg-port (mkstemp! (string-copy "/tmp/guix-config-XXXXXX"))))
+      (let ((cfg-port (mkstemp! (string-copy
+                                 (string-append tempdir "/guix-config-XXXXXX")))))
         (generate-guix-config cfg-port)
         (set! config-file (port-filename cfg-port))
         (close-port cfg-port))
