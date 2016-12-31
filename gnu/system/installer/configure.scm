@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -32,7 +32,6 @@
   #:use-module (ncurses curses)
   #:use-module (guix store)
   #:use-module (guix utils)
-
 
   #:export (make-configure-page))
 
@@ -108,7 +107,7 @@
       ;; Write the configuration and set the file name
       (let ((cfg-port (mkstemp! (string-copy
                                  (string-append tempdir "/guix-config-XXXXXX")))))
-        (generate-guix-config cfg-port)
+        (generate-guix-config cfg-port 79)
         (set! config-file (port-filename cfg-port))
         (close-port cfg-port))
 
@@ -129,7 +128,7 @@
   (refresh (inner (page-wwin page))))
 
 
-(define (generate-guix-config p)
+(define (generate-guix-config p width)
   (let ((grub-mount-point
          (find-mount-device "/boot/grub"
                             mount-points)))
@@ -140,15 +139,15 @@
                        `(gnu system grub))
 
                     (gnu system nss))
-                  p)
+                  p #:width width)
     (newline p)
 
     (pretty-print 
-     `(use-service-modules desktop) p)
+     `(use-service-modules desktop) p #:width width)
     (newline p)
 
     (pretty-print
-     `(use-package-modules certs) p)
+     `(use-package-modules certs) p #:width width)
     (newline p)
 
     (pretty-print
@@ -183,7 +182,7 @@
                         `((console-keymap-service ,key-map))
                         `())
                         %desktop-services))
-        (name-service-switch %mdns-host-lookup-nss)) p)))
+        (name-service-switch %mdns-host-lookup-nss)) p #:width width)))
 
 
 (define (configure-page-init p)
@@ -220,7 +219,7 @@
               "The following configuration has been generated for you.  If you are satisfied with it you may save it and continue.  Otherwise go back and change some options."))
 
     (let ((p (make-window-port (inner config-window))))
-      (generate-guix-config p)
+      (generate-guix-config p (getmaxx (inner config-window)))
       (force-output p))
 
     (page-set-wwin! p pr)
