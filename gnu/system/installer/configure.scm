@@ -178,7 +178,11 @@
                   (list '%base-file-systems)))
         (users (cons* %base-user-accounts))
         (packages (cons* nss-certs %base-packages))
-        (services (cons* %desktop-services))
+        (services (cons*
+                   ,@(if key-map
+                        `((console-keymap-service ,key-map))
+                        `())
+                        %desktop-services))
         (name-service-switch %mdns-host-lookup-nss)) p)))
 
 
