@@ -23,6 +23,7 @@
   #:export (time-zone)
   #:export (host-name)
   #:export (config-file)
+  #:export (key-map)
   #:export (mount-points))
 
 (define livery-title 1)
@@ -32,6 +33,7 @@
 (define time-zone "")
 
 (define host-name "")
+(define key-map #f)
 
 (define config-file #f)
 

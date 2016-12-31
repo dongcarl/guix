@@ -63,19 +63,19 @@
      ((and (eqv? ch #\newline)
 	   (menu-active menu))
       (let* ((i (menu-get-current-item menu))
-	    (new-dir (string-append directory "/" i)))
+             (new-dir (string-append directory "/" i)))
 	(if (eq? 'directory (stat:type (stat new-dir)))
 	    (let ((p (make-file-browser
 		      page new-dir)))
 	      (set! page-stack (cons p page-stack))
 	      ((page-refresh p) p))
 	    (begin
-	      (system* "loadkeys" i)
-	      (set! page-stack (page-datum page 'exit-point))
-	      #f)))
-    ))
-  (std-menu-key-handler menu ch)
-  #f))
+              (system* "loadkeys" i)
+              (set! key-map i)
+              (set! page-stack (page-datum page 'exit-point))
+              #f)))))
+    (std-menu-key-handler menu ch)
+    #f))
 
 
 (define (file-browser-page-refresh page)
