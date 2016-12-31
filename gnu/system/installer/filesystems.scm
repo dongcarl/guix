@@ -23,6 +23,7 @@
   #:use-module (gnu system installer page)
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer utils)
+  #:use-module (guix build utils)
   #:use-module (gurses buttons)
   #:use-module (gurses menu)
   #:use-module (ncurses curses)
@@ -46,11 +47,11 @@
         (N_ "You must specify a mount point for the root (/)."))
 
 
-   (and (< (size-of-partition (find-mount-device "/gnu" mount-points))
+   (and (< (size-of-partition (find-mount-device (%store-directory) mount-points))
            minimum-store-size)
         (format #f
-                (N_ "The filesystem for /gnu requires at least ~aGB.")
-                (/ minimum-store-size 1000)))
+                (N_ "The filesystem for ~a requires at least ~aGB.")
+                (%store-directory) (/ minimum-store-size 1000)))
 
    (let loop ((ll mount-points)
               (ac '()))
