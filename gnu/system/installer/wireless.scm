@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -142,8 +142,11 @@ network={
                     (assq-ref j 'signal)
                     (assq-ref i 'signal))))
                 #:disp-proc
-                (lambda (d _) (assq-ref d 'essid)))
-               ))
+                (lambda (d _)
+                  (format #f "~30a ~a" (assq-ref d 'essid)
+                          (if (assq-ref d 'encryption)
+                              (N_ "Encr.")
+                              (N_ "Clear")))))))
 
     (addstr*   text-window  (format #f
 	      (gettext
