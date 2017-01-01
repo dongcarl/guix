@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -55,7 +55,6 @@
 (define (form-update-cursor form)
   "Updates the cursor for FIELD in FORM"
   (let ((field (array-ref (form-items form) (form-current-item form))))
-    (curs-set 1)
     (move (form-window form) (form-current-item form)
 	  (+ (field-cursor-position field)
 	     (form-tabpos form)))))
