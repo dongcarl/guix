@@ -124,8 +124,7 @@
                                 generate-menu-title))))
                              
     (install .  ,(make-task installation-menu-title
-                            ;;                            '(generate network)
-                            '(generate)
+                            '(network generate)
                             (lambda () #f)
                             (lambda (page)
                               (make-install-page
