@@ -31,14 +31,14 @@
   #:use-module (guix utils)
 
   #:export (wireless-connect)
-  #:export (make-essid-page))
+  #:export (make-wireless-page))
 
 
-(define (make-essid-page parent title interface)
+(define (make-wireless-page parent title interface)
   (let ((page (make-page (page-surface parent)
                          title
-                         essid-page-refresh
-                         essid-page-key-handler)))
+                         wireless-page-refresh
+                         wireless-page-key-handler)))
 
     (page-set-datum! page 'ifce interface)
     page))
@@ -46,7 +46,7 @@
 
 (define my-buttons `((back ,(N_ "_Back") #t)))
 
-(define (essid-page-key-handler page ch)
+(define (wireless-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))
         (menu  (page-datum page 'menu))
         (test-window  (page-datum page 'test-window)))
@@ -87,9 +87,9 @@
 
     #f))
 
-(define (essid-page-refresh page)
+(define (wireless-page-refresh page)
   (when (not (page-initialised? page))
-    (essid-page-init page)
+    (wireless-page-init page)
     (page-set-initialised! page #t))
   (touchwin (outer (page-wwin page)))
   (refresh (outer (page-wwin page)))
@@ -97,7 +97,7 @@
   (menu-refresh (page-datum page 'menu)))
 
 
-(define (essid-page-init p)
+(define (wireless-page-init p)
   (let* ((s (page-surface p))
          (pr (make-boxed-window  #f
                                  (- (getmaxy s) 4) (- (getmaxx s) 2)

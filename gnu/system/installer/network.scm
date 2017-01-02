@@ -91,7 +91,7 @@
      ((and (select-key? ch)
            (eq? 'wireless (assq-ref (menu-get-current-item menu) 'class)))
 
-      (let ((next (make-essid-page page (N_ "Wireless interface setup")
+      (let ((next (make-wireless-page page (N_ "Wireless interface setup")
                                    (assq-ref (menu-get-current-item menu) 'name))))
         (set! page-stack (cons next page-stack))
         ((page-refresh next) next)))
