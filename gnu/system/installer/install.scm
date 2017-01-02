@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -42,6 +42,7 @@
 
 
 (define my-buttons `((continue ,(N_ "_Continue") #t)
+                     (reboot ,(N_ "_Reboot") #t)
                      (back ,(N_ "_Back") #t)))
 
 (define (install-page-key-handler page ch)
@@ -73,6 +74,9 @@
       (delwin (inner (page-wwin page)))
       (set! page-stack (cdr page-stack)))
 
+     ((buttons-key-matches-symbol? nav ch 'reboot)
+      (system* "reboot"))
+
      ((buttons-key-matches-symbol? nav ch 'continue)
       (let ((target "/target")
             (window-port (make-window-port config-window))
@@ -99,7 +103,7 @@
                                  target))
 
              (display (gettext
-                       "Installation is complete.  You should reboot now.")
+                       "Installation is complete.  You should remove the device containing the installer image and reboot now.")
                       window-port)))
           (lambda (key . args)
             #f)
@@ -130,7 +134,7 @@
 		       3 (getmaxx (inner pr))
 		       0 0
 		       #:panel #f))
-			
+
 	 (bwin (derwin (inner pr)
 		       3 (getmaxx (inner pr))
 		       (- (getmaxy (inner pr)) 3) 0
@@ -161,4 +165,4 @@
     (refresh (outer pr))
     (refresh text-window)
     (refresh bwin)))
-			
+
