@@ -695,6 +695,7 @@ dist_patch_DATA =						\
   %D%/packages/patches/libmad-armv7-thumb-pt2.patch		\
   %D%/packages/patches/libmad-frame-length.patch		\
   %D%/packages/patches/libmad-mips-newgcc.patch			\
+  %D%/packages/patches/libpng-CVE-2016-10087.patch		\
   %D%/packages/patches/libssh-0.6.5-CVE-2016-0739.patch		\
   %D%/packages/patches/libtar-CVE-2013-4420.patch \
   %D%/packages/patches/libtheora-config-guess.patch		\
@@ -716,6 +717,8 @@ dist_patch_DATA =						\
   %D%/packages/patches/libwmf-CVE-2015-0848+CVE-2015-4588.patch	\
   %D%/packages/patches/libwmf-CVE-2015-4695.patch		\
   %D%/packages/patches/libwmf-CVE-2015-4696.patch		\
+  %D%/packages/patches/libxml2-CVE-2016-4658.patch		\
+  %D%/packages/patches/libxml2-CVE-2016-5131.patch		\
   %D%/packages/patches/libxslt-generated-ids.patch		\
   %D%/packages/patches/libxslt-CVE-2016-4738.patch		\
   %D%/packages/patches/linux-pam-no-setfsuid.patch		\
@@ -747,6 +750,7 @@ dist_patch_DATA =						\
   %D%/packages/patches/mpc123-initialize-ao.patch		\
   %D%/packages/patches/mplayer2-theora-fix.patch		\
   %D%/packages/patches/module-init-tools-moduledir.patch	\
+  %D%/packages/patches/multiqc-fix-git-subprocess-error.patch	\
   %D%/packages/patches/mumps-build-parallelism.patch		\
   %D%/packages/patches/mupdf-build-with-openjpeg-2.1.patch	\
   %D%/packages/patches/mupen64plus-ui-console-notice.patch	\
@@ -830,7 +834,6 @@ dist_patch_DATA =						\
   %D%/packages/patches/python-3-search-paths.patch		\
   %D%/packages/patches/python-3.4-fix-tests.patch		\
   %D%/packages/patches/python-3.5-fix-tests.patch		\
-  %D%/packages/patches/python-dendropy-exclude-failing-tests.patch \
   %D%/packages/patches/python-file-double-encoding-bug.patch	\
   %D%/packages/patches/python-fix-tests.patch			\
   %D%/packages/patches/python-parse-too-many-fields.patch	\

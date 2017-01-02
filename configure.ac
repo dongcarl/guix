@@ -216,6 +216,11 @@ AC_MSG_CHECKING([for zlib's shared library name])
 AC_MSG_RESULT([$LIBZ])
 AC_SUBST([LIBZ])
 
+dnl Check for Guile-SSH, for the (guix ssh) module.
+GUIX_CHECK_GUILE_SSH
+AM_CONDITIONAL([HAVE_GUILE_SSH],
+  [test "x$guix_cv_have_recent_guile_ssh" = "xyes"])
+
 AC_CACHE_SAVE
 
 m4_include([config-daemon.ac])
@@ -236,15 +241,5 @@ AC_CONFIG_FILES([scripts/guix], [chmod +x scripts/guix])
 AC_CONFIG_FILES([test-env:build-aux/test-env.in], [chmod +x test-env])
 AC_CONFIG_FILES([pre-inst-env:build-aux/pre-inst-env.in],
   [chmod +x pre-inst-env])
-
-dnl Emacs interface.
-AC_PATH_PROG([DOT_USER_PROGRAM], [dot], [dot])
-AM_PATH_LISPDIR
-AM_CONDITIONAL([HAVE_EMACS], [test "x$EMACS" != "xno"])
-
-emacsuidir="${guilemoduledir}/guix/emacs"
-AC_SUBST([emacsuidir])
-AC_CONFIG_FILES([emacs/guix-config.el
-                 emacs/guix-helper.scm])
 
 AC_OUTPUT

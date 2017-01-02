@@ -1,6 +1,6 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2013, 2014, 2015, 2016 Ludovic Courtès <ludo@gnu.org>
-;;; Copyright © 2015 Ricardo Wurmus <rekado@elephly.net>
+;;; Copyright © 2015, 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -44,14 +44,15 @@
   #:use-module (gnu packages curl)
   #:use-module (gnu packages web)
   #:use-module (gnu packages man)
-  #:use-module (gnu packages emacs)
   #:use-module (gnu packages bdw-gc)
+  #:use-module (gnu packages patchutils)
   #:use-module (gnu packages python)
   #:use-module (gnu packages popt)
   #:use-module (gnu packages gnuzilla)
   #:use-module (gnu packages cpio)
   #:use-module (gnu packages tls)
   #:use-module (gnu packages ssh)
+  #:use-module (gnu packages vim)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-26)
   #:use-module (ice-9 popen)
@@ -162,7 +163,6 @@
 
                        #t))))))
     (native-inputs `(("pkg-config" ,pkg-config)
-                     ("emacs" ,emacs-minimal)     ;for guix.el
 
                      ;; XXX: Keep the development inputs here even though
                      ;; they're unnecessary, just so that 'guix environment
@@ -206,10 +206,8 @@
     (propagated-inputs
      `(("gnutls" ,gnutls)                         ;for 'guix download' & co.
        ("guile-json" ,guile-json)
-       ("guile-ssh" ,guile-ssh)
        ("guile-ncurses" ,guile-ncurses)           ;for 'guix system installer'
-       ("geiser" ,geiser)                         ;for guix.el
-       ("emacs-magit-popup" ,emacs-magit-popup))) ;for "M-x guix" command
+       ("guile-ssh" ,guile-ssh)))
 
     (home-page "http://www.gnu.org/software/guix")
     (synopsis "Functional package manager for installed software packages and versions")
@@ -499,12 +497,29 @@ transactions from C or Python.")
                   (add-after 'unpack 'dependency-on-python-magic
                     (lambda _
                       (substitute* "setup.py"
-                        (("'python-magic',") "")))))))
+                        (("'python-magic',") ""))))
+                  (add-after 'unpack 'embed-tool-references
+                    (lambda* (#:key inputs #:allow-other-keys)
+                      (substitute* "diffoscope/difference.py"
+                        (("@tool_required\\('colordiff'\\)") "")
+                        (("\\[\"colordiff\"")
+                         (string-append "[\"" (which "colordiff") "\"")))
+                      (substitute* "diffoscope/comparators/utils.py"
+                        (("@tool_required\\('xxd'\\)") "")
+                        (("\\['xxd',")
+                         (string-append "['" (which "xxd") "',")))
+                      (substitute* "diffoscope/comparators/elf.py"
+                        (("@tool_required\\('readelf'\\)") "")
+                        (("\\['readelf',")
+                         (string-append "['" (which "readelf") "',")))
+                      #t)))))
     (inputs `(("rpm" ,rpm)                        ;for rpm-python
               ("python-file" ,python-file)
               ("python-debian" ,python-debian)
               ("python-libarchive-c" ,python-libarchive-c)
               ("python-tlsh" ,python-tlsh)
+              ("colordiff" ,colordiff)
+              ("xxd" ,vim)
 
               ;; Below are modules used for tests.
               ("python-pytest" ,python-pytest)

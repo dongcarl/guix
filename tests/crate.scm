@@ -35,6 +35,7 @@
     \"license\": \"MIT/Apache-2.0\",
     \"description\": \"summary\",
     \"homepage\": \"http://example.com\",
+    \"repository\": \"http://example.com\",
   }
 }")
 
@@ -90,7 +91,7 @@
          ('build-system 'cargo-build-system)
          ('inputs
           ('quasiquote
-           (("rust-bar" ('unquote 'rust-bar)))))
+           (("rust-bar" ('unquote 'rust-bar) "src"))))
          ('home-page "http://example.com")
          ('synopsis "summary")
          ('description "summary")

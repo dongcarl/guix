@@ -726,10 +726,12 @@ HDF5 file is encoded according to the HDF File Format Specification.")
        ("doxygen" ,doxygen)
        ("graphviz" ,graphviz)))
     (inputs
-     `(("hdf5" ,hdf5)
-       ("zlib" ,zlib)))
+     `(("hdf4" ,hdf4-alt)
+       ("hdf5" ,hdf5)
+       ("zlib" ,zlib)
+       ("libjpeg" ,libjpeg)))
     (arguments
-     `(#:configure-flags '("--enable-doxygen" "--enable-dot")
+     `(#:configure-flags '("--enable-doxygen" "--enable-dot" "--enable-hdf4")
        #:parallel-tests? #f))           ;various race conditions
     (home-page "http://www.unidata.ucar.edu/software/netcdf/")
     (synopsis "Library for scientific data")
@@ -1990,14 +1992,14 @@ full text searching.")
 (define-public armadillo
   (package
     (name "armadillo")
-    (version "7.500.0")
+    (version "7.600.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://sourceforge/arma/armadillo-"
                                   version ".tar.xz"))
               (sha256
                (base32
-                "1x98d32cgxbzbbma2ak6c37wnbpq13xxyxyd6jjvflv748mzi9ks"))))
+                "0bac9y46m61zxinj51l82w06v01ra9vw7a9j6rrwdjhznkkdb437"))))
     (build-system cmake-build-system)
     (arguments `(#:tests? #f)) ;no test target
     (inputs
@@ -2018,14 +2020,14 @@ associated functions (eg. contiguous and non-contiguous submatrix views).")
 
 (define-public armadillo-for-rcpparmadillo
   (package (inherit armadillo)
-    (version "7.500.0")
+    (version "7.600.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://sourceforge/arma/armadillo-"
                                   version ".tar.xz"))
               (sha256
                (base32
-                "1x98d32cgxbzbbma2ak6c37wnbpq13xxyxyd6jjvflv748mzi9ks"))))))
+                "1dxgfd2r9lbh24nszvqm2lag439s0srxaf1l86f6ww6waqm5r8zk"))))))
 
 (define-public muparser
   ;; When switching download sites, muparser re-issued a 2.2.5 release with a

@@ -2399,7 +2399,7 @@ XC-APPGROUP, XTEST.")
 (define-public libevdev
   (package
     (name "libevdev")
-    (version "1.3")
+    (version "1.5.5")
     (source
      (origin
        (method url-fetch)
@@ -2407,10 +2407,10 @@ XC-APPGROUP, XTEST.")
                            name "-" version ".tar.xz"))
        (sha256
         (base32
-         "0iil4pnla0kjdx52ay7igq65sx32sjbzn1wx9q3v74m5g7712m16"))))
+         "1cc00876lqvyadsfmj3sh1h2i0r3qfar98izdfar5f8q41w2009j"))))
     (build-system gnu-build-system)
     (native-inputs `(("python" ,python)))
-    (home-page "http://www.freedesktop.org/wiki/Software/libevdev/")
+    (home-page "https://www.freedesktop.org/wiki/Software/libevdev/")
     (synopsis "Wrapper library for evdev devices")
     (description
      "libevdev is a wrapper library for evdev devices. it moves the common
@@ -3145,7 +3145,7 @@ UniChrome Pro and Chrome9 integrated graphics processors.")
 (define-public xf86-video-qxl
   (package
     (name "xf86-video-qxl")
-    (version "0.1.4")
+    (version "0.1.5")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -3153,7 +3153,7 @@ UniChrome Pro and Chrome9 integrated graphics processors.")
                 "xf86-video-qxl-" version ".tar.bz2"))
               (sha256
                (base32
-                "018ic9ddxfnjcv2yss0mwk1gq6rmip1hrgi2wxwqkbqx1cpx4yp5"))))
+                "14jc24znnahhmz4kqalafmllsg8awlz0y6gpgdpk5ih38ph851mi"))))
     (build-system gnu-build-system)
     (inputs
       `(("fontsproto" ,fontsproto)

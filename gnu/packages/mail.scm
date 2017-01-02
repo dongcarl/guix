@@ -380,24 +380,20 @@ repository and Maildir/IMAP as LOCAL repository.")
 (define-public mu
   (package
     (name "mu")
-    (version "0.9.16")
+    (version "0.9.18")
     (source (origin
               (method url-fetch)
-              (uri (string-append "https://github.com/djcb/mu/archive/v"
+              (uri (string-append "https://github.com/djcb/mu/releases/"
+                                  "download/" version "/mu-"
                                   version ".tar.gz"))
-              (file-name (string-append "mu-" version ".tar.gz"))
               (sha256
                (base32
-                "0p7hqri1r1x6750x138cc29mh81kdav2dcim26y58s8an206h25g"))))
+                "02g82zvxfgn17wzy846bfxj0izjj7yklhwdnhwxy1y2kin4fqnb5"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("pkg-config" ,pkg-config)
        ("glib" ,glib "bin")             ; for gtester
-       ("autoconf" ,autoconf)
-       ("automake" ,automake)
-       ("emacs" ,emacs-minimal)
-       ("libtool" ,libtool)
-       ("texinfo" ,texinfo)))
+       ("emacs" ,emacs-minimal)))
     ;; TODO: Add webkit and gtk to build the mug GUI.
     (inputs
      `(("xapian" ,xapian)
@@ -413,18 +409,15 @@ repository and Maildir/IMAP as LOCAL repository.")
                            (guix build emacs-utils))
        #:phases
        (modify-phases %standard-phases
-         (add-after 'unpack 'patch-configure.ac
+         (add-after 'unpack 'patch-configure
            ;; By default, elisp code goes to "share/emacs/site-lisp/mu4e",
            ;; so our Emacs package can't find it.  Setting "--with-lispdir"
            ;; configure flag doesn't help because "mu4e" will be added to
            ;; the lispdir anyway, so we have to modify "configure.ac".
            (lambda _
-             (substitute* "configure.ac"
-               (("^ +lispdir=.*") ""))
+             (substitute* "configure"
+               (("^ +lispdir=\"\\$\\{lispdir\\}/mu4e/\".*") ""))
              #t))
-         (add-after 'patch-configure.ac 'autoreconf
-           (lambda _
-             (zero? (system* "autoreconf" "-vi"))))
          (add-before 'check 'check-tz-setup
            (lambda* (#:key inputs #:allow-other-keys)
              ;; For mu/test/test-mu-query.c
@@ -535,14 +528,14 @@ invoking @command{notifymuch} from the post-new hook.")
 (define-public notmuch
   (package
     (name "notmuch")
-    (version "0.23.3")
+    (version "0.23.4")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://notmuchmail.org/releases/notmuch-"
                                   version ".tar.gz"))
               (sha256
                (base32
-                "10hqjnl5aavf9clfmx3y832jyz58fplmc3f58pip9dq30b7sap8g"))))
+                "0fs5crf8v3jghc8jnm61cv7wxhclcg88hi5894d8fma9kkixcv8h"))))
     (build-system gnu-build-system)
     (arguments
      '(#:make-flags (list "V=1") ; Verbose test output.
@@ -843,7 +836,7 @@ delivery.")
 (define-public exim
   (package
     (name "exim")
-    (version "4.87")
+    (version "4.87.1")
     (source
      (origin
        (method url-fetch)
@@ -853,7 +846,7 @@ delivery.")
                                  version ".tar.bz2")))
        (sha256
         (base32
-         "1jbxn13shq90kpn0s73qpjnx5xm8jrpwhcwwgqw5s6sdzw6iwsbl"))))
+         "050m2gjzpc6vyik458h1j0vi8bxplkzjsyndkyd2y394i569kdyl"))))
     (build-system gnu-build-system)
     (inputs
      `(("bdb" ,bdb)
@@ -1349,36 +1342,27 @@ maintained.")
 (define-public khard
   (package
     (name "khard")
-    (version "0.9.0")
+    (version "0.11.3")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri name version))
               (sha256
                (base32
-                "0y83rji4f270hbb41m4jpr0z3yzvpvbsl32mpg9d38hlydw8fk1s"))))
+                "1v66khq5w17xdbkpb00pf9xbl84dlzx4lq286fvzskb949b3y4yn"))))
     (build-system python-build-system)
     (arguments
-      `(#:python ,python-2 ; only python-2 is supported.
-        #:phases
+      `(#:phases
         (modify-phases %standard-phases
-          (add-before 'build 'disable-egg-compression
-            ;; Do not compress the egg.
-            (lambda _
-              (let ((port (open-file "setup.cfg" "a")))
-                (display "\n[easy_install]\nzip_ok = 0\n"
-                         port)
-                (close-port port)
-                #t)))
           (add-after 'install 'install-doc
             (lambda* (#:key outputs #:allow-other-keys)
               (let* ((out (assoc-ref outputs "out"))
                      (doc (string-append out "/share/doc/khard")))
                 (copy-recursively "misc/khard" doc)))))))
     (propagated-inputs
-     `(("python2-vobject" ,python2-vobject)
-       ("python2-pyyaml" ,python2-pyyaml)
-       ("python2-atomicwrites" ,python2-atomicwrites)
-       ("python2-configobj" ,python2-configobj)))
+     `(("python-vobject" ,python-vobject)
+       ("python-pyyaml" ,python-pyyaml)
+       ("python-atomicwrites" ,python-atomicwrites)
+       ("python-configobj" ,python-configobj)))
     (synopsis "Console address book using CardDAV")
     (description "Khard is an address book for the console.  It creates, reads,
 modifies and removes CardDAV address book entries at your local machine.  For

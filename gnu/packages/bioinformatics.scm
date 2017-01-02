@@ -1930,19 +1930,14 @@ accessing bigWig files.")
 (define-public python-dendropy
   (package
     (name "python-dendropy")
-    (version "4.1.0")
+    (version "4.2.0")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri "DendroPy" version))
        (sha256
         (base32
-         "1jfz7gp18wph311w1yygbvjanb3n5mdqal439bb6myw41dwb5m63"))
-       ;; There are two known test failures that will be fixed in the next
-       ;; release after 4.1.0.
-       ;; https://github.com/jeetsukumaran/DendroPy/issues/48
-       (patches (search-patches
-                 "python-dendropy-exclude-failing-tests.patch"))))
+         "15c7s3d5gf19ljsxvq5advaa752wfi7pwrdjyhzmg85hccyvp47p"))))
     (build-system python-build-system)
     (home-page "http://packages.python.org/DendroPy/")
     (synopsis "Library for phylogenetics and phylogenetic computing")
@@ -1957,15 +1952,6 @@ trees (phylogenies) and characters.")
   (let ((base (package-with-python2 (strip-python2-variant python-dendropy))))
     (package
       (inherit base)
-      ;; Do not use same source as 'python-dendropy' because the patched
-      ;; failing tests do not occur on Python 2.
-      (source
-       (origin
-         (method url-fetch)
-         (uri (pypi-uri "DendroPy" (package-version base)))
-         (sha256
-          (base32
-           "1jfz7gp18wph311w1yygbvjanb3n5mdqal439bb6myw41dwb5m63"))))
       (arguments
        `(#:python ,python-2
          #:phases
@@ -2020,7 +2006,7 @@ identify enrichments with functional annotations of the genome.")
 (define-public diamond
   (package
     (name "diamond")
-    (version "0.8.29")
+    (version "0.8.31")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -2029,7 +2015,7 @@ identify enrichments with functional annotations of the genome.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1mnhj7y13pk2bhfichjma5aw8ssdiqyria61ip1kps6facqlal3z"))))
+                "0nh79f4rpgq8vmlga743r7vd0z0ik6spy34f7vfq0v9lcmvfr7xq"))))
     (build-system cmake-build-system)
     (arguments
      '(#:tests? #f ; no "check" target
@@ -5227,20 +5213,21 @@ data types as well.")
 (define-public r-annotate
   (package
     (name "r-annotate")
-    (version "1.52.0")
+    (version "1.52.1")
     (source
      (origin
        (method url-fetch)
        (uri (bioconductor-uri "annotate" version))
        (sha256
         (base32
-         "1fd2csq7dcs2gwndgwdx2nwkymz8gsmlnqqzv3p0vjjsvvq5n2a8"))))
+         "0yymz8qxgnbybvfhqrgkd1hh9dhwxdii1yxkhr1zicjgb35xixxb"))))
     (build-system r-build-system)
     (propagated-inputs
      `(("r-annotationdbi" ,r-annotationdbi)
        ("r-biobase" ,r-biobase)
        ("r-biocgenerics" ,r-biocgenerics)
        ("r-dbi" ,r-dbi)
+       ("r-rcurl" ,r-rcurl)
        ("r-xml" ,r-xml)
        ("r-xtable" ,r-xtable)))
     (home-page
@@ -5304,14 +5291,14 @@ high-throughput sequencing experiments.")
 (define-public r-deseq2
   (package
     (name "r-deseq2")
-    (version "1.14.0")
+    (version "1.14.1")
     (source
      (origin
        (method url-fetch)
        (uri (bioconductor-uri "DESeq2" version))
        (sha256
         (base32
-         "0kq06jy4xg5ii3a9l62f17kirsfx0gsiwq6mhiy985cqzpdn893g"))))
+         "1walwkqryn1gnwz7zryr5764a0p6ia7ag4w6w9n8fskg8dkg0fqs"))))
     (properties `((upstream-name . "DESeq2")))
     (build-system r-build-system)
     (arguments
@@ -5957,13 +5944,13 @@ also known as views, in a controlled vocabulary.")
 (define-public r-biocstyle
   (package
    (name "r-biocstyle")
-   (version "2.2.0")
+   (version "2.2.1")
     (source (origin
               (method url-fetch)
               (uri (bioconductor-uri "BiocStyle" version))
               (sha256
                (base32
-                "0qbk23fz8cn260isd9xlh9lxfj4adar6iqzai01c4kz0p31f45za"))))
+                "0sl99xw940ixrm6v24lgaw3ljh56g59a6rdz7g160hx84z9f8n2n"))))
     (properties
      `((upstream-name . "BiocStyle")))
     (build-system r-build-system)
@@ -6092,13 +6079,13 @@ abnormal copy number.")
 (define-public r-s4vectors
   (package
     (name "r-s4vectors")
-    (version "0.12.0")
+    (version "0.12.1")
     (source (origin
               (method url-fetch)
               (uri (bioconductor-uri "S4Vectors" version))
               (sha256
                (base32
-                "0m0npc0vhmcwcxws7v2f8k4hvvrjvnlrsr94klxf4a8m4xw2xzzk"))))
+                "0i36y3w36h3d8rmazxcrip4gvn54rd9av1wz4lygsprrjmylfhcc"))))
     (properties
      `((upstream-name . "S4Vectors")))
     (build-system r-build-system)
@@ -6144,13 +6131,13 @@ utilities for sequence data management under the ACNUC system.")
 (define-public r-iranges
   (package
     (name "r-iranges")
-    (version "2.8.0")
+    (version "2.8.1")
     (source (origin
               (method url-fetch)
               (uri (bioconductor-uri "IRanges" version))
               (sha256
                (base32
-                "0cdl1sfd3cvf93lnz91fdk64fbg1mnd5g958dwh1il8r358hqq3f"))))
+                "0cryqnpqb3p6l9jjw27hyqd550sxlljls3ka7b9rb38hkji7b5hw"))))
     (properties
      `((upstream-name . "IRanges")))
     (build-system r-build-system)
@@ -6173,13 +6160,13 @@ possible.")
 (define-public r-genomeinfodb
   (package
     (name "r-genomeinfodb")
-    (version "1.10.0")
+    (version "1.10.1")
     (source (origin
               (method url-fetch)
               (uri (bioconductor-uri "GenomeInfoDb" version))
               (sha256
                (base32
-                "0nhg4bk38gzvf3mvnbqgisbbhfv1kzjld27z1z9knnlkplkiyyyv"))))
+                "1d3wwlzx0dk08wps35ilr4mg3f29f0fa72hcnzzsp5npaaxi1zrk"))))
     (properties
      `((upstream-name . "GenomeInfoDb")))
     (build-system r-build-system)
@@ -6199,13 +6186,13 @@ names in their natural, rather than lexicographic, order.")
 (define-public r-edger
   (package
     (name "r-edger")
-    (version "3.16.1")
+    (version "3.16.5")
     (source (origin
               (method url-fetch)
               (uri (bioconductor-uri "edgeR" version))
               (sha256
                (base32
-                "1r6hhwkqp13m022hjajzr1lnjsbai0yjhykwn0kp1f0la990a808"))))
+                "04vpa0a6dkkjyvvfbkmfjyaxf2ldkagi66g028qpaszd8jsk8yiv"))))
     (properties `((upstream-name . "edgeR")))
     (build-system r-build-system)
     (propagated-inputs
@@ -6225,13 +6212,13 @@ CAGE.")
 (define-public r-variantannotation
   (package
     (name "r-variantannotation")
-    (version "1.20.0")
+    (version "1.20.2")
     (source (origin
               (method url-fetch)
               (uri (bioconductor-uri "VariantAnnotation" version))
               (sha256
                (base32
-                "1lwzfgahz8ipwli73kcfqb18y6adi129hap1gnycnj3980m54i8q"))))
+                "165wda1d2jagd907pnra4m3sla66icyqxvd60xpv09jl5agd5mn9"))))
     (properties
      `((upstream-name . "VariantAnnotation")))
     (inputs
@@ -6263,13 +6250,13 @@ coding changes and predict coding outcomes.")
 (define-public r-limma
   (package
     (name "r-limma")
-    (version "3.30.2")
+    (version "3.30.7")
     (source (origin
               (method url-fetch)
               (uri (bioconductor-uri "limma" version))
               (sha256
                (base32
-                "04jris7wk2lxksrrvrjsysznsdb2k04lfgrnp18ic49sazva0hfy"))))
+                "1xg9w4lmn9n4hwyflxiwi6g969lcy569cg4z1x47crwwg7z7qdka"))))
     (build-system r-build-system)
     (home-page "http://bioinf.wehi.edu.au/limma")
     (synopsis "Package for linear models for microarray and RNA-seq data")
@@ -6450,13 +6437,13 @@ objects.")
 (define-public r-biostrings
   (package
     (name "r-biostrings")
-    (version "2.42.0")
+    (version "2.42.1")
     (source (origin
               (method url-fetch)
               (uri (bioconductor-uri "Biostrings" version))
               (sha256
                (base32
-                "08z8lkz3axa94wkf144a931ry6vf6cc25avi1ywr84ln2k5czz9f"))))
+                "0vqgd9i6y3wj4zviqwgvwgd4qj6033fg01rmx1cw9bw5i8ans42d"))))
     (properties
      `((upstream-name . "Biostrings")))
     (build-system r-build-system)
@@ -6627,13 +6614,13 @@ as well as query and modify the browser state, such as the current viewport.")
 (define-public r-genomicfeatures
   (package
     (name "r-genomicfeatures")
-    (version "1.26.0")
+    (version "1.26.2")
     (source (origin
               (method url-fetch)
               (uri (bioconductor-uri "GenomicFeatures" version))
               (sha256
                (base32
-                "0z8spi2knwzwi10c38vr7xlvi3ah9faj7m1lka880mmxkl9cai4k"))))
+                "1ybi6r3bax07wlv2qcd34y5qjdvcqcfayfvlrjc39ifrkk65wv4f"))))
     (properties
      `((upstream-name . "GenomicFeatures")))
     (build-system r-build-system)
@@ -7239,7 +7226,7 @@ throughput genetic sequencing data sets using regression methods.")
 (define-public r-qtl
  (package
   (name "r-qtl")
-  (version "1.39-5")
+  (version "1.40-8")
   (source
    (origin
     (method url-fetch)
@@ -7247,7 +7234,7 @@ throughput genetic sequencing data sets using regression methods.")
                         version ".tar.gz"))
     (sha256
      (base32
-      "1grwgvyv7x0dgay1858bg7qf4wk47gpnq7qkqpcda9cn0h970d6f"))))
+      "05bj1x2ry0i7yqiydlswb3d2h4pxg70z8w1072az1mrv1m54k8sp"))))
   (build-system r-build-system)
   (home-page "http://rqtl.org/")
   (synopsis "R package for analyzing QTL experiments in genetics")
@@ -7363,7 +7350,7 @@ paired-end data.")
 (define-public r-rcas
   (package
     (name "r-rcas")
-    (version "1.0.0")
+    (version "1.1.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/BIMSBbioinfo/RCAS/archive/v"
@@ -7371,7 +7358,7 @@ paired-end data.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1h7di822ihgkhmmmlfbfz3c2dkjyjxl307i6mx8w0cwjqbna1kp6"))))
+                "1hd0r66556bxbdd82ksjklq7nfli36l4k6y88ic7kkg9873wa1nw"))))
     (build-system r-build-system)
     (native-inputs
      `(("r-knitr" ,r-knitr)
@@ -7393,6 +7380,7 @@ paired-end data.")
        ("r-topgo" ,r-topgo)
        ("r-dt" ,r-dt)
        ("r-plotly" ,r-plotly)
+       ("r-plotrix" ,r-plotrix)
        ("r-motifrg" ,r-motifrg)
        ("r-genomation" ,r-genomation)
        ("r-genomicfeatures" ,r-genomicfeatures)
@@ -7853,15 +7841,20 @@ replacement for strverscmp.")
 (define-public multiqc
   (package
     (name "multiqc")
-    (version "0.6")
+    (version "0.9")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri "multiqc" version))
        (sha256
         (base32
-         "0avw11h63ldpxy5pizc3wl1wa01ha7q10wb240nggsjz3jaqvyiy"))))
+         "12gs1jw2jrxrij529rnl5kaqxfcqn15yzcsggxkfhdx634ml0cny"))
+       (patches (search-patches "multiqc-fix-git-subprocess-error.patch"))))
     (build-system python-build-system)
+    (arguments
+     ;; Tests are to be introduced in the next version, see
+     ;; https://github.com/ewels/MultiQC/issues/376
+     `(#:tests? #f))
     (propagated-inputs
      `(("python-jinja2" ,python-jinja2)
        ("python-simplejson" ,python-simplejson)

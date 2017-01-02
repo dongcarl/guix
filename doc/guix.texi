@@ -13,7 +13,7 @@
 @set OPENPGP-SIGNING-KEY-ID BCA689B636553801C3C62150197A5888235FACAC
 
 @copying
-Copyright @copyright{} 2012, 2013, 2014, 2015, 2016 Ludovic Courtès@*
+Copyright @copyright{} 2012, 2013, 2014, 2015, 2016, 2017 Ludovic Courtès@*
 Copyright @copyright{} 2013, 2014, 2016 Andreas Enge@*
 Copyright @copyright{} 2013 Nikita Karetnikov@*
 Copyright @copyright{} 2014, 2015, 2016 Alex Kost@*
@@ -54,12 +54,6 @@ Documentation License''.
 * guix environment: (guix)Invoking guix environment. Building development environments with Guix.
 @end direntry
 
-@dircategory Emacs
-@direntry
-* Guix user interface: (guix)Emacs Interface. Package management from the comfort of Emacs.
-@end direntry
-
-
 @titlepage
 @title GNU Guix Reference Manual
 @subtitle Using the GNU Guix Functional Package Manager
@@ -86,7 +80,6 @@ package management tool written for the GNU system.
 * Introduction::                What is Guix about?
 * Installation::                Installing Guix.
 * Package Management::          Package installation, upgrade, etc.
-* Emacs Interface::             Using Guix from Emacs.
 * Programming Interface::       Using Guix in Scheme.
 * Utilities::                   Package management commands.
 * GNU Distribution::            Software for your friendly GNU system.
@@ -124,19 +117,6 @@ Package Management
 * Invoking guix pull::          Fetching the latest Guix and distribution.
 * Invoking guix archive::       Exporting and importing store files.
 
-Emacs Interface
-
-* Initial Setup: Emacs Initial Setup.	Preparing @file{~/.emacs}.
-* Package Management: Emacs Package Management.	Managing packages and generations.
-* Licenses: Emacs Licenses.		Interface for licenses of Guix packages.
-* Package Source Locations: Emacs Package Locations.	Interface for package location files.
-* Popup Interface: Emacs Popup Interface.	Magit-like interface for guix commands.
-* Prettify Mode: Emacs Prettify.	Abbreviating @file{/gnu/store/@dots{}} file names.
-* Build Log Mode: Emacs Build Log.	Highlighting Guix build logs.
-* Completions: Emacs Completions.	Completing @command{guix} shell command.
-* Development: Emacs Development.	Tools for Guix developers.
-* Hydra: Emacs Hydra.			Interface for Guix build farm.
-
 Programming Interface
 
 * Defining Packages::           Defining new packages.
@@ -165,12 +145,13 @@ Utilities
 * Invoking guix environment::   Setting up development environments.
 * Invoking guix publish::       Sharing substitutes.
 * Invoking guix challenge::     Challenging substitute servers.
+* Invoking guix copy::          Copying to and from a remote store.
 * Invoking guix container::     Process isolation.
 
 Invoking @command{guix build}
 
 * Common Build Options::        Build options for most commands.
-* Package Transformation Options::    Creating variants of packages.
+* Package Transformation Options::  Creating variants of packages.
 * Additional Build Options::    Options specific to 'guix build'.
 
 GNU Distribution
@@ -219,12 +200,14 @@ Services
 * Log Rotation::                The rottlog service.
 * Networking Services::         Network setup, SSH daemon, etc.
 * X Window::                    Graphical display.
+* Printing Services::           Local and remote printer support.
 * Desktop Services::            D-Bus and desktop services.
 * Database Services::           SQL databases.
 * Mail Services::               IMAP, POP3, SMTP, and all that.
 * Kerberos Services::           Kerberos services.
 * Web Services::                Web servers.
 * Network File System::         NFS related services.
+* Continuous Integration::      The Cuirass service.
 * Miscellaneous Services::      Other services.
 
 Defining Services
@@ -278,8 +261,7 @@ assists with the creation and maintenance of software environments.
 @cindex user interfaces
 Guix provides a command-line package management interface
 (@pxref{Invoking guix package}), a set of command-line utilities
-(@pxref{Utilities}), a visual user interface in Emacs (@pxref{Emacs
-Interface}), as well as Scheme programming interfaces
+(@pxref{Utilities}), as well as Scheme programming interfaces
 (@pxref{Programming Interface}).
 @cindex build daemon
 Its @dfn{build daemon} is responsible for building packages on behalf of
@@ -572,7 +554,8 @@ interest primarily for developers and not for casual users.
 
 @item
 @c Note: We need at least 0.10.2 for 'channel-send-eof'.
-Support for build offloading (@pxref{Daemon Offload Setup}) depends on
+Support for build offloading (@pxref{Daemon Offload Setup}) and
+@command{guix copy} (@pxref{Invoking guix copy}) depends on
 @uref{https://github.com/artyom-poptsov/guile-ssh, Guile-SSH},
 version 0.10.2 or later.
 
@@ -1414,10 +1397,14 @@ procedures or dependencies.  Guix also goes beyond this obvious set of
 features.
 
 This chapter describes the main features of Guix, as well as the package
-management tools it provides.  Two user interfaces are provided for
-routine package management tasks: A command-line interface described below
-(@pxref{Invoking guix package, @code{guix package}}), as well as a visual user
-interface in Emacs described in a subsequent chapter (@pxref{Emacs Interface}).
+management tools it provides.  Along with the command-line interface
+described below (@pxref{Invoking guix package, @code{guix package}}),
+you may also use Emacs Interface, after installing @code{emacs-guix}
+package (run @kbd{M-x guix-help} command to start with it):
+
+@example
+guix package -i emacs-guix
+@end example
 
 @menu
 * Features::                    How Guix will make your life brighter.
@@ -1434,9 +1421,7 @@ interface in Emacs described in a subsequent chapter (@pxref{Emacs Interface}).
 
 When using Guix, each package ends up in the @dfn{package store}, in its
 own directory---something that resembles
-@file{/gnu/store/xxx-package-1.2}, where @code{xxx} is a base32 string
-(note that Guix comes with an Emacs extension to shorten those file
-names, @pxref{Emacs Prettify}.)
+@file{/gnu/store/xxx-package-1.2}, where @code{xxx} is a base32 string.
 
 Instead of referring to these directories, users have their own
 @dfn{profile}, which points to the packages that they actually want to
@@ -1982,9 +1967,7 @@ also result from derivation builds, can be available as substitutes.
 
 The @code{hydra.gnu.org} server is a front-end to a build farm that
 builds packages from the GNU distribution continuously for some
-architectures, and makes them available as substitutes (@pxref{Emacs
-Hydra}, for information on how to query the continuous integration
-server).  This is the
+architectures, and makes them available as substitutes.  This is the
 default source of substitutes; it can be overridden by passing the
 @option{--substitute-urls} option either to @command{guix-daemon}
 (@pxref{daemon-substitute-urls,, @code{guix-daemon --substitute-urls}})
@@ -2405,7 +2388,9 @@ However, note that, in both examples, all of @code{emacs} and the
 profile as well as all of their dependencies are transferred (due to
 @code{-r}), regardless of what is already available in the store on the
 target machine.  The @code{--missing} option can help figure out which
-items are missing from the target store.
+items are missing from the target store.  The @command{guix copy}
+command simplifies and optimizes this whole process, so this is probably
+what you should use in this case (@pxref{Invoking guix copy}).
 
 @cindex nar, archive format
 @cindex normalized archive (nar)
@@ -2508,9 +2493,6 @@ The primary purpose of this operation is to facilitate inspection of
 archive contents coming from possibly untrusted substitute servers.
 
 @end table
-
-@c *********************************************************************
-@include emacs.texi
 
 @c *********************************************************************
 @node Programming Interface
@@ -4439,6 +4421,7 @@ the Scheme programming interface of Guix in a convenient way.
 * Invoking guix environment::   Setting up development environments.
 * Invoking guix publish::       Sharing substitutes.
 * Invoking guix challenge::     Challenging substitute servers.
+* Invoking guix copy::          Copying to and from a remote store.
 * Invoking guix container::     Process isolation.
 @end menu
 
@@ -4491,7 +4474,7 @@ described in the subsections below.
 
 @menu
 * Common Build Options::        Build options for most commands.
-* Package Transformation Options::    Creating variants of packages.
+* Package Transformation Options::  Creating variants of packages.
 * Additional Build Options::    Options specific to 'guix build'.
 @end menu
 
@@ -4922,11 +4905,6 @@ have created your own packages on @code{GUIX_PACKAGE_PATH}
 (@pxref{Defining Packages}), you will be able to edit the package
 recipes. Otherwise, you will be able to examine the read-only recipes
 for packages currently in the store.
-
-If you are using Emacs, note that the Emacs user interface provides the
-@kbd{M-x guix-edit} command and a similar functionality in the ``package
-info'' and ``package list'' buffers created by the @kbd{M-x
-guix-search-by-name} and similar commands (@pxref{Emacs Commands}).
 
 
 @node Invoking guix download
@@ -6399,6 +6377,68 @@ Consider @var{urls} the whitespace-separated list of substitute source
 URLs to compare to.
 
 @end table
+
+@node Invoking guix copy
+@section Invoking @command{guix copy}
+
+@cindex copy, of store items, over SSH
+@cindex SSH, copy of store items
+@cindex sharing store items across machines
+@cindex transferring store items across machines
+The @command{guix copy} command copies items from the store of one
+machine to that of another machine over a secure shell (SSH)
+connection@footnote{This command is available only when Guile-SSH was
+found.  @xref{Requirements}, for details.}.  For example, the following
+command copies the @code{coreutils} package, the user's profile, and all
+their dependencies over to @var{host}, logged in as @var{user}:
+
+@example
+guix copy --to=@var{user}@@@var{host} \
+          coreutils `readlink -f ~/.guix-profile`
+@end example
+
+If some of the items to be copied are already present on @var{host},
+they are not actually sent.
+
+The command below retrieves @code{libreoffice} and @code{gimp} from
+@var{host}, assuming they are available there:
+
+@example
+guix copy --from=@var{host} libreoffice gimp
+@end example
+
+The SSH connection is established using the Guile-SSH client, which is
+compatible with OpenSSH: it honors @file{~/.ssh/known_hosts} and
+@file{~/.ssh/config}, and uses the SSH agent for authentication.
+
+The key used to sign items that are sent must be accepted by the remote
+machine.  Likewise, the key used by the remote machine to sign items you
+are retrieving must be in @file{/etc/guix/acl} so it is accepted by your
+own daemon.  @xref{Invoking guix archive}, for more information about
+store item authentication.
+
+The general syntax is:
+
+@example
+guix copy [--to=@var{spec}|--from=@var{spec}] @var{items}@dots{}
+@end example
+
+You must always specify one of the following options:
+
+@table @code
+@item --to=@var{spec}
+@itemx --from=@var{spec}
+Specify the host to send to or receive from.  @var{spec} must be an SSH
+spec such as @code{example.org}, @code{charlie@@example.org}, or
+@code{charlie@@example.org:2222}.
+@end table
+
+The @var{items} can be either package names, such as @code{gimp}, or
+store items, such as @file{/gnu/store/@dots{}-idutils-4.6}.
+
+When specifying the name of a package to send, it is first built if
+needed, unless @option{--dry-run} was specified.  Common build options
+are supported (@pxref{Common Build Options}).
 
 
 @node Invoking guix container
@@ -11971,36 +12011,38 @@ providing substitutes to others (@pxref{Substitutes}).
 
 The @code{(gnu services cuirass)} module provides the following service.
 
-@deffn {Scheme Procedure} cuirass-service @
-       [#:config @code{(cuirass-configuration)}]
-Return a service that runs @command{cuirass}.
+@defvr {Scheme Procedure} cuirass-service-type
+The type of the Cuirass service.  Its value must be a
+@code{cuirass-configuration} object, as described below.
+@end defvr
 
-The @var{#:config} keyword argument specifies the configuration for
-@command{cuirass}, which must be a @code{<cuirass-configuration>}
-object, by default it doesn't provide any build job.  If you want to
-provide your own configuration you will most likely use the
-@code{cuirass-configuration} special form which returns such objects.
-@end deffn
-
-In order to add build jobs you will have to set the
-@code{specifications} field.  Here is an example of a cuirass service
-defining a build job based on a specification that can be found in
-Cuirass source tree.
+To add build jobs, you have to set the @code{specifications} field of
+the configuration.  Here is an example of a service defining a build job
+based on a specification that can be found in Cuirass source tree.  This
+service polls the Guix repository and builds a subset of the Guix
+packages, as prescribed in the @file{gnu-system.scm} example spec:
 
 @example
-(let ((spec `((#:name . "guix")
-              (#:url . "git://git.savannah.gnu.org/guix.git")
-              (#:load-path . ".")
-              ;; Adapt to a valid absolute file name.
-              (#:file . "/.../cuirass/tests/gnu-system.scm")
-              (#:proc . hydra-jobs)
-              (#:arguments (subset . "hello"))
-              (#:branch . "master"))))
-  (cuirass-service #:config (cuirass-configuration
-                             (specifications (list spec)))))
+(let ((spec #~((#:name . "guix")
+               (#:url . "git://git.savannah.gnu.org/guix.git")
+               (#:load-path . ".")
+
+               ;; Here we must provide an absolute file name.
+               ;; We take jobs from one of the examples provided
+               ;; by Cuirass.
+               (#:file . #$(file-append
+                            cuirass
+                            "/tests/gnu-system.scm"))
+
+               (#:proc . hydra-jobs)
+               (#:arguments (subset . "hello"))
+               (#:branch . "master"))))
+  (service cuirass-service-type
+           (cuirass-configuration
+            (specifications #~(list #$spec)))))
 @end example
 
-While information related to build jobs are located directly in the
+While information related to build jobs is located directly in the
 specifications, global settings for the @command{cuirass} process are
 accessible in other @code{cuirass-configuration} fields.
 
@@ -12028,8 +12070,9 @@ Cuirass jobs.
 Location of sqlite database which contains the build results and previously
 added specifications.
 
-@item @code{specifications} (default: @code{'()})
-A list of specifications, where a specification is an association list
+@item @code{specifications} (default: @code{#~'()})
+A gexp (@pxref{G-Expressions}) that evaluates to a list of specifications,
+where a specification is an association list
 (@pxref{Associations Lists,,, guile, GNU Guile Reference Manual}) whose
 keys are keywords (@code{#:keyword-example}) as shown in the example
 above.

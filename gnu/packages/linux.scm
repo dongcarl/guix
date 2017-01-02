@@ -344,8 +344,8 @@ It has been modified to remove all non-free binary blobs.")
                     #:configuration-file kernel-config))
 
 (define-public linux-libre-4.1
-  (make-linux-libre "4.1.36"
-                    "0wy7xpqjwn1aprbzrbqgjskcg8qj2mczkv3rcisxf8gcdifz61qh"
+  (make-linux-libre "4.1.37"
+                    "0q79cxmrz0j5wh7z1dc103q6q6qf7rqgjl7ka8lvn4vl32pr0kq1"
                     %intel-compatible-systems
                     #:configuration-file kernel-config))
 
@@ -856,14 +856,14 @@ MIDI functionality to the Linux-based operating system.")
 (define-public alsa-utils
   (package
     (name "alsa-utils")
-    (version "1.1.2")
+    (version "1.1.3")
     (source (origin
              (method url-fetch)
              (uri (string-append "ftp://ftp.alsa-project.org/pub/utils/"
                                  name "-" version ".tar.bz2"))
              (sha256
               (base32
-               "0wcha78c2sm8qqk5r3w83cvm8fp6fb1zpd35kmcm24kxhz007xks"))))
+               "0z0nnqp1707bm02dys2d16m88lsg5nd26bqaf14rl3za9sjifwhj"))))
     (build-system gnu-build-system)
     (arguments
      ;; XXX: Disable man page creation until we have DocBook.
@@ -882,7 +882,8 @@ MIDI functionality to the Linux-based operating system.")
              ;; Don't try to mkdir /var/lib/alsa.
              (substitute* "Makefile"
                (("\\$\\(MKDIR_P\\) .*ASOUND_STATE_DIR.*")
-                "true\n")))))))
+                "true\n"))
+             #t)))))
     (inputs
      `(("libsamplerate" ,libsamplerate)
        ("ncurses" ,ncurses)
@@ -2698,7 +2699,7 @@ and copy/paste text in the console and in xterm.")
 (define-public btrfs-progs
   (package
     (name "btrfs-progs")
-    (version "4.8.5")
+    (version "4.9")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://kernel.org/linux/kernel/"
@@ -2706,7 +2707,7 @@ and copy/paste text in the console and in xterm.")
                                   "btrfs-progs-v" version ".tar.xz"))
               (sha256
                (base32
-                "1vq83a8sz8dnshbyaghacqvcwv2n1kh53yjv87rxx9dc4b0b2iyj"))))
+                "18y88avadn4wb3xmczd6pfcjr7ik62dw4phk6fmkms2j8vmvl9z2"))))
     (build-system gnu-build-system)
     (outputs '("out"
                "static"))      ; static versions of binaries in "out" (~16MiB!)
@@ -2733,11 +2734,11 @@ and copy/paste text in the console and in xterm.")
     (native-inputs `(("pkg-config" ,pkg-config)
                      ("asciidoc" ,asciidoc)
                      ("xmlto" ,xmlto)
-                     ;; For building documentation
+                     ;; For building documentation.
                      ("libxml2" ,libxml2)
                      ("docbook-xml" ,docbook-xml)
                      ("docbook-xsl" ,docbook-xsl)
-                     ;; For tests
+                     ;; For tests.
                      ("which" ,which)))
     (home-page "https://btrfs.wiki.kernel.org/")
     (synopsis "Create and manage btrfs copy-on-write file systems")

@@ -64,6 +64,7 @@
 (define-public libpng
   (package
    (name "libpng")
+   (replacement libpng/fixed)
    (version "1.6.25")
    (source (origin
             (method url-fetch)
@@ -88,10 +89,19 @@ library.  It supports almost all PNG features and is extensible.")
    (license license:zlib)
    (home-page "http://www.libpng.org/pub/png/libpng.html")))
 
+(define libpng/fixed
+  (package
+    (inherit libpng)
+    (source
+      (origin
+        (inherit (package-source libpng))
+        (patches (search-patches "libpng-CVE-2016-10087.patch"))))))
+
 (define-public libpng-1.2
   (package
     (inherit libpng)
-    (version "1.2.56")
+    (replacement #f)
+    (version "1.2.57")
     (source
      (origin
        (method url-fetch)
@@ -102,7 +112,7 @@ library.  It supports almost all PNG features and is extensible.")
                    "ftp://ftp.simplesystems.org/pub/libpng/png/src"
                    "/libpng12/libpng-" version ".tar.xz")))
        (sha256
-        (base32 "1ghd03p353x0vi4dk83n1nlldg11w7vqdk3f99rkgfb82ic59ki4"))))))
+        (base32 "1n2lrzjkm5jhfg2bs10q398lkwbbx742fi27zgdgx0x23zhj0ihg"))))))
 
 (define-public libjpeg
   (package
@@ -329,28 +339,23 @@ the W3C's XML-based Scaleable Vector Graphic (SVG) format.")
 (define-public leptonica
   (package
     (name "leptonica")
-    (version "1.72")
+    (version "1.74.0")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "http://www.leptonica.com/source/leptonica-"
-                           version ".tar.gz"))
+       (uri (string-append
+             "https://github.com/DanBloomberg/leptonica/archive/" version
+             ".tar.gz"))
+       (file-name (string-append "leptonica-" version ".tar.gz"))
        (sha256
-        (base32 "0mhzvqs0im04y1cpcc1yma70hgdac1frf33h73m9z3356bfymmbr"))
-       (modules '((guix build utils)))
-       ;; zlib and openjpg should be under Libs, not Libs.private.  See:
-       ;; https://code.google.com/p/tesseract-ocr/issues/detail?id=1436
-       (snippet
-        '(substitute* "lept.pc.in"
-           (("^(Libs\\.private: .*)@ZLIB_LIBS@(.*)" all pre post)
-            (string-append pre post))
-           (("^(Libs\\.private: .*)@JPEG_LIBS@(.*)" all pre post)
-            (string-append pre post))
-           (("^Libs: .*" all)
-            (string-append all " @ZLIB_LIBS@ @JPEG_LIBS@"))))))
+        (base32 "0i2a4vx9gizki0wgmv03xjz8j9d8agkvbag1a8m4kcw4asd4p87g"))))
     (build-system gnu-build-system)
     (native-inputs
-     `(("gnuplot" ,gnuplot)))           ;needed for test suite
+     `(("gnuplot" ,gnuplot)             ;needed for test suite
+       ("autoconf" ,autoconf)
+       ("automake" ,automake)
+       ("libtool" ,libtool)
+       ("pkg-config" ,pkg-config)))
     (inputs
      `(("giflib" ,giflib)
        ("libjpeg" ,libjpeg)
@@ -358,31 +363,22 @@ the W3C's XML-based Scaleable Vector Graphic (SVG) format.")
        ("libtiff" ,libtiff)
        ("libwebp" ,libwebp)))
     (propagated-inputs
+     ;; Linking a program with leptonica also requires these.
      `(("openjpeg" ,openjpeg)
        ("zlib" ,zlib)))
     (arguments
-     '(#:parallel-tests? #f ; XXX: cause fpix1_reg to fail
-       #:phases
+     '(#:phases
        (modify-phases %standard-phases
-         ;; Prevent make from trying to regenerate config.h.in.
-         (add-after
-          'unpack 'set-config-h-in-file-time
-          (lambda _
-            (set-file-time "config/config.h.in" (stat "configure"))))
-         (add-after
-          'unpack 'patch-reg-wrapper
-          (lambda _
-            (substitute* "prog/reg_wrapper.sh"
-              ((" /bin/sh ")
-               (string-append " " (which "sh") " "))
-              (("which gnuplot") (which "gnuplot")))))
-         (add-before
-          'check 'disable-failing-tests
-          ;; XXX: 2 of 9 tests from webpio_reg fails.
-          (lambda _
-            (substitute* "prog/webpio_reg.c"
-              ((".*DoWebpTest2.* 90.*") "")
-              ((".*DoWebpTest2.* 100.*") "")))))))
+         (add-after 'unpack 'autogen
+           (lambda _
+             (zero? (system* "sh" "autobuild"))))
+         (add-after 'unpack 'patch-reg-wrapper
+           (lambda _
+             (substitute* "prog/reg_wrapper.sh"
+               ((" /bin/sh ")
+                (string-append " " (which "sh") " "))
+               (("which gnuplot")
+                "true")))))))
     (home-page "http://www.leptonica.com/")
     (synopsis "Library and tools for image processing and analysis")
     (description
