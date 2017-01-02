@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -25,9 +25,25 @@
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
   #:use-module (web uri)
+  #:use-module (srfi srfi-1)
+
+  #:export (substitute-is-reachable?)
   #:export (ping-page-refresh)
   #:export (ping-page-key-handler))
 
+
+(define (substitute-is-reachable?)
+  "Return #t if at least one substitute URL responds to pings"
+  (with-output-to-file "/dev/null"
+    (lambda ()
+      (with-error-to-file "/dev/null"
+        (lambda ()
+          (fold (lambda (x prev)
+                  (or prev
+                      (zero? (system*
+                              "ping" "-q" "-c" "1"
+                              (uri-host (string->uri x))))))
+                #f %default-substitute-urls))))))
 
 (define my-buttons `((test ,(N_ "_Test") #t)
 		     (continue  ,(N_ "_Continue") #t)

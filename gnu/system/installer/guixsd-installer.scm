@@ -33,11 +33,12 @@
 	     (gnu system installer network)
              (gnu system installer install)
 	     (gnu system installer page)
+             (gnu system installer ping)
 	     (gnu system installer dialog)
 
              (guix build utils)
              (guix utils)
-             
+
 	     (ice-9 format)
              (ice-9 match)
 	     (ice-9 pretty-print)
@@ -66,8 +67,7 @@
         0 (volumes)))
 
 (define main-options
-  `(
-    (disk . ,(make-task partition-menu-title
+  `((disk . ,(make-task partition-menu-title
                         '()
                         (lambda () (< minimum-store-size (size-of-largest-disk)))
                         (lambda (page)
@@ -76,32 +76,32 @@
                            partition-menu-title))))
 
     (filesystems . ,(make-task filesystem-menu-title
-                        '(disk)
-                        filesystem-task-complete?
-                        (lambda (page)
-                          (make-filesystem-page
-                           page
-                           filesystem-menu-title))))
+                               '(disk)
+                               filesystem-task-complete?
+                               (lambda (page)
+                                 (make-filesystem-page
+                                  page
+                                  filesystem-menu-title))))
 
     (network . ,(make-task network-menu-title
-                        '()
-                        (lambda () #f)
-                        (lambda (page)
-                          (make-network-page
-                           page
-                           network-menu-title))))
+                           '()
+                           substitute-is-reachable?
+                           (lambda (page)
+                             (make-network-page
+                              page
+                              network-menu-title))))
 
     (timezone . ,(make-task timezone-menu-title
-                        '()
-                        (lambda () (not (equal? "" time-zone)))
-                        (lambda (page)
-                          (make-tz-browser
-                           page
-                           (or
-                            (getenv "TZDIR")
-                            (string-append (car (slurp "guix build tzdata" #f))
-                                           "/share/zoneinfo"))
-        	     page-stack))))
+                            '()
+                            (lambda () (not (equal? "" time-zone)))
+                            (lambda (page)
+                              (make-tz-browser
+                               page
+                               (or
+                                (getenv "TZDIR")
+                                (string-append (car (slurp "guix build tzdata" #f))
+                                               "/share/zoneinfo"))
+                               page-stack))))
 
     (hostname . ,(make-task hostname-menu-title
                             '()
@@ -122,7 +122,7 @@
                                (make-configure-page
                                 page
                                 generate-menu-title))))
-                             
+
     (install .  ,(make-task installation-menu-title
                             '(network generate)
                             (lambda () #f)
@@ -199,16 +199,16 @@
       (page-set-wwin! page frame)
       (page-set-datum! page 'menu main-menu)
       (menu-post main-menu win))
-    
+
     ;; Do the key action labels
     (let ((ypos (1- (getmaxy background)))
 	  (str0 (gettext "Get a Shell <F1>"))
 	  (str1 (gettext "Language <F9>"))
 	  (str2 (gettext "Keyboard <F10>")))
-      
+
       (addstr background str0 #:y ypos #:x 0)
       (addstr background str1 #:y ypos #:x
-	      (truncate (/ (- (getmaxx background) 
+	      (truncate (/ (- (getmaxx background)
 			      (string-length str1)) 2)))
       (addstr background str2 #:y ypos #:x
 	      (- (getmaxx background) (string-length str2))))))
@@ -218,7 +218,7 @@
   (when (not (page-initialised? page))
     (main-page-init page)
     (page-set-initialised! page #t))
-  
+
   (touchwin (outer (page-wwin page)))
   (refresh (outer (page-wwin page)))
   (refresh (inner (page-wwin page)))
