@@ -9,6 +9,7 @@
 # Copyright © 2016 Adonay "adfeno" Felipe Nogueira <https://libreplanet.org/wiki/User:Adfeno> <adfeno@openmailbox.org>
 # Copyright © 2016 Ricardo Wurmus <rekado@elephly.net>
 # Copyright © 2016 Ben Woodcroft <donttrustben@gmail.com>
+# Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 #
 # This file is part of GNU Guix.
 #
@@ -450,6 +451,7 @@ GNU_SYSTEM_MODULES =				\
   %D%/system/installer/file-browser.scm         \
   %D%/system/installer/utils.scm                \
   %D%/system/installer/page.scm                 \
+  %D%/system/installer/passphrase.scm           \
   %D%/system/installer/configure.scm            \
   %D%/system/installer/time-zone.scm            \
   %D%/system/installer/misc.scm                 \
