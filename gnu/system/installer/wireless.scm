@@ -19,6 +19,7 @@
 (define-module (gnu system installer wireless)
   #:use-module (gnu system installer page)
   #:use-module (gnu system installer ping)
+  #:use-module (gnu system installer passphrase)
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer utils)
   #:use-module (ice-9 format)
@@ -29,6 +30,7 @@
   #:use-module (guix store)
   #:use-module (guix utils)
 
+  #:export (wireless-connect)
   #:export (make-essid-page))
 
 
@@ -42,13 +44,12 @@
     page))
 
 
-(define my-buttons `((continue ,(N_ "_Continue") #t)))
+(define my-buttons `((back ,(N_ "_Back") #t)))
 
 (define (essid-page-key-handler page ch)
-
   (let ((nav  (page-datum page 'navigation))
         (menu  (page-datum page 'menu))
-	(test-window  (page-datum page 'test-window)))
+        (test-window  (page-datum page 'test-window)))
 
     (cond
      ((eq? ch KEY_RIGHT)
@@ -57,10 +58,10 @@
      ((eq? ch #\tab)
       (cond
        ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-	(buttons-unselect-all nav))
+        (buttons-unselect-all nav))
 
        (else
-	(buttons-select-next nav))))
+        (buttons-select-next nav))))
 
      ((eq? ch KEY_LEFT)
       (buttons-select-prev nav))
@@ -68,30 +69,18 @@
      ((eq? ch KEY_UP)
       (buttons-unselect-all nav))
 
+     ((buttons-key-matches-symbol? nav ch 'back)
+      (set! page-stack (cdr page-stack))
+      ((page-refresh (car page-stack)) (car page-stack)))
 
-     ((buttons-key-matches-symbol? nav ch 'continue)
-
-      (with-output-to-file "/tmp/wpa_supplicant.conf"
-        (lambda ()
-         (format #t "
-network={
-\tssid=\"~a\"
-\tkey_mgmt=WPA-PSK
-\tpsk=\"~a\"
-}
-"
-                 (assq-ref (menu-get-current-item menu) 'essid)
-                 "Passphrase")))
-
-      (and (zero? (system* "wpa_supplicant" "-c" "/tmp/wpa_supplicant.conf" "-i"
-               (page-datum page 'ifce)
-               "-B"))
-           (zero? (system* "dhclient" (page-datum page 'ifce))))
-
-      (delwin (outer (page-wwin page)))
-      (delwin (inner (page-wwin page)))
-
-      (set! page-stack (cdr page-stack))))
+     ((select-key? ch)
+      (let ((next (make-passphrase-page
+                   page
+                   (N_ "Passphrase entry")
+                   (page-datum page 'ifce)
+                   (assq-ref (menu-get-current-item menu) 'essid))))
+        (set! page-stack (cons next page-stack))
+        ((page-refresh next) next))))
 
 
     (std-menu-key-handler menu ch)
@@ -110,28 +99,28 @@ network={
 
 (define (essid-page-init p)
   (let* ((s (page-surface p))
-	 (pr (make-boxed-window  #f
-	      (- (getmaxy s) 4) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
-	 (text-window (derwin
-		       (inner pr)
-		       5 (getmaxx (inner pr))
-		       0 0
-		       #:panel #f))
-			
-	 (bwin (derwin (inner pr)
-		       3 (getmaxx (inner pr))
-		       (- (getmaxy (inner pr)) 3) 0
-			  #:panel #f))
-	 (buttons (make-buttons my-buttons 1))
+         (pr (make-boxed-window  #f
+                                 (- (getmaxy s) 4) (- (getmaxx s) 2)
+                                 2 1
+                                 #:title (page-title p)))
+         (text-window (derwin
+                       (inner pr)
+                       5 (getmaxx (inner pr))
+                       0 0
+                       #:panel #f))
 
-	 (mwin (derwin (inner pr)
-		       (- (getmaxy (inner pr)) (getmaxy text-window) 3)
-		       (- (getmaxx (inner pr)) 0)
-		       (getmaxy text-window) 0 #:panel #f))
+         (bwin (derwin (inner pr)
+                       3 (getmaxx (inner pr))
+                       (- (getmaxy (inner pr)) 3) 0
+                       #:panel #f))
+         (buttons (make-buttons my-buttons 1))
 
-	 (menu (make-menu
+         (mwin (derwin (inner pr)
+                       (- (getmaxy (inner pr)) (getmaxy text-window) 3)
+                       (- (getmaxx (inner pr)) 0)
+                       (getmaxy text-window) 0 #:panel #f))
+
+         (menu (make-menu
                 ;; Present a menu of available Access points in decreasing
                 ;; order of signal strength
                 (sort
@@ -149,8 +138,8 @@ network={
                               (N_ "Clear")))))))
 
     (addstr*   text-window  (format #f
-	      (gettext
-	       "Select an access point to connect.")))
+                                    (gettext
+                                     "Select an access point to connect.")))
 
     (page-set-wwin! p pr)
     (page-set-datum! p 'menu menu)
@@ -160,7 +149,7 @@ network={
     (refresh (outer pr))
     (refresh text-window)
     (refresh bwin)))
-			
+
 
 
 (use-modules (ice-9 pretty-print))
@@ -231,3 +220,24 @@ network={
                     (else
                      prev))))
           '() (scan-wifi ifce))))
+
+
+
+(define (wireless-connect ifce essid passphrase)
+  "Connect the wireless interface IFCE to the network advertising ESSID using
+the key PASSPHRASE."
+  (call-with-temporary-output-file
+   (lambda (filename port)
+     (format port "
+network={
+\tssid=\"~a\"
+\tkey_mgmt=WPA-PSK
+\tpsk=\"~a\"
+}
+"
+             essid
+             passphrase)
+     (force-output port)
+
+     (and (zero? (system* "wpa_supplicant" "-c" filename "-i" ifce "-B"))
+          (zero? (system* "dhclient" ifce))))))

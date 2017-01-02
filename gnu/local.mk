@@ -15,6 +15,7 @@
 # Copyright © 2017 Clément Lassieur <clement@lassieur.org>
 # Copyright © 2017 Mathieu Othacehe <m.othacehe@gmail.com>
 # Copyright © 2017 Gábor Boskovits <boskovits@gmail.com>
+# Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 #
 # This file is part of GNU Guix.
 #
@@ -474,6 +475,7 @@ GNU_SYSTEM_MODULES =				\
   %D%/system/installer/file-browser.scm         \
   %D%/system/installer/utils.scm                \
   %D%/system/installer/page.scm                 \
+  %D%/system/installer/passphrase.scm           \
   %D%/system/installer/configure.scm            \
   %D%/system/installer/time-zone.scm            \
   %D%/system/installer/misc.scm                 \
