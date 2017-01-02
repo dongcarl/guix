@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -46,6 +46,22 @@
    (and (not (find-mount-device "/" mount-points))
         (N_ "You must specify a mount point for the root (/)."))
 
+
+   (let ((non-absolute-list (fold (lambda (x prev)
+                (if (absolute-file-name? (cdr x))
+                    prev
+                    (cons (cdr x) prev)))
+              '()
+              mount-points)))
+     (and (not (null? non-absolute-list))
+          (ngettext
+           (format #f
+                   (N_ "The mount point ~s is a relative path.  All mount points must be absolute.")
+                   (car non-absolute-list))
+           (format #f
+                   (N_ "The mount points ~s are relative paths.  All mount points must be absolute.")
+                   non-absolute-list)
+           (length non-absolute-list))))
 
    (and (< (size-of-partition (find-mount-device (%store-directory) mount-points))
            minimum-store-size)
