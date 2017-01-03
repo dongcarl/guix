@@ -21,9 +21,10 @@
   #:use-module (gnu system installer ping)
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer utils)
-  #:use-module  (gnu system installer misc)
-  #:use-module  (gnu system installer partition-reader)
-  #:use-module  (gnu system installer disks)
+  #:use-module (gnu system installer misc)
+  #:use-module (gnu system installer role)
+  #:use-module (gnu system installer partition-reader)
+  #:use-module (gnu system installer disks)
   #:use-module (ice-9 format)
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 match)
@@ -143,11 +144,13 @@
     (newline p)
 
     (pretty-print 
-     `(use-service-modules desktop) p #:width width)
+     `(use-service-modules
+       ,@(role-service-modules system-role)) p #:width width)
     (newline p)
 
     (pretty-print
-     `(use-package-modules certs) p #:width width)
+     `(use-package-modules
+       ,@(role-package-modules system-role)) p #:width width)
     (newline p)
 
     (pretty-print
@@ -176,12 +179,15 @@
                               (type ,(partition-fs z))))) mount-points)
                   (list '%base-file-systems)))
         (users (cons* %base-user-accounts))
-        (packages (cons* nss-certs %base-packages))
+        (packages (cons*
+                   ,@(role-packages system-role)
+                   %base-packages))
         (services (cons*
                    ,@(if key-map
                         `((console-keymap-service ,key-map))
                         `())
-                        %desktop-services))
+                   ,@(role-services system-role)
+                   ))
         (name-service-switch %mdns-host-lookup-nss)) p #:width width)))
 
 

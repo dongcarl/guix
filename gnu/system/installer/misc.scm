@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -24,6 +24,7 @@
   #:export (host-name)
   #:export (config-file)
   #:export (key-map)
+  #:export (system-role)
   #:export (mount-points))
 
 (define livery-title 1)
@@ -37,3 +38,4 @@
 
 (define config-file #f)
 
+(define system-role #f)

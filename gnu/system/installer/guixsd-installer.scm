@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -30,6 +30,7 @@
 	     (gnu system installer hostname)
 	     (gnu system installer file-browser)
 	     (gnu system installer time-zone)
+             (gnu system installer role)
 	     (gnu system installer network)
              (gnu system installer install)
 	     (gnu system installer page)
@@ -60,6 +61,7 @@
 (define timezone-menu-title     (N_ "Set the time zone"))
 (define hostname-menu-title     (N_ "Set the host name"))
 (define installation-menu-title (N_ "Install the system"))
+(define role-menu-title         (N_ "Select a role for the system"))
 (define generate-menu-title     (N_ "Generate the configuration"))
 
 (define (size-of-largest-disk)
@@ -111,8 +113,18 @@
                                page
                                hostname-menu-title))))
 
+
+    (role . ,(make-task role-menu-title
+                            '()
+                            (lambda () (and system-role (role? system-role)))
+                            (lambda (page)
+                              (make-role-page
+                               page
+                               role-menu-title))))
+
+
     (generate . , (make-task generate-menu-title
-                             '(filesystems timezone hostname)
+                             '(role filesystems timezone hostname)
                              (lambda ()
                                (and config-file
                                     (file-exists? config-file)
