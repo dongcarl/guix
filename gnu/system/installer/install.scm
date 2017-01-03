@@ -101,7 +101,7 @@
              (display (gettext "Installing the system ...") window-port)
              (force-output window-port)
 
-             (zero? (pipe-cmd window-port "guix" "guix" "system" "init"
+             (zero? (pipe-cmd window-port "guix" "guix" "system" "init" "--fallback"
                                  (string-append target "/etc/config.scm")
                                  target))
 
