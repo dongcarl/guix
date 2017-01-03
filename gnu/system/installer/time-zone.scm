@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -29,8 +29,8 @@
 (define* (make-tz-browser parent directory #:optional (exit-point #f))
   (let ((page (make-page (page-surface parent)
 			(gettext "Time Zone")
-			file-browser-page-refresh
-			file-browser-page-key-handler)))
+			time-zone-page-refresh
+			time-zone-page-key-handler)))
     (page-set-datum! page 'directory directory)
     (if exit-point
 	(page-set-datum! page 'exit-point exit-point)
@@ -40,7 +40,7 @@
 
 (define my-buttons `((back  ,(N_ "_Back") #t)))
 
-(define (file-browser-page-key-handler page ch)
+(define (time-zone-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))
 	(menu (page-datum page 'menu))
 	(directory (page-datum page 'directory)))
@@ -87,16 +87,16 @@
   #f))
 
 
-(define (file-browser-page-refresh page)
+(define (time-zone-page-refresh page)
   (when (not (page-initialised? page))
-    (file-browser-page-init page)
+    (time-zone-page-init page)
     (page-set-initialised! page #t))
   (touchwin (outer (page-wwin page)))
   (refresh (outer (page-wwin page)))
   (refresh (inner (page-wwin page)))
   (menu-refresh (page-datum page 'menu)))
 
-(define (file-browser-page-init p)
+(define (time-zone-page-init p)
   (let* ((s (page-surface p))
 	 (frame (make-boxed-window  #f
 	      (- (getmaxy s) 4) (- (getmaxx s) 2)
