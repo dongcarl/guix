@@ -98,6 +98,9 @@
 
              (file-exists? (string-append target "/etc/config.scm"))
 
+             (display (gettext "Installing the system ...") window-port)
+             (force-output window-port)
+
              (zero? (pipe-cmd window-port "guix" "guix" "system" "init"
                                  (string-append target "/etc/config.scm")
                                  target))
