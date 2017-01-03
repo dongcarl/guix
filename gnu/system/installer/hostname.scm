@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -68,7 +68,11 @@
 	(dev   (page-datum page 'device)))
 
     (cond
-     ((buttons-key-matches-symbol? nav ch 'continue)
+     ((buttons-key-matches-symbol? nav ch 'back)
+      (set! page-stack (cdr page-stack))
+      ((page-refresh (car page-stack)) (car page-stack)))
+
+     ((select-key? ch)
       (set! host-name (form-get-value form 0))
       (set! page-stack (cdr page-stack))
       ((page-refresh (car page-stack)) (car page-stack)))
@@ -107,7 +111,7 @@
       (form-enter form ch)))
     #f))
 
-(define my-buttons `((continue ,(N_ "Continue") #f)))
+(define my-buttons `((back ,(N_ "Back") #f)))
 
 (define (host-name-init p)
   (let* ((s (page-surface p))
