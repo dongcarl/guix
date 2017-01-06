@@ -74,7 +74,7 @@
      ((buttons-key-matches-symbol? nav ch 'continue)
 
       (delwin (page-datum page 'test-window))
-      (set! page-stack (cdr page-stack))
+      (page-leave)
       )
 
      ((buttons-key-matches-symbol? nav ch 'test)

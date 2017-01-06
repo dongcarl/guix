@@ -188,7 +188,7 @@
 	))
 
      ((buttons-key-matches-symbol? nav ch 'back)
-      (set! page-stack (cdr page-stack)))
+      (page-leave))
 
 
      ((buttons-key-matches-symbol? nav ch 'continue)
@@ -198,8 +198,7 @@
               (set! page-stack (cons next page-stack))
               ((page-refresh next) next))
             (begin
-              (set! page-stack (cdr page-stack))
-              ((page-refresh (car page-stack)) (car page-stack)))
+              (page-leave))
             ))))
 
     (std-menu-key-handler menu ch))

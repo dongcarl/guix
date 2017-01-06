@@ -94,8 +94,7 @@
         (system* "partprobe")))
 
      ((buttons-key-matches-symbol? nav ch 'continue)
-      (set! page-stack (cdr page-stack))
-      ((page-refresh (car page-stack)) (car page-stack))))
+      (page-leave)))
     
     (std-menu-key-handler menu ch))
 

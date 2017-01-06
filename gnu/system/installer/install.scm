@@ -70,7 +70,7 @@
 
      ((buttons-key-matches-symbol? nav ch 'back)
       ;; Close the menu and return
-      (set! page-stack (cdr page-stack)))
+      (page-leave))
 
      ((buttons-key-matches-symbol? nav ch 'reboot)
       (system* "reboot"))

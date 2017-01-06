@@ -69,13 +69,11 @@
 
     (cond
      ((buttons-key-matches-symbol? nav ch 'back)
-      (set! page-stack (cdr page-stack))
-      ((page-refresh (car page-stack)) (car page-stack)))
+      (page-leave))
 
      ((select-key? ch)
       (set! host-name (form-get-value form 0))
-      (set! page-stack (cdr page-stack))
-      ((page-refresh (car page-stack)) (car page-stack)))
+      (page-leave))
 
      ((eq? ch #\tab)
       (form-set-enabled! form #f)

@@ -23,7 +23,7 @@
   #:export (page-refresh)
   #:export (page-initialised?)
   #:export (page-set-initialised!)
-  #:export (page-stack)
+  #:export (page-leave)
   #:export (page-set-wwin!)
   #:export (page-wwin)
   #:export (page-title)
@@ -54,3 +54,7 @@
 
 (define (page-datum page key)
   (assq-ref (page-data page) key))
+
+(define* (page-leave #:optional (return-point #f))
+  (set! page-stack
+    (or return-point (cdr page-stack))))
