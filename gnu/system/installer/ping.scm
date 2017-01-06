@@ -72,8 +72,6 @@
       (buttons-unselect-all nav))
 
      ((buttons-key-matches-symbol? nav ch 'continue)
-      (delwin (outer (page-wwin page)))
-      (delwin (inner (page-wwin page)))
 
       (delwin (page-datum page 'test-window))
       (set! page-stack (cdr page-stack))

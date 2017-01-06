@@ -52,8 +52,6 @@
 	(buttons-select-next nav))))
 
      ((buttons-key-matches-symbol? nav ch 'ok)
-      (delwin (outer (page-wwin page)))
-      (delwin (inner (page-wwin page)))
 
       (delwin (page-datum page 'text-window))
       (set! page-stack (cdr page-stack))

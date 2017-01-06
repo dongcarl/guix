@@ -188,8 +188,6 @@
 	))
 
      ((buttons-key-matches-symbol? nav ch 'back)
-      (delwin (outer (page-wwin page)))
-      (delwin (inner (page-wwin page)))
       (set! page-stack (cdr page-stack)))
 
 
@@ -200,7 +198,6 @@
               (set! page-stack (cons next page-stack))
               ((page-refresh next) next))
             (begin
-              (delwin (outer (page-wwin page)))
               (set! page-stack (cdr page-stack))
               ((page-refresh (car page-stack)) (car page-stack)))
             ))))
