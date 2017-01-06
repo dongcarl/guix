@@ -56,7 +56,7 @@
 
      ((buttons-key-matches-symbol? nav ch 'back)
 
-      (set! page-stack (cdr page-stack)))
+      (page-leave))
 
      ((and (eqv? ch #\newline)
 	   (menu-active menu))
@@ -70,7 +70,7 @@
 	    (begin
               (system* "loadkeys" i)
               (set! key-map i)
-              (set! page-stack (page-datum page 'exit-point))
+              (page-leave (page-datum page 'exit-point))
               #f)))))
     (std-menu-key-handler menu ch)
     #f))

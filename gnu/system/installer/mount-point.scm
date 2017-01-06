@@ -71,8 +71,7 @@
                     (set! mount-points (assoc-set! mount-points
                                                    dev mp))))
 
-	      (set! page-stack (cdr page-stack))
-	      ((page-refresh (car page-stack)) (car page-stack)))
+	      (page-leave))
 
 	     ((buttons-key-matches-symbol? nav ch 'check)
 	      (window-pipe (page-datum page 'output) "fsck.ext4" "fsck.ext4" "-n" "-v"

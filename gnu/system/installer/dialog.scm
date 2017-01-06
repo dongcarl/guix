@@ -54,7 +54,7 @@
      ((buttons-key-matches-symbol? nav ch 'ok)
 
       (delwin (page-datum page 'text-window))
-      (set! page-stack (cdr page-stack))
+      (page-leave)
       ))
     #f))
 

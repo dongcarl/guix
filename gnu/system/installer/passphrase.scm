@@ -66,8 +66,7 @@
 
     (cond
      ((buttons-key-matches-symbol? nav ch 'back)
-      (set! page-stack (cdr page-stack))
-      ((page-refresh (car page-stack)) (car page-stack)))
+      (page-leave))
 
      ((eq? ch #\tab)
       (form-set-enabled! form #f)
@@ -86,9 +85,7 @@
        (page-datum page 'ifce)
        (page-datum page 'network)
        (form-get-value form 'passphrase))
-
-      (set! page-stack (cdr (cdr page-stack)))
-      ((page-refresh (car page-stack)) (car page-stack)))
+      (page-leave (cdr (cdr page-stack))))
 
      (else
       (form-enter form ch)))

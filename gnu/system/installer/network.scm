@@ -116,7 +116,7 @@
       ;; Cancel the timer
       (setitimer ITIMER_REAL 0 0 0 0)
 
-      (set! page-stack (cdr page-stack))))
+      (page-leave)))
 
     (std-menu-key-handler menu ch))
   #f)

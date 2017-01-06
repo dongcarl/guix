@@ -70,8 +70,7 @@
       (buttons-unselect-all nav))
 
      ((buttons-key-matches-symbol? nav ch 'back)
-      (set! page-stack (cdr page-stack))
-      ((page-refresh (car page-stack)) (car page-stack)))
+      (page-leave))
 
      ((select-key? ch)
       (let ((next (make-passphrase-page

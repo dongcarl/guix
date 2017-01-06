@@ -88,10 +88,10 @@
      ((select-key? ch)
       (set! system-role (menu-get-current-item menu))
       
-      (set! page-stack (cdr page-stack)))
+      (page-leave))
 
      ((buttons-key-matches-symbol? nav ch 'back)
-      (set! page-stack (cdr page-stack))))
+      (page-leave)))
 
     (std-menu-key-handler menu ch))
   #f)

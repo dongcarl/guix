@@ -55,8 +55,7 @@
 	(buttons-select-next nav))))
 
      ((buttons-key-matches-symbol? nav ch 'back)
-
-      (set! page-stack (cdr page-stack)))
+      (page-leave))
 
      ((and (eqv? ch #\newline)
 	   (menu-active menu))
@@ -78,7 +77,7 @@
 		(if (page-datum page 'stem)
 		    (string-append (page-datum page 'stem) "/" i)
 		    i))
-	      (set! page-stack (page-datum page 'exit-point))
+	      (page-leave (page-datum page 'exit-point))
 	      #f)))
       ))
   (std-menu-key-handler menu ch)
