@@ -70,8 +70,7 @@
 			       (if (page-datum page 'stem)
 				   (string-append (page-datum page 'stem) "/" i)
 				   i))
-	      (set! page-stack (cons p page-stack))
-	      ((page-refresh p) p))
+              (page-enter p))
 	    (begin
 	      (set! time-zone
 		(if (page-datum page 'stem)

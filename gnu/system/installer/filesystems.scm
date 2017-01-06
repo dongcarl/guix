@@ -183,9 +183,7 @@
 			       mount-point-page-key-handler)))
 
 	(page-set-datum! next 'device name)
-	(set! page-stack (cons next page-stack))
-	((page-refresh next) next)
-	))
+        (page-enter next)))
 
      ((buttons-key-matches-symbol? nav ch 'back)
       (page-leave))
@@ -195,8 +193,7 @@
       (let ((errstr (filesystem-task-incomplete-reason)))
         (if errstr
             (let ((next (make-dialog page errstr)))
-              (set! page-stack (cons next page-stack))
-              ((page-refresh next) next))
+              (page-enter next))
             (begin
               (page-leave))
             ))))

@@ -23,6 +23,7 @@
   #:export (page-refresh)
   #:export (page-initialised?)
   #:export (page-set-initialised!)
+  #:export (page-enter)
   #:export (page-leave)
   #:export (page-set-wwin!)
   #:export (page-wwin)
@@ -58,3 +59,8 @@
 (define* (page-leave #:optional (return-point #f))
   (set! page-stack
     (or return-point (cdr page-stack))))
+
+(define (page-enter p)
+  (set! page-stack (cons p page-stack))
+  ((page-refresh p) p))
+

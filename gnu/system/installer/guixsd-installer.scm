@@ -168,8 +168,7 @@
               (p (make-file-browser
                   page keymap-directory
                   page-stack)))
-         (set! page-stack (cons p page-stack))
-         ((page-refresh p) p)))))))
+         (page-enter p)))))))
 
 (define (do-task task-name page)
   "Queue the task whose name is TASK-NAME and any dependencies"
@@ -263,8 +262,7 @@
                    stdscr (gettext "GuixSD Installer")
                    main-page-refresh main-page-key-handler)))
 
-        (set! page-stack (cons page page-stack))
-        ((page-refresh page) (car page-stack))
+        (page-enter page)
         (let loop ((ch (getch stdscr)))
           (let ((current-page (car page-stack)))
             ((page-key-handler current-page) current-page ch)
