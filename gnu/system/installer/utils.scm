@@ -209,13 +209,11 @@ which will process each string before returning it."
 (define cursor-stack '())
 
 (define (push-cursor c)
-  (curs-set c)
-  (set! cursor-stack (cons c cursor-stack)))
+  (set! cursor-stack (cons (curs-set c) cursor-stack)))
 
 (define (pop-cursor)
-  (set! cursor-stack (cdr cursor-stack))
-  (curs-set (car cursor-stack)))
-
+  (curs-set (car cursor-stack))
+  (set! cursor-stack (cdr cursor-stack)))
 
 
 
