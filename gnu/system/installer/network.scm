@@ -92,10 +92,9 @@
            (eq? 'wireless (assq-ref (menu-get-current-item menu) 'class)))
 
       (let ((next (make-wireless-page page (N_ "Wireless interface setup")
-                                   (assq-ref (menu-get-current-item menu) 'name))))
-        (set! page-stack (cons next page-stack))
-        ((page-refresh next) next)))
-
+                                      (assq-ref (menu-get-current-item menu) 'name))))
+        (page-enter next)))
+     
      ((select-key? ch)
       (let ((item (menu-get-current-item menu)))
         (when (eq? (assq-ref item 'class) 'ethernet)
@@ -107,9 +106,7 @@
 				"Ping"
 				ping-page-refresh
 				ping-page-key-handler)))
-
-	       (set! page-stack (cons next page-stack))
-	       ((page-refresh next) next)))
+          (page-enter next)))
 
      ((buttons-key-matches-symbol? nav ch 'continue)
 

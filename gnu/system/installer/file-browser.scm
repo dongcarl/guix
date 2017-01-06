@@ -65,8 +65,7 @@
 	(if (eq? 'directory (stat:type (stat new-dir)))
 	    (let ((p (make-file-browser
 		      page new-dir)))
-	      (set! page-stack (cons p page-stack))
-	      ((page-refresh p) p))
+              (page-enter p))
 	    (begin
               (system* "loadkeys" i)
               (set! key-map i)

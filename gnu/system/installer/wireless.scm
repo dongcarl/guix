@@ -78,9 +78,7 @@
                    (N_ "Passphrase entry")
                    (page-datum page 'ifce)
                    (assq-ref (menu-get-current-item menu) 'essid))))
-        (set! page-stack (cons next page-stack))
-        ((page-refresh next) next))))
-
+        (page-enter next))))
 
     (std-menu-key-handler menu ch)
 
