@@ -94,7 +94,6 @@
         (system* "partprobe")))
 
      ((buttons-key-matches-symbol? nav ch 'continue)
-      (delwin (outer (page-wwin page)))
       (set! page-stack (cdr page-stack))
       ((page-refresh (car page-stack)) (car page-stack))))
     

@@ -55,8 +55,6 @@
 	(buttons-select-next nav))))
 
      ((buttons-key-matches-symbol? nav ch 'back)
-      (delwin (outer (page-wwin page)))
-      (delwin (inner (page-wwin page)))
 
       (set! page-stack (cdr page-stack)))
 

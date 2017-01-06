@@ -88,13 +88,9 @@
      ((select-key? ch)
       (set! system-role (menu-get-current-item menu))
       
-      (delwin (outer (page-wwin page)))
-      (delwin (inner (page-wwin page)))
       (set! page-stack (cdr page-stack)))
 
      ((buttons-key-matches-symbol? nav ch 'back)
-      (delwin (outer (page-wwin page)))
-      (delwin (inner (page-wwin page)))
       (set! page-stack (cdr page-stack))))
 
     (std-menu-key-handler menu ch))

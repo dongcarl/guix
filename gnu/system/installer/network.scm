@@ -116,8 +116,6 @@
       ;; Cancel the timer
       (setitimer ITIMER_REAL 0 0 0 0)
 
-      (delwin (outer (page-wwin page)))
-      (delwin (inner (page-wwin page)))
       (set! page-stack (cdr page-stack))))
 
     (std-menu-key-handler menu ch))
