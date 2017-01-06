@@ -107,7 +107,6 @@
            (positive? (field-cursor-position (get-current-field form)))))
 
      (else
-      (curs-set 1)
       (form-enter form ch)))
     #f))
 

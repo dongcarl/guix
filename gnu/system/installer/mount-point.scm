@@ -111,7 +111,6 @@
       (form-set-enabled! form #t))
      )
 
-    (curs-set 1)
     (form-enter form ch))
   #f)
 
