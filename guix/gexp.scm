@@ -34,6 +34,8 @@
             gexp-input
             gexp-input?
 
+            gexp-grafts
+
             local-file
             local-file?
             local-file-file
@@ -131,11 +133,12 @@
 
 ;; Compiler for a type of objects that may be introduced in a gexp.
 (define-record-type <gexp-compiler>
-  (gexp-compiler type lower expand)
+  (gexp-compiler type lower expand grafts)
   gexp-compiler?
-  (type       gexp-compiler-type)                 ;record type descriptor
+  (type       gexp-compiler-type)               ;record type descriptor
   (lower      gexp-compiler-lower)
-  (expand     gexp-compiler-expand))              ;#f | DRV -> sexp
+  (expand     gexp-compiler-expand)             ;DRV -> sexp
+  (grafts     gexp-compiler-applicable-grafts)) ;thing system target -> grafts
 
 (define %gexp-compilers
   ;; 'eq?' mapping of record type descriptor to <gexp-compiler>.
@@ -149,6 +152,18 @@ returns its output file name of OBJ's OUTPUT."
      (derivation->output-path drv output))
     ((? string? file)
      file)))
+
+(define (default-applicable-grafts thing system target)
+  "This is the default procedure returning applicable grafts for THING.  It
+returns the empty list---i.e., no grafts need to be applied."
+  (with-monad %store-monad
+    (return '())))
+
+(define (propagated-applicable-grafts field)
+  "Return a monadic procedure that propagates applicable grafts of the gexp
+returned by applying FIELD to the object."
+  (lambda (thing system target)
+    (gexp-grafts (field thing) #:target target)))
 
 (define (register-compiler! compiler)
   "Register COMPILER as a gexp compiler."
@@ -167,6 +182,12 @@ procedure to expand it; otherwise return #f."
   (and=> (hashq-ref %gexp-compilers (struct-vtable object))
          gexp-compiler-expand))
 
+(define (lookup-graft-procedure object)
+  "Search for a procedure returning the list of applicable grafts for OBJECT.
+Upon success, return the three argument procedure; otherwise return #f."
+  (and=> (hashq-ref %gexp-compilers (struct-vtable object))
+         gexp-compiler-applicable-grafts))
+
 (define* (lower-object obj
                        #:optional (system (%current-system))
                        #:key target)
@@ -178,7 +199,7 @@ OBJ must be an object that has an associated gexp compiler, such as a
     (lower obj system target)))
 
 (define-syntax define-gexp-compiler
-  (syntax-rules (=> compiler expander)
+  (syntax-rules (=> compiler expander applicable-grafts)
     "Define NAME as a compiler for objects matching PREDICATE encountered in
 gexps.
 
@@ -188,21 +209,32 @@ object that matches PREDICATE, for SYSTEM and TARGET (the latter of which is
 
 The more elaborate form allows you to specify an expander:
 
-  (define-gexp-compiler something something?
+  (define-gexp-compiler something-compiler <something>
     compiler => (lambda (param system target) ...)
-    expander => (lambda (param drv output) ...))
+    expander => (lambda (param drv output) ...)
+    applicable-grafts => (lambda (param system target) ...))
 
-The expander specifies how an object is converted to its sexp representation."
+The expander specifies how an object is converted to its sexp representation.
+The 'applicable-grafts' monadic procedure returns a list of grafts that can be
+applied to the object."
     ((_ (name (param record-type) system target) body ...)
      (define-gexp-compiler name record-type
        compiler => (lambda (param system target) body ...)
-       expander => default-expander))
+       applicable-grafts => default-applicable-grafts))
     ((_ name record-type
         compiler => compile
-        expander => expand)
+        applicable-grafts => grafts)
+     (define-gexp-compiler name record-type
+       compiler => compile
+       expander => default-expander
+       applicable-grafts => grafts))
+    ((_ name record-type
+        compiler => compile
+        expander => expand
+        applicable-grafts => grafts)
      (begin
        (define name
-         (gexp-compiler record-type compile expand))
+         (gexp-compiler record-type compile expand grafts))
        (register-compiler! name)))))
 
 (define-gexp-compiler (derivation-compiler (drv <derivation>) system target)
@@ -320,13 +352,14 @@ to 'gexp->derivation'.
 This is the declarative counterpart of 'gexp->derivation'."
   (%computed-file name gexp options))
 
-(define-gexp-compiler (computed-file-compiler (file <computed-file>)
-                                              system target)
-  ;; Compile FILE by returning a derivation whose build expression is its
-  ;; gexp.
-  (match file
-    (($ <computed-file> name gexp options)
-     (apply gexp->derivation name gexp options))))
+(define-gexp-compiler computed-file-compiler <computed-file>
+  compiler => (lambda (file system target)
+                ;; Compile FILE by returning a derivation whose build
+                ;; expression is its gexp.
+                (match file
+                  (($ <computed-file> name gexp options)
+                   (apply gexp->derivation name gexp options))))
+  applicable-grafts => (propagated-applicable-grafts computed-file-gexp))
 
 (define-record-type <program-file>
   (%program-file name gexp guile)
@@ -342,13 +375,15 @@ GEXP.  GUILE is the Guile package used to execute that script.
 This is the declarative counterpart of 'gexp->script'."
   (%program-file name gexp guile))
 
-(define-gexp-compiler (program-file-compiler (file <program-file>)
-                                             system target)
-  ;; Compile FILE by returning a derivation that builds the script.
-  (match file
-    (($ <program-file> name gexp guile)
-     (gexp->script name gexp
-                   #:guile (or guile (default-guile))))))
+(define-gexp-compiler program-file-compiler <program-file>
+  compiler => (lambda (file system target)
+                ;; Compile FILE by returning a derivation that builds the
+                ;; script.
+                (match file
+                  (($ <program-file> name gexp guile)
+                   (gexp->script name gexp
+                                 #:guile (or guile (default-guile))))))
+  applicable-grafts => (propagated-applicable-grafts program-file-gexp))
 
 (define-record-type <scheme-file>
   (%scheme-file name gexp)
@@ -362,12 +397,14 @@ This is the declarative counterpart of 'gexp->script'."
 This is the declarative counterpart of 'gexp->file'."
   (%scheme-file name gexp))
 
-(define-gexp-compiler (scheme-file-compiler (file <scheme-file>)
-                                            system target)
-  ;; Compile FILE by returning a derivation that builds the file.
-  (match file
-    (($ <scheme-file> name gexp)
-     (gexp->file name gexp))))
+(define-gexp-compiler scheme-file-compiler <scheme-file>
+  compiler => (lambda (file system target)
+                ;; Compile FILE by returning a derivation that builds the
+                ;; file.
+                (match file
+                  (($ <scheme-file> name gexp)
+                   (gexp->file name gexp))))
+  applicable-grafts => (propagated-applicable-grafts scheme-file-gexp))
 
 ;; Appending SUFFIX to BASE's output file name.
 (define-record-type <file-append>
@@ -391,7 +428,12 @@ SUFFIX."
                   (($ <file-append> base suffix)
                    (let* ((expand (lookup-expander base))
                           (base   (expand base lowered output)))
-                     (string-append base (string-concatenate suffix)))))))
+                     (string-append base (string-concatenate suffix))))))
+  applicable-grafts => (lambda (obj system target)
+                         (match obj
+                           (($ <file-append> base _)
+                            (let ((proc (lookup-graft-procedure base)))
+                              (proc base system target))))))
 
 
 ;;;
@@ -509,6 +551,41 @@ names and file names suitable for the #:allowed-references argument to
                   (module-ref iface 'default-guile-derivation)))))
     (lambda (system)
       ((force proc) system))))
+
+(define* (gexp-grafts exp
+                      #:optional (system (%current-system))
+                      #:key target)
+  "Return the list of grafts applicable to a derivation built by EXP, a gexp,
+for SYSTEM and TARGET (the latter is #f when building natively).
+
+This works by querying the list applicable grafts of each object EXP
+references---e.g., packages."
+  (with-monad %store-monad
+    (define gexp-input-grafts
+      (match-lambda
+        (($ <gexp-input> (? gexp? exp) _ #t)
+         (gexp-grafts exp system #:target #f))
+        (($ <gexp-input> (? gexp? exp) _ #f)
+         (gexp-grafts exp system #:target target))
+        (($ <gexp-input> (? struct? obj) _ #t)
+         (let ((applicable-grafts (lookup-graft-procedure obj)))
+          (applicable-grafts obj system #f)))
+        (($ <gexp-input> (? struct? obj) _ #f)
+         (let ((applicable-grafts (lookup-graft-procedure obj)))
+          (applicable-grafts obj system target)))
+        (($ <gexp-input> (lst ...) _ native?)
+         (foldm %store-monad
+                (lambda (input grafts)
+                  (mlet %store-monad ((g (gexp-input-grafts input)))
+                    (return (append g grafts))))
+                '()
+                lst))
+        (_                            ;another <gexp-input> or a <gexp-output>
+         (return '()))))
+
+    (>>= (mapm %store-monad gexp-input-grafts (gexp-references exp))
+         (lift1 (compose delete-duplicates concatenate)
+                %store-monad))))
 
 (define* (gexp->derivation name exp
                            #:key

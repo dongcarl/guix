@@ -453,6 +453,39 @@
                  (string=? (derivation->output-path drv0)
                            (derivation->output-path drv1*))))))
 
+(test-assertm "gexp-grafts"
+  ;; Make sure 'gexp-grafts' returns the graft to replace P1 by R.
+  (let* ((p0    (dummy-package "dummy"
+                               (arguments
+                                '(#:implicit-inputs? #f))))
+         (r     (package (inherit p0) (name "DuMMY")))
+         (p1    (package (inherit p0) (replacement r)))
+         (exp0  (gexp (frob (ungexp p0) (ungexp output))))
+         (exp1  (gexp (frob (ungexp p1) (ungexp output))))
+         (exp2  (gexp (frob (ungexp (list (gexp-input p1))))))
+         (exp3  (gexp (stuff (ungexp exp1))))
+         (exp4  (gexp (frob (ungexp (file-append p1 "/bin/foo")))))
+         (exp5  (gexp (frob (ungexp (computed-file "foo" exp1)))))
+         (exp6  (gexp (frob (ungexp (program-file "foo" exp1)))))
+         (exp7  (gexp (frob (ungexp (scheme-file "foo" exp1))))))
+    (mlet* %store-monad ((grafts0 (gexp-grafts exp0))
+                         (grafts1 (gexp-grafts exp1))
+                         (grafts2 (gexp-grafts exp2))
+                         (grafts3 (gexp-grafts exp3))
+                         (grafts4 (gexp-grafts exp4))
+                         (grafts5 (gexp-grafts exp5))
+                         (grafts6 (gexp-grafts exp6))
+                         (grafts7 (gexp-grafts exp7))
+                         (p0-drv  (package->derivation p0))
+                         (r-drv   (package->derivation r))
+                         (expected -> (graft
+                                        (origin p0-drv)
+                                        (replacement r-drv))))
+      (return (and (null? grafts0)
+                   (equal? grafts1 grafts2 grafts3 grafts4
+                           grafts5 grafts6 grafts7
+                           (list expected)))))))
+
 (test-assertm "gexp->derivation, composed gexps"
   (mlet* %store-monad ((exp0 -> (gexp (begin
                                         (mkdir (ungexp output))

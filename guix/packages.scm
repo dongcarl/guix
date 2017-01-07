@@ -1194,12 +1194,39 @@ cross-compilation target triplet."
 (define package->cross-derivation
   (store-lift package-cross-derivation))
 
-(define-gexp-compiler (package-compiler (package <package>) system target)
-  ;; Compile PACKAGE to a derivation for SYSTEM, optionally cross-compiled for
-  ;; TARGET.  This is used when referring to a package from within a gexp.
-  (if target
-      (package->cross-derivation package target system)
-      (package->derivation package system)))
+(define replacement-graft*
+  (let ((native (store-lift replacement-graft))
+        (cross  (store-lift replacement-cross-graft)))
+    (lambda (package system target)
+      "Return, as a monadic value, the replacement graft for PACKAGE, assuming
+it has a replacement."
+      (if target
+          (cross package system target)
+          (native package system)))))
+
+(define-gexp-compiler package-compiler <package>
+  compiler
+  => (lambda (package system target)
+       ;; Compile PACKAGE to a derivation for SYSTEM, optionally
+       ;; cross-compiled for TARGET.  This is used when referring to a package
+       ;; from within a gexp.
+       (if target
+           (package->cross-derivation package target system)
+           (package->derivation package system)))
+
+  applicable-grafts
+  => (let ((bag-grafts* (store-lift bag-grafts)))
+       (lambda (package system target)
+         ;; Return the list of grafts that apply to things that reference
+         ;; PACKAGE.
+         (mlet* %store-monad ((bag ->  (package->bag package
+                                                     system target))
+                              (grafts  (bag-grafts* bag)))
+           (if (package-replacement package)
+               (mlet %store-monad ((repl (replacement-graft* package
+                                                             system target)))
+                 (return (cons repl grafts)))
+               (return grafts))))))
 
 (define* (origin->derivation origin
                              #:optional (system (%current-system)))
