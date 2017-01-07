@@ -35,6 +35,7 @@
   (make-page (page-surface parent)
 	     title
 	     network-page-refresh
+             0
 	     network-page-key-handler))
 
 (define (interfaces)
@@ -105,6 +106,7 @@
 	(let ((next  (make-page (page-surface page)
 				"Ping"
 				ping-page-refresh
+                                0
 				ping-page-key-handler)))
           (page-enter next)))
 
@@ -203,6 +205,7 @@
     (sigaction SIGALRM (lambda (_) (menu-redraw menu)))
     (setitimer ITIMER_REAL 1 0 1 0)
 
+    (push-cursor (page-cursor-visibility p))
     (page-set-wwin! p pr)
     (page-set-datum! p 'menu menu)
     (page-set-datum! p 'navigation buttons)

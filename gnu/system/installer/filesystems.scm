@@ -101,6 +101,7 @@
   (make-page (page-surface parent)
 	     title
 	     filesystem-page-refresh
+             0
 	     filesystem-page-key-handler))
 
 
@@ -180,6 +181,7 @@
 			       (format #f
 				       (gettext "Choose the mount point for device ~s") name)
 			       mount-point-refresh
+                               1
 			       mount-point-page-key-handler)))
 
 	(page-set-datum! next 'device name)
@@ -236,7 +238,7 @@
 				       (let ((x (assoc-ref mount-points name)))
                                          (if x x ""))))))))
 
-
+    (push-cursor (page-cursor-visibility p))
     (page-set-wwin! p pr)
     (page-set-datum! p 'menu menu)
     (page-set-datum! p 'navigation buttons)

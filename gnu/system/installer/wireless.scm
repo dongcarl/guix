@@ -38,6 +38,7 @@
   (let ((page (make-page (page-surface parent)
                          title
                          wireless-page-refresh
+                         0
                          wireless-page-key-handler)))
 
     (page-set-datum! page 'ifce interface)
@@ -138,6 +139,7 @@
                                     (gettext
                                      "Select an access point to connect.")))
 
+    (push-cursor (page-cursor-visibility p))
     (page-set-wwin! p pr)
     (page-set-datum! p 'menu menu)
     (page-set-datum! p 'navigation buttons)

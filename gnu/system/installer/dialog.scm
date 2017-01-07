@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -31,6 +31,7 @@
   (let ((page (make-page (page-surface parent)
 			(gettext "Information")
 			dialog-page-refresh
+                        0
 			dialog-page-key-handler)))
     (page-set-datum! page 'message message)
     (page-set-datum! page 'justify justify)
@@ -89,6 +90,7 @@
 	  (addstr text-window
 		  (if (promise? m) (force m) m))))
     
+  (push-cursor (page-cursor-visibility p))
   (page-set-wwin! p frame)
   (page-set-datum! p 'text-window text-window)
   (page-set-datum! p 'navigation buttons)

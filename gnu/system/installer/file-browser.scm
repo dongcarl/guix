@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -30,6 +30,7 @@
   (let ((page (make-page (page-surface parent)
 			(gettext "File Browser")
 			file-browser-page-refresh
+                        0
 			file-browser-page-key-handler)))
     (page-set-datum! page 'directory directory)
     (if exit-point
@@ -116,6 +117,7 @@
     
     (addstr* text-window
 	     (gettext "Select an item most closely matching your keyboard layout:" ))
+    (push-cursor (page-cursor-visibility p))
     (page-set-wwin! p frame)
     (page-set-datum! p 'menu menu)
     (page-set-datum! p 'navigation buttons)

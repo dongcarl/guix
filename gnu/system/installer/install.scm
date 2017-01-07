@@ -37,6 +37,7 @@
   (let ((page (make-page (page-surface parent)
                          title
                          install-page-refresh
+                         0
                          install-page-key-handler)))
     page))
 
@@ -158,7 +159,8 @@
     (addstr* text-window
              (gettext
               "Choose \"Continue\" to start installing the system."))
-
+    
+    (push-cursor (page-cursor-visibility p))
     (page-set-wwin! p pr)
     (page-set-datum! p 'navigation buttons)
     (page-set-datum! p 'config-window (inner config-window))

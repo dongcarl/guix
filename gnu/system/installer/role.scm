@@ -49,6 +49,7 @@
   (make-page (page-surface parent)
 	     title
 	     role-page-refresh
+             0
 	     role-page-key-handler))
 
 
@@ -158,6 +159,7 @@
 	      (gettext
 	       "Select from the list below the role which most closely matches the purpose of the system to be installed.")))
 
+    (push-cursor (page-cursor-visibility p))
 
     (page-set-wwin! p pr)
     (page-set-datum! p 'menu menu)
