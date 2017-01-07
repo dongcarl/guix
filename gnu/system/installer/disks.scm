@@ -27,8 +27,7 @@
   #:use-module (ice-9 format)
   #:export (make-disk-page))
 
-(define my-buttons `((continue ,(N_ "_Continue") #t)
-		     (back     ,(N_ "Go _Back") #t)))
+(define my-buttons `((continue ,(N_ "_Continue") #t)))
 
 (define (make-disk-page parent  title)
   (make-page (page-surface parent)
@@ -96,7 +95,7 @@
 
      ((buttons-key-matches-symbol? nav ch 'continue)
       (page-leave)))
-    
+
     (std-menu-key-handler menu ch))
 
   #f

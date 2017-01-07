@@ -47,13 +47,17 @@
 
 (define my-buttons `((test ,(N_ "_Test") #t)
 		     (continue  ,(N_ "_Continue") #t)
-		     (back     ,(N_ "Go _Back") #t)))
+		     (cancel     ,(N_ "Canc_el") #t)))
 
 (define (ping-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))
 	(test-window  (page-datum page 'test-window)))
 
     (cond
+     ((buttons-key-matches-symbol? nav ch 'cancel)
+      ;; Close the menu and return 
+      (page-leave))
+
      ((eq? ch KEY_RIGHT)
       (buttons-select-next nav))
 
@@ -74,8 +78,7 @@
      ((buttons-key-matches-symbol? nav ch 'continue)
 
       (delwin (page-datum page 'test-window))
-      (page-leave)
-      )
+      (page-leave))
 
      ((buttons-key-matches-symbol? nav ch 'test)
       (let* ()

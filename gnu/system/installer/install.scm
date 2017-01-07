@@ -44,7 +44,7 @@
 
 (define my-buttons `((continue ,(N_ "_Continue") #t)
                      (reboot ,(N_ "_Reboot") #t)
-                     (back ,(N_ "_Back") #t)))
+                     (cancel ,(N_ "Canc_el") #t)))
 
 (define (install-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))
@@ -69,7 +69,7 @@
       (buttons-unselect-all nav))
 
 
-     ((buttons-key-matches-symbol? nav ch 'back)
+     ((buttons-key-matches-symbol? nav ch 'cancel)
       ;; Close the menu and return
       (page-leave))
 
