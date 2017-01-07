@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -152,7 +152,8 @@
 
 (define (buttons-key-matches-symbol? nav ch symbol)
   (if (char? ch)
-      (or (eq? (buttons-fetch-by-key nav (char-upcase ch)) symbol)
+      (or (eq? (buttons-fetch-by-key nav (char-downcase ch)) symbol)
+          (eq? (buttons-fetch-by-key nav (char-upcase ch)) symbol)
 	  (and (or (eq? ch #\newline)
 		   (eq? ch #\space))
 	       (and=> (buttons-get-current-selection nav)
