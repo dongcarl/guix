@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -27,28 +27,31 @@
   #:export (page-leave)
   #:export (page-set-wwin!)
   #:export (page-wwin)
+  #:export (page-cursor-visibility)
   #:export (page-title)
   #:export (page-datum)
   #:export (page-set-datum!)
   #:export (page-key-handler)
 
+  #:use-module (gnu system installer utils)
   #:use-module (srfi srfi-9))
 
 (define page-stack '())
 
 (define-record-type <page>
-  (make-page' surface title inited refresh key-handler data)
+  (make-page' surface title inited refresh cursor-visibility key-handler data)
   page?
   (title page-title)
   (surface page-surface)
   (inited  page-initialised? page-set-initialised!)
   (refresh page-refresh)
+  (cursor-visibility page-cursor-visibility)
   (key-handler page-key-handler)
   (wwin page-wwin page-set-wwin!)
   (data page-data page-set-data!))
 
-(define (make-page surface title refresh key-handler)
-  (make-page' surface title #f refresh key-handler '()))
+(define (make-page surface title refresh cursor-visibility key-handler)
+  (make-page' surface title #f refresh cursor-visibility key-handler '()))
 
 (define (page-set-datum! page key value)
   (page-set-data! page (acons key value (page-data page))))
@@ -57,6 +60,7 @@
   (assq-ref (page-data page) key))
 
 (define* (page-leave #:optional (return-point #f))
+  (pop-cursor)
   (set! page-stack
     (or return-point (cdr page-stack))))
 

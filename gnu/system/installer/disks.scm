@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -34,6 +34,7 @@
   (make-page (page-surface parent)
 	     title
 	     disk-page-refresh
+             0
 	     disk-page-key-handler))
 
 (define (disk-page-refresh page)
@@ -140,7 +141,8 @@
 				       (list (truncate-string (disk-vendor d) w))
 				       (number->size (disk-size d))
 				       (length (disk-partitions d))))))))
-    
+
+    (push-cursor (page-cursor-visibility p))
     (page-set-datum! p 'text-window text-window)
     (page-set-wwin! p frame)
     (page-set-datum! p 'menu menu)

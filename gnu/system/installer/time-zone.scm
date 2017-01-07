@@ -30,6 +30,7 @@
   (let ((page (make-page (page-surface parent)
 			(gettext "Time Zone")
 			time-zone-page-refresh
+                        0
 			time-zone-page-key-handler)))
     (page-set-datum! page 'directory directory)
     (if exit-point
@@ -135,6 +136,9 @@
     
     (addstr* text-window
 	     (gettext "Select the default time zone for the system:" ))
+
+    (push-cursor (page-cursor-visibility p))
+
     (page-set-wwin! p frame)
     (page-set-datum! p 'menu menu)
     (page-set-datum! p 'navigation  buttons)

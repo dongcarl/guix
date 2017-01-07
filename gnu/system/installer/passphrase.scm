@@ -37,6 +37,7 @@
          (make-page (page-surface parent)
                     title
                     passphrase-refresh
+                    1
                     passphrase-key-handler)))
     (page-set-datum! page 'network network)
     (page-set-datum! page 'ifce ifce)
@@ -119,6 +120,7 @@
 
          (form (make-form my-fields)))
 
+    (push-cursor (page-cursor-visibility p))
     (page-set-datum! p 'navigation nav)
     (page-set-datum! p 'text-window text-window)
     (page-set-datum! p 'form form)

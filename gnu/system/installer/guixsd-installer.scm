@@ -211,6 +211,7 @@
       (page-set-datum! page 'menu main-menu)
       (menu-post main-menu win))
 
+    (push-cursor (page-cursor-visibility page))
     ;; Do the key action labels
     (let ((ypos (1- (getmaxy background)))
 	  (str0 (gettext "Get a Shell <F1>"))
@@ -260,7 +261,7 @@
 
       (let ((page (make-page
                    stdscr (gettext "GuixSD Installer")
-                   main-page-refresh main-page-key-handler)))
+                   main-page-refresh 0 main-page-key-handler)))
 
         (page-enter page)
         (let loop ((ch (getch stdscr)))

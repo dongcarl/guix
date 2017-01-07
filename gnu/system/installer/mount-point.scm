@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -173,6 +173,7 @@
 		       (or (assoc-ref mount-points dev)
 			   "")))
 
+    (push-cursor (page-cursor-visibility p))
     (buttons-post nav bwin)
     (page-set-datum! p 'form form)
 

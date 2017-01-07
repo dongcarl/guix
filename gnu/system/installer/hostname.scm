@@ -44,6 +44,7 @@
   (make-page (page-surface parent)
 	     title
 	     host-name-refresh
+             1
 	     host-name-key-handler))
 
 (define (host-name-refresh page)
@@ -139,6 +140,7 @@
     (page-set-datum! p 'navigation nav)    
     (page-set-datum! p 'text-window text-window)
     (page-set-datum! p 'form form)
+    (push-cursor (page-cursor-visibility p))
     
     (form-post form fw)
     (buttons-post nav bwin)

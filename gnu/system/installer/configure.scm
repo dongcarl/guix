@@ -41,6 +41,7 @@
   (let ((page (make-page (page-surface parent)
                          title
                          configure-page-refresh
+                         0
                          configure-page-key-handler)))
     page))
 
@@ -224,6 +225,7 @@
       (generate-guix-config p (getmaxx (inner config-window)))
       (force-output p))
 
+    (push-cursor (page-cursor-visibility p))
     (page-set-wwin! p pr)
     (page-set-datum! p 'navigation buttons)
     (buttons-post buttons bwin)
