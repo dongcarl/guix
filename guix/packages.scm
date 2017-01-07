@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2012, 2013, 2014, 2015, 2016 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2012, 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2014, 2015 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2015 Eric Bavier <bavier@member.fsf.org>
 ;;; Copyright © 2016 Alex Kost <alezost@gmail.com>
@@ -909,6 +909,30 @@ and return it."
   ;; replacement package.
   (make-weak-key-hash-table 200))
 
+(define (replacement-graft store package system)
+  "Return the graft for SYSTEM to replace PACKAGE by its 'replacement'."
+  (cached (=> %graft-cache) package system
+          (let ((orig (package-derivation store package system
+                                          #:graft? #f))
+                (new  (package-derivation store (package-replacement package)
+                                          system
+                                          #:graft? #t)))
+            (graft
+              (origin orig)
+              (replacement new)))))
+
+(define* (replacement-cross-graft store package system target)
+  "Return the graft to replace PACKAGE by its 'replacement' when
+cross-compiling from SYSTEM to TARGET."
+  (let ((orig (package-cross-derivation store package target system
+                                        #:graft? #f))
+        (new  (package-cross-derivation store (package-replacement package)
+                                        target system
+                                        #:graft? #t)))
+    (graft
+      (origin orig)
+      (replacement new))))
+
 (define (input-graft store system)
   "Return a procedure that, given a package with a graft, returns a graft, and
 #f otherwise."
@@ -916,14 +940,7 @@ and return it."
     ((? package? package)
      (let ((replacement (package-replacement package)))
        (and replacement
-            (cached (=> %graft-cache) package system
-                    (let ((orig (package-derivation store package system
-                                                    #:graft? #f))
-                          (new  (package-derivation store replacement system
-                                                    #:graft? #t)))
-                      (graft
-                        (origin orig)
-                        (replacement new)))))))
+            (replacement-graft store package system))))
     (x
      #f)))
 
@@ -933,14 +950,7 @@ and return it."
     ((? package? package)
     (let ((replacement (package-replacement package)))
       (and replacement
-           (let ((orig (package-cross-derivation store package target system
-                                                 #:graft? #f))
-                 (new  (package-cross-derivation store replacement
-                                                 target system
-                                                 #:graft? #t)))
-             (graft
-               (origin orig)
-               (replacement new))))))
+           (replacement-cross-graft store package system target))))
    (_
     #f)))
 
