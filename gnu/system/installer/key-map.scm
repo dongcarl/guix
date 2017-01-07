@@ -16,7 +16,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with GNU Guix.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (gnu system installer file-browser)
+(define-module (gnu system installer key-map)
   #:use-module (gnu system installer page)
   #:use-module (gnu system installer utils)
   #:use-module (gnu system installer misc)
