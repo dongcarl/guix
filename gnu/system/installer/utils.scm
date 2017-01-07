@@ -60,6 +60,12 @@
 
 (define (make-window-port win)
   "Return a port which writes to the curses window WIN"
+
+  ;; It is reasonable to assume that windows for which a soft-port
+  ;; exists will have a lot of text sent to them and should therefore
+  ;; be scrollable.
+  (scrollok! win #t)
+
   (make-soft-port
    (vector
     (lambda (c) (addch win c))
