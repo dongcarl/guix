@@ -28,7 +28,7 @@
 	     (gnu system installer configure)
              (gnu system installer filesystems)
 	     (gnu system installer hostname)
-	     (gnu system installer file-browser)
+	     (gnu system installer key-map)
 	     (gnu system installer time-zone)
              (gnu system installer role)
 	     (gnu system installer network)
