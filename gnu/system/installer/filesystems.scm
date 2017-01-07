@@ -106,7 +106,7 @@
 
 
 (define my-buttons `((continue ,(N_ "_Continue") #t)
-		     (back     ,(N_ "Go _Back") #t)))
+		     (cancel     ,(N_ "Canc_el") #t)))
 
 
 
@@ -187,7 +187,7 @@
 	(page-set-datum! next 'device name)
         (page-enter next)))
 
-     ((buttons-key-matches-symbol? nav ch 'back)
+     ((buttons-key-matches-symbol? nav ch 'cancel)
       (page-leave))
 
 

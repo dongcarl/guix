@@ -92,6 +92,10 @@
 	     )))
     
     (cond
+     ((buttons-key-matches-symbol? nav ch 'cancel)
+      ;; Close the menu and return 
+      (page-leave))
+
      ((or (eq? ch KEY_RIGHT)
 	  (eq? ch #\tab))
       (form-set-enabled! form #f)
@@ -117,7 +121,7 @@
 		     (check    ,(N_ "Check") #f)
 		     (write    ,(N_ "Write") #f)
 		     (recreate ,(N_ "(re)Create") #f)
-		     (back     ,(N_ "Go Back") #f)))
+		     (cancel     ,(N_ "Cancel") #f)))
 
 (define (mount-point-page-init p)
   (let* ((s (page-surface p))

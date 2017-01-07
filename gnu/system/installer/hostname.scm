@@ -69,7 +69,7 @@
 	(dev   (page-datum page 'device)))
 
     (cond
-     ((buttons-key-matches-symbol? nav ch 'back)
+     ((buttons-key-matches-symbol? nav ch 'cancel)
       (page-leave))
 
      ((select-key? ch)
@@ -109,7 +109,7 @@
       (form-enter form ch)))
     #f))
 
-(define my-buttons `((back ,(N_ "Back") #f)))
+(define my-buttons `((cancel ,(N_ "Cancel") #f)))
 
 (define (host-name-init p)
   (let* ((s (page-surface p))

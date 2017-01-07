@@ -47,7 +47,7 @@
 
 
 (define my-buttons `((save ,(N_ "_Save") #t)
-                     (back ,(N_ "_Back") #t)))
+                     (cancel ,(N_ "Canc_el") #t)))
 
 
 ;; Kludge!  For testing.
@@ -96,7 +96,7 @@
       (buttons-unselect-all nav))
 
      
-     ((buttons-key-matches-symbol? nav ch 'back)
+     ((buttons-key-matches-symbol? nav ch 'cancel)
       ;; Close the menu and return 
       (page-leave))
 

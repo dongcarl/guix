@@ -45,7 +45,7 @@
     page))
 
 
-(define my-buttons `((back ,(N_ "_Back") #t)))
+(define my-buttons `((cancel ,(N_ "Canc_el") #t)))
 
 (define (wireless-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))
@@ -70,7 +70,7 @@
      ((eq? ch KEY_UP)
       (buttons-unselect-all nav))
 
-     ((buttons-key-matches-symbol? nav ch 'back)
+     ((buttons-key-matches-symbol? nav ch 'cancel)
       (page-leave))
 
      ((select-key? ch)

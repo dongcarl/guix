@@ -53,7 +53,7 @@
 	     role-page-key-handler))
 
 
-(define my-buttons `((back ,(N_ "_Back") #t)))
+(define my-buttons `((cancel ,(N_ "Canc_el") #t)))
 
 (define (role-page-key-handler page ch)
   (let ((menu (page-datum page 'menu))
@@ -91,7 +91,7 @@
       
       (page-leave))
 
-     ((buttons-key-matches-symbol? nav ch 'back)
+     ((buttons-key-matches-symbol? nav ch 'cancel)
       (page-leave)))
 
     (std-menu-key-handler menu ch))

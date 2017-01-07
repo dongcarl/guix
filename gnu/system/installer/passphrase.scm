@@ -66,7 +66,7 @@
         (dev   (page-datum page 'device)))
 
     (cond
-     ((buttons-key-matches-symbol? nav ch 'back)
+     ((buttons-key-matches-symbol? nav ch 'cancel)
       (page-leave))
 
      ((eq? ch #\tab)
@@ -92,7 +92,7 @@
       (form-enter form ch)))
     #f))
 
-(define my-buttons `((back ,(N_ "Back") #f)))
+(define my-buttons `((cancel ,(N_ "Cancel") #f)))
 
 (define (passphrase-init p)
   (let* ((s (page-surface p))
