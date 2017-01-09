@@ -67,7 +67,6 @@
             make-regexp*
             string->number*
             size->number
-            show-derivation-outputs
             show-what-to-build
             show-what-to-build*
             show-manifest-transaction
@@ -547,14 +546,6 @@ error."
     (x
      (leave (_ "expression ~s does not evaluate to a package~%")
             str))))
-
-(define (show-derivation-outputs derivation)
-  "Show the output file names of DERIVATION."
-  (format #t "~{~a~%~}"
-          (map (match-lambda
-                 ((out-name . out)
-                  (derivation->output-path derivation out-name)))
-               (derivation-outputs derivation))))
 
 (define* (show-what-to-build store drv
                              #:key dry-run? (use-substitutes? #t)
