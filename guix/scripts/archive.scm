@@ -256,24 +256,24 @@ resulting archive to the standard output port."
                         #:use-substitutes? (assoc-ref opts 'substitutes?)
                         #:dry-run? (assoc-ref opts 'dry-run?))
 
-    (if (or (assoc-ref opts 'dry-run?)
-            (build-derivations store drv))
-        (match (assoc-ref opts 'format)
-          ("nar"
-           (export-paths store files (current-output-port)
-                         #:recursive? (assoc-ref opts 'export-recursive?)))
-          ("docker"
-           (match files
-             ((file)
-              (let ((system (assoc-ref opts 'system)))
-                (format #t "~a\n"
-                        (build-docker-image file #:system system))))
-             (_
-              ;; TODO: Remove this restriction.
-              (leave (_ "only a single item can be exported to Docker~%")))))
-          (format
-           (leave (_ "~a: unknown archive format~%") format)))
-        (leave (_ "unable to export the given packages~%")))))
+    (let ((files (if (assoc-ref opts 'dry-run?)
+                     files
+                     (build-derivations store drv))))
+      (match (assoc-ref opts 'format)
+        ("nar"
+         (export-paths store files (current-output-port)
+                       #:recursive? (assoc-ref opts 'export-recursive?)))
+        ("docker"
+         (match files
+           ((file)
+            (let ((system (assoc-ref opts 'system)))
+              (format #t "~a\n"
+                      (build-docker-image file #:system system))))
+           (_
+            ;; TODO: Remove this restriction.
+            (leave (_ "only a single item can be exported to Docker~%")))))
+        (format
+         (leave (_ "~a: unknown archive format~%") format))))))
 
 (define (generate-key-pair parameters)
   "Generate a key pair with PARAMETERS, a canonical sexp, and store it in the

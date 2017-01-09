@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -112,14 +112,15 @@ package names, build the underlying packages before sending them."
                           #:use-substitutes? (assoc-ref opts 'substitutes?)
                           #:dry-run? (assoc-ref opts 'dry-run?))
 
-      (and (or (assoc-ref opts 'dry-run?)
-               (build-derivations local drv))
-           (let* ((session (open-ssh-session host #:user user #:port port))
-                  (sent    (send-files local items
-                                       (connect-to-remote-daemon session)
-                                       #:recursive? #t)))
-             (format #t "~{~a~%~}" sent)
-             sent)))))
+      (let ((items   (if (assoc-ref opts 'dry-run?)
+                         items
+                         (build-derivations local drv)))
+            (session (open-ssh-session host #:user user #:port port))
+            (sent    (send-files local items
+                                 (connect-to-remote-daemon session)
+                                 #:recursive? #t)))
+        (format #t "~{~a~%~}" sent)
+        sent))))
 
 (define (retrieve-from-remote-host source opts)
   "Retrieve ITEMS from SOURCE."

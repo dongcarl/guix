@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2013, 2014, 2015 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2013, 2014, 2015, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2014 Deck Pickard <deck.r.pickard@gmail.com>
 ;;; Copyright © 2015, 2016 Alex Kost <alezost@gmail.com>
 ;;;
@@ -29,6 +29,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-37)
   #:use-module (ice-9 match)
+  #:use-module (ice-9 format)
   #:export (args-fold*
             parse-command-line
             maybe-build
@@ -90,7 +91,8 @@ parameter of 'args-fold'."
 (define* (maybe-build drvs
                       #:key dry-run? use-substitutes?)
   "Show what will/would be built, and actually build DRVS, unless DRY-RUN? is
-true."
+true.  Return #f when DRY-RUN? is true, and the list of store items actually
+built otherwise."
   (with-monad %store-monad
     (>>= (show-what-to-build* drvs
                               #:dry-run? dry-run?
@@ -112,12 +114,14 @@ Show what and how will/would be built."
            (strip-keyword-arguments '(#:dry-run?) build-options))
     (mlet %store-monad ((derivation (package->derivation
                                      package #:graft? (and (not dry-run?)
-                                                           grafting?))))
-      (mbegin %store-monad
-        (maybe-build (list derivation)
-                     #:use-substitutes? use-substitutes?
-                     #:dry-run? dry-run?)
-        (return (show-derivation-outputs derivation))))))
+                                                           grafting?)))
+                        (items      (maybe-build (list derivation)
+                                                 #:use-substitutes?
+                                                 use-substitutes?
+                                                 #:dry-run? dry-run?)))
+      (unless dry-run?
+        (format #t "~{~a~%~}" items))
+      (return (or dry-run? items)))))
 
 (define* (build-package-source package
                                #:key dry-run? (use-substitutes? #t)
@@ -129,11 +133,13 @@ Show what and how will/would be built."
            #:use-substitutes? use-substitutes?
            (strip-keyword-arguments '(#:dry-run?) build-options))
     (mlet %store-monad ((derivation (origin->derivation
-                                     (package-source package))))
-      (mbegin %store-monad
-        (maybe-build (list derivation)
-                     #:use-substitutes? use-substitutes?
-                     #:dry-run? dry-run?)
-        (return (show-derivation-outputs derivation))))))
+                                     (package-source package)))
+                        (items      (maybe-build (list derivation)
+                                                 #:use-substitutes?
+                                                 use-substitutes?
+                                                 #:dry-run? dry-run?)))
+      (unless dry-run?
+        (format #t "~{~a~%~}" items))
+      (return (or dry-run? items)))))
 
 ;;; scripts.scm ends here

@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2012, 2013, 2014, 2015, 2016 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2012, 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2013 Nikita Karetnikov <nikita@karetnikov.org>
 ;;; Copyright © 2013, 2015 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2014, 2016 Alex Kost <alezost@gmail.com>
@@ -207,19 +207,20 @@ specified in MANIFEST, a manifest object."
                         #:use-substitutes? use-substitutes?
                         #:dry-run? dry-run?)
 
-    (cond
-     (dry-run? #t)
-     ((and (file-exists? profile)
-           (and=> (readlink* profile) (cut string=? prof <>)))
-      (format (current-error-port) (_ "nothing to be done~%")))
-     (else
-      (let* ((number (generation-number profile))
+    (or dry-run?
+        (match (build-derivations store (list prof-drv))
+          ((prof)
+           (cond
+            ((and (file-exists? profile)
+                  (and=> (readlink* profile) (cut string=? prof <>)))
+             (format (current-error-port) (_ "nothing to be done~%")))
+            (else
+             (let* ((number (generation-number profile))
 
-             ;; Always use NUMBER + 1 for the new profile, possibly
-             ;; overwriting a "previous future generation".
-             (name   (generation-file-name profile (+ 1 number))))
-        (and (build-derivations store (list prof-drv))
-             (let* ((entries (manifest-entries manifest))
+                    ;; Always use NUMBER + 1 for the new profile, possibly
+                    ;; overwriting a "previous future generation".
+                    (name   (generation-file-name profile (+ 1 number)))
+                    (entries (manifest-entries manifest))
                     (count   (length entries)))
                (switch-symlinks name prof)
                (switch-symlinks profile name)
@@ -230,7 +231,7 @@ specified in MANIFEST, a manifest object."
                               count)
                        count)
                (display-search-paths entries (list profile)
-                                     #:kind 'prefix))))))))
+                                     #:kind 'prefix)))))))))
 
 
 ;;;

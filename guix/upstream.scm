@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2015 Alex Kost <alezost@gmail.com>
 ;;;
 ;;; This file is part of GNU Guix.
@@ -201,9 +201,7 @@ values: 'interactive' (default), 'always', and 'never'."
                          (run-with-store store
                            (mlet %store-monad ((drv (uncompressed-tarball
                                                      (basename url) tarball)))
-                             (mbegin %store-monad
-                               (built-derivations (list drv))
-                               (return (derivation->output-path drv)))))))
+                             (built-derivations (list drv))))))
 
                (ret  (gnupg-verify* sig data #:key-download key-download)))
           (if ret

@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2013, 2014, 2015, 2016 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2013 Nikita Karetnikov <nikita@karetnikov.org>
 ;;; Copyright © 2014, 2016 Alex Kost <alezost@gmail.com>
 ;;; Copyright © 2015 Mark H Weaver <mhw@netris.org>
@@ -1120,8 +1120,7 @@ that fails."
   (let* ((drv  (run-with-store store
                  (profile-derivation (manifest '())
                                      #:locales? #f)))
-         (prof (derivation->output-path drv "out")))
-    (build-derivations store (list drv))
+         (prof (build-derivations store (list drv))))
     (switch-symlinks generation prof)))
 
 (define (switch-to-generation profile number)

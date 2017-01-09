@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2014, 2015, 2016 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2016 Alex Kost <alezost@gmail.com>
 ;;; Copyright © 2016 Chris Marusich <cmmarusich@gmail.com>
 ;;;
@@ -445,20 +445,21 @@ open connection to the store."
                                               entries
                                               #:old-entries old-entries))))
     (show-what-to-build store (list grub.cfg))
-    (build-derivations store (list grub.cfg))
+
     ;; This is basically the same as install-grub*, but for now we avoid
     ;; re-installing the GRUB boot loader itself onto a device, mainly because
     ;; we don't in general have access to the same version of the GRUB package
     ;; which was used when installing this other system generation.
-    (let* ((grub.cfg-path (derivation->output-path grub.cfg))
-           (gc-root (string-append %gc-roots-directory "/grub.cfg"))
-           (temp-gc-root (string-append gc-root ".new")))
-      (switch-symlinks temp-gc-root grub.cfg-path)
-      (unless (false-if-exception (install-grub-config grub.cfg-path "/"))
-        (delete-file temp-gc-root)
-        (leave (_ "failed to re-install GRUB configuration file: '~a'~%")
-               grub.cfg-path))
-      (rename-file temp-gc-root gc-root))))
+    (match (build-derivations store (list grub.cfg))
+      ((grub.cfg-path)
+       (let* ((gc-root (string-append %gc-roots-directory "/grub.cfg"))
+              (temp-gc-root (string-append gc-root ".new")))
+         (switch-symlinks temp-gc-root grub.cfg-path)
+         (unless (false-if-exception (install-grub-config grub.cfg-path "/"))
+           (delete-file temp-gc-root)
+           (leave (_ "failed to re-install GRUB configuration file: '~a'~%")
+                  grub.cfg-path))
+         (rename-file temp-gc-root gc-root))))))
 
 
 ;;;
@@ -630,17 +631,15 @@ building anything."
                           (list sys grub.cfg grub)
                           (list sys grub.cfg))
                       (list sys)))
-       (%         (if derivations-only?
-                      (return (for-each (compose println derivation-file-name)
-                                        drvs))
+       (results   (if derivations-only?
+                      (return (map derivation-file-name drvs))
                       (maybe-build drvs #:dry-run? dry-run?
                                    #:use-substitutes? use-substitutes?))))
 
     (if (or dry-run? derivations-only?)
         (return #f)
         (begin
-          (for-each (compose println derivation->output-path)
-                    drvs)
+          (for-each println results)
 
           ;; Make sure GRUB is accessible.
           (when grub?
