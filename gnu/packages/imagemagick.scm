@@ -2,7 +2,7 @@
 ;;; Copyright © 2013, 2014, 2015 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2015 Eric Bavier <bavier@member.fsf.org>
 ;;; Copyright © 2015 Ricardo Wurmus <rekado@elephly.net>
-;;; Copyright © 2016 Leo Famulari <leo@famulari.name>
+;;; Copyright © 2016, 2017 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2016 Mark H Weaver <mhw@netris.org>
 ;;;
 ;;; This file is part of GNU Guix.
@@ -112,6 +112,20 @@ and TIFF.  Use ImageMagick to resize, flip, mirror, rotate, distort, shear and
 transform images, adjust image colors, apply various special effects, or draw
 text, lines, polygons, ellipses and Bézier curves.")
     (license (license:fsf-free "http://www.imagemagick.org/script/license.php"))))
+
+;;; The ImageMagick 6 series is still maintained, in parallel with 7. We keep it
+;;; around for packages that have not adapted to the 7-series API. See
+;;; <https://www.imagemagick.org/script/porting.php> for more information.
+(define-public imagemagick-6
+  (package (inherit imagemagick)
+    (version "6.9.7-3")
+    (source (origin
+             (method url-fetch)
+             (uri (string-append "mirror://imagemagick/ImageMagick-"
+                                 version ".tar.xz"))
+             (sha256
+              (base32
+               "18cibh5rmxddwpsrpzjd4sbim80g5w36zhl8bw582nw39cs6f5w0"))))))
 
 (define-public perl-image-magick
   (package
