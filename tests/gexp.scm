@@ -434,25 +434,6 @@
                  (equal? refs (list (dirname (dirname guile))))
                  (equal? refs2 (list file))))))
 
-(test-assertm "gexp->derivation vs. grafts"
-  (mlet* %store-monad ((graft?  (set-grafting #f))
-                       (p0 ->   (dummy-package "dummy"
-                                               (arguments
-                                                '(#:implicit-inputs? #f))))
-                       (r  ->   (package (inherit p0) (name "DuMMY")))
-                       (p1 ->   (package (inherit p0) (replacement r)))
-                       (exp0 -> (gexp (frob (ungexp p0) (ungexp output))))
-                       (exp1 -> (gexp (frob (ungexp p1) (ungexp output))))
-                       (void    (set-guile-for-build %bootstrap-guile))
-                       (drv0    (gexp->derivation "t" exp0 #:graft? #t))
-                       (drv1    (gexp->derivation "t" exp1 #:graft? #t))
-                       (drv1*   (gexp->derivation "t" exp1 #:graft? #f))
-                       (_       (set-grafting graft?)))
-    (return (and (not (string=? (derivation->output-path drv0)
-                                (derivation->output-path drv1)))
-                 (string=? (derivation->output-path drv0)
-                           (derivation->output-path drv1*))))))
-
 (test-assertm "gexp-grafts"
   ;; Make sure 'gexp-grafts' returns the graft to replace P1 by R.
   (let* ((p0    (dummy-package "dummy"

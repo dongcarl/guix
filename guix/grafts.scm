@@ -29,6 +29,7 @@
   #:use-module (srfi srfi-34)
   #:use-module (ice-9 match)
   #:use-module (ice-9 vlist)
+  #:use-module (ice-9 format)
   #:export (graft?
             graft
             graft-origin
@@ -38,6 +39,8 @@
 
             graft-derivation
             graft-derivation/shallow
+
+            graft-continuation
 
             %graft?
             set-grafting))
@@ -320,6 +323,26 @@ DRV itself to refer to those grafted dependencies."
      (if (equal? drv (graft-origin first))
          (graft-replacement first)
          drv))))
+
+(define graft-derivation*
+  (store-lift graft-derivation))
+
+(define (graft-continuation drv grafts)
+  "Return a monadic thunk that acts as a built continuation applying GRAFTS to
+the result of DRV."
+  (define _ gettext)                              ;FIXME: (guix ui)?
+  (match grafts
+    (()
+     (lift1 (const '()) %store-monad))
+    (x
+     (lambda (drv-file-name)
+       (format #t (_ "applying ~a grafts to~{ ~a~}~%")
+               (length grafts)
+               (match (derivation->output-paths drv)
+                 (((outputs . items) ...)
+                  items)))
+       (mlet  %store-monad ((drv (graft-derivation* drv grafts)))
+         (return (list (derivation-file-name drv))))))))
 
 
 ;; The following might feel more at home in (guix packages) but since (guix

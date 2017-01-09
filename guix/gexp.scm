@@ -195,6 +195,9 @@ Upon success, return the three argument procedure; otherwise return #f."
 corresponding to OBJ for SYSTEM, cross-compiling for TARGET if TARGET is true.
 OBJ must be an object that has an associated gexp compiler, such as a
 <package>."
+  ;; FIXME: Must register build continuation (or 'guix system build' does not
+  ;; graft its things because 'system-derivation' uses 'lower-object', not
+  ;; 'gexp->derivation'.)
   (let ((lower (lookup-compiler obj)))
     (lower obj system target)))
 
@@ -656,7 +659,7 @@ The other arguments are as for 'derivation'."
   (mlet* %store-monad (;; The following binding forces '%current-system' and
                        ;; '%current-target-system' to be looked up at >>=
                        ;; time.
-                       (graft?    (set-grafting graft?))
+                       (prev-graft? (set-grafting #f))
 
                        (system -> (or system (%current-system)))
                        (target -> (if (eq? target 'current)
@@ -701,38 +704,50 @@ The other arguments are as for 'derivation'."
                                                          #:system system
                                                          #:target target)
                                        (return #f)))
-                       (guile    (if guile-for-build
-                                     (return guile-for-build)
-                                     (default-guile-derivation system))))
-    (mbegin %store-monad
-      (set-grafting graft?)                       ;restore the initial setting
-      (raw-derivation name
-                      (string-append (derivation->output-path guile)
-                                     "/bin/guile")
-                      `("--no-auto-compile"
-                        ,@(if (pair? %modules)
-                              `("-L" ,(derivation->output-path modules)
-                                "-C" ,(derivation->output-path compiled))
-                              '())
-                        ,builder)
-                      #:outputs outputs
-                      #:env-vars env-vars
-                      #:system system
-                      #:inputs `((,guile)
-                                 (,builder)
-                                 ,@(if modules
-                                       `((,modules) (,compiled) ,@inputs)
-                                       inputs)
-                                 ,@(match graphs
-                                     (((_ . inputs) ...) inputs)
-                                     (_ '())))
-                      #:hash hash #:hash-algo hash-algo #:recursive? recursive?
-                      #:references-graphs (and=> graphs graphs-file-names)
-                      #:allowed-references allowed
-                      #:disallowed-references disallowed
-                      #:leaked-env-vars leaked-env-vars
-                      #:local-build? local-build?
-                      #:substitutable? substitutable?))))
+                       (guile      (if guile-for-build
+                                       (return guile-for-build)
+                                       (default-guile-derivation system))))
+    (>>= (mbegin %store-monad
+           (set-grafting prev-graft?)             ;restore the initial setting
+           (raw-derivation name
+                           (string-append (derivation->output-path guile)
+                                          "/bin/guile")
+                           `("--no-auto-compile"
+                             ,@(if (pair? %modules)
+                                   `("-L" ,(derivation->output-path modules)
+                                     "-C" ,(derivation->output-path compiled))
+                                   '())
+                             ,builder)
+                           #:outputs outputs
+                           #:env-vars env-vars
+                           #:system system
+                           #:inputs `((,guile)
+                                      (,builder)
+                                      ,@(if modules
+                                            `((,modules) (,compiled) ,@inputs)
+                                            inputs)
+                                      ,@(match graphs
+                                          (((_ . inputs) ...) inputs)
+                                          (_ '())))
+                           #:hash hash #:hash-algo hash-algo #:recursive? recursive?
+                           #:references-graphs (and=> graphs graphs-file-names)
+                           #:allowed-references allowed
+                           #:disallowed-references disallowed
+                           #:leaked-env-vars leaked-env-vars
+                           #:local-build? local-build?
+                           #:substitutable? substitutable?))
+         (if graft?
+             (lambda (drv)
+               ;; Register a build continuation to apply the relevant grafts
+               ;; to the outputs of DRV.
+               (mlet %store-monad ((grafts (gexp-grafts exp system
+                                                        #:target target)))
+                 (mbegin %store-monad
+                   (set-build-continuation (derivation-file-name drv)
+                                           (graft-continuation drv grafts))
+                   (return drv))))
+             (lambda (drv)
+               (with-monad %store-monad (return drv)))))))
 
 (define* (gexp-inputs exp #:key native?)
   "Return the input list for EXP.  When NATIVE? is true, return only native
