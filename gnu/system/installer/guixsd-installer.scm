@@ -57,7 +57,7 @@
 
 (define partition-menu-title    (N_ "Partition the disk(s)"))
 (define filesystem-menu-title   (N_ "Allocate disk partitions"))
-(define network-menu-title      (N_ "Setup the network"))
+(define network-menu-title      (N_ "Set up the network"))
 (define timezone-menu-title     (N_ "Set the time zone"))
 (define hostname-menu-title     (N_ "Set the host name"))
 (define installation-menu-title (N_ "Install the system"))
