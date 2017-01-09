@@ -43,17 +43,14 @@
 (define-public imagemagick
   (package
     (name "imagemagick")
-    ;; The 7 release series has an incompatible API, while the 6 series is still
-    ;; maintained. Don't update to 7 until we've made sure that the ImageMagick
-    ;; users are ready for the 7-series API.
-    (version "6.9.7-3")
+    (version "7.0.4-3")
     (source (origin
              (method url-fetch)
              (uri (string-append "mirror://imagemagick/ImageMagick-"
                                  version ".tar.xz"))
              (sha256
               (base32
-               "18cibh5rmxddwpsrpzjd4sbim80g5w36zhl8bw582nw39cs6f5w0"))))
+               "1i4z8lw2i4vk9gg5av50k2maf2nx6rzdm7l8jg0c5lc2788fl2dw"))))
     (build-system gnu-build-system)
     (arguments
      `(#:configure-flags '("--with-frozenpaths" "--without-gcc-arch")
