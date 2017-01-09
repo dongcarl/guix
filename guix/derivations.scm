@@ -989,15 +989,28 @@ recursively."
 ;;;
 
 (define* (build-derivations store derivations
-                            #:optional (mode (build-mode normal)))
+                            #:optional (mode (build-mode normal))
+                            #:key (continuations? #t))
   "Build DERIVATIONS, a list of <derivation> objects or .drv file names, using
-the specified MODE."
-  (build-things store (map (match-lambda
-                            ((? string? file) file)
-                            ((and drv ($ <derivation>))
-                             (derivation-file-name drv)))
-                           derivations)
-                mode))
+the specified MODE.  When CONTINUATIONS? is true, run the \"build
+continuations\" of each of DERIVATIONS.  Return the list of store items that
+were built."
+  (let ((things (build-things store (map (match-lambda
+                                           ((? string? file) file)
+                                           ((and drv ($ <derivation>))
+                                            (derivation-file-name drv)))
+                                         derivations)
+                              mode)))
+    ;; Convert the list of .drv file names to a list of output file names.
+    (append-map (match-lambda
+                  ((? derivation-path? drv)
+                   (let ((drv (call-with-input-file drv read-derivation)))
+                     (match (derivation->output-paths drv)
+                       (((outputs . items) ...)
+                        items))))
+                  (x
+                   (list x)))
+                things)))
 
 
 ;;;

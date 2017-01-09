@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2012, 2013, 2014, 2015, 2016 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2012, 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -71,6 +71,8 @@
             add-to-store
             build-things
             build
+            set-build-continuation!
+            set-build-continuation
             query-failed-paths
             clear-failed-paths
             add-temp-root
@@ -312,11 +314,15 @@
 
 (define-record-type <nix-server>
   (%make-nix-server socket major minor
-                    ats-cache atts-cache)
+                    continuations ats-cache atts-cache)
   nix-server?
   (socket nix-server-socket)
   (major  nix-server-major-version)
   (minor  nix-server-minor-version)
+
+  ;; Hash table that maps store items to a "build continuation" for that store
+  ;; item.
+  (continuations nix-server-build-continuations)
 
   ;; Caches.  We keep them per-connection, because store paths build
   ;; during the session are temporary GC roots kept for the duration of
@@ -399,6 +405,7 @@ for this connection will be pinned.  Return a server object."
                       (let ((conn (%make-nix-server port
                                                     (protocol-major v)
                                                     (protocol-minor v)
+                                                    (make-hash-table 100)
                                                     (make-hash-table 100)
                                                     (make-hash-table 100))))
                         (let loop ((done? (process-stderr conn)))
@@ -720,7 +727,19 @@ where FILE is the entry's absolute file name and STAT is the result of
               (hash-set! cache args path)
               path))))))
 
-(define build-things
+(define (set-build-continuation! store item proc)
+  "Register PROC as a \"build continuation\" for when ITEM is built on STORE.
+When 'build-things' is passed ITEM, it calls (PROC STORE ITEM), which must
+return a list of store items to build."
+  (hash-set! (nix-server-build-continuations store) item proc))
+
+(define (build-continuation store item)
+  "Return the procedure that implements a \"build continuation\" for ITEM, or
+#f if there is none."
+  (hash-ref (nix-server-build-continuations store) item))
+
+(define %build-things
+  ;; This is the raw RPC.
   (let ((build (operation (build-things (string-list things)
                                         (integer mode))
                           "Do it!"
@@ -740,6 +759,29 @@ Return #t on success."
               (raise (condition (&nix-protocol-error
                                  (message "unsupported build mode")
                                  (status  1)))))))))
+
+(define* (build-things store things
+                       #:optional (mode (build-mode normal))
+                       #:key (continuations? #t))
+  "Build THINGS, a list of store items which may be either '.drv' files or
+outputs, and return when the worker is done building them.  Elements of THINGS
+that are not derivations can only be substituted and not built locally.  When
+CONTINUATIONS? is true, run the \"build continuations\" of THINGS.  Return the
+list of store items built."
+  (let loop ((things things)
+             (built '()))
+    (match things
+      (()
+       built)
+      (_
+       (and (%build-things store things mode)
+            (loop (append-map (lambda (thing)
+                                (let ((proc (build-continuation store thing)))
+                                  (if proc
+                                      (proc store thing)
+                                      '())))
+                              things)
+                  things))))))
 
 (define-operation (add-temp-root (store-path path))
   "Make PATH a temporary root for the duration of the current session.
@@ -1183,6 +1225,12 @@ where FILE is the entry's absolute file name and STAT is the result of
 (define build
   ;; Monadic variant of 'build-things'.
   (store-lift build-things))
+
+(define (set-build-continuation item proc)
+  "Register monadic thunk PROC as a \"build continuation\" for ITEM."
+  (lambda (store)
+    (set-build-continuation! store item (store-lower proc))
+    (values *unspecified* store)))
 
 (define set-build-options*
   (store-lift set-build-options))
