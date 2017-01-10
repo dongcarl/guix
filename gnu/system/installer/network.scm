@@ -22,6 +22,7 @@
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer utils)
   #:use-module (gnu system installer wireless)
+  #:use-module (guix build syscalls)
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (gurses menu)
@@ -39,22 +40,14 @@
 	     network-page-key-handler))
 
 (define (interfaces)
-  "Return a alist of network interfaces. Keys include 'name, 'class and 'state"
-  (slurp "ip -o link"
-         (lambda (s)
-           (match (string-split s #\space)
-             ((_ interface-name _ _ _ _ _ _
-                 state _ _ _ _ _ _ _ _ _ class . _)
-              (let ((clean-name (string-trim-right interface-name #\:)))
-              `((name .  ,clean-name)
-                (state . ,state)
-                (class . ,(cond
-                           ((equal? class "link/loopback") 'loopback)
-                           ((equal? class "link/ether")
-                            (if (zero? (system* "iw" "dev" clean-name "info"))
-                                 'wireless
-                                 'ethernet))
-                           (else 'other))))))))))
+  (map (lambda (ifce)
+                `((name .  ,ifce)
+                  (class . ,(cond
+                             ((loopback-network-interface? ifce) 'loopback)
+                             ((zero? (system* "iw" "dev" ifce "info"))
+                              'wireless)
+                             (else 'ethernet)))))
+       (all-network-interface-names)))
 
 (define my-buttons `((continue ,(N_ "_Continue") #t)
 		     (test     ,(N_ "_Test") #t)))
@@ -155,12 +148,12 @@
 		       (getmaxy text-window) 0 #:panel #f))
 
 	 (menu (make-menu
-		(filter (lambda (i) (memq
+	        (filter (lambda (i) (memq
                                      (assq-ref i 'class)
                                      '(ethernet wireless)))
                         (interfaces))
-		#:disp-proc
-		(lambda (datum row)
+	        #:disp-proc
+	        (lambda (datum row)
 
                   (match (string-split
                           (car (slurp
@@ -170,9 +163,9 @@
 
 
                   ;; Convert a network device name such as "enp0s25" to
-		  ;; something more descriptive like
-		  ;; "82567LM Gigabit Network Connection"
-		  (let* ((name (assq-ref datum 'name))
+	          ;; something more descriptive like
+	          ;; "82567LM Gigabit Network Connection"
+	          (let* ((name (assq-ref datum 'name))
                          (addr (string-tokenize name char-set:digit)))
                     (match addr
                       ((bus device . func)
@@ -194,7 +187,6 @@
                                        (string-split x #\tab))))
                              "Device:"))
                        state flags))))))))))
-
 
     (addstr*   text-window  (format #f
 	      (gettext
