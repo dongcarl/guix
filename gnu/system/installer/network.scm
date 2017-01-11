@@ -41,12 +41,12 @@
 
 (define (interfaces)
   (map (lambda (ifce)
-                `((name .  ,ifce)
-                  (class . ,(cond
-                             ((loopback-network-interface? ifce) 'loopback)
-                             ((zero? (system* "iw" "dev" ifce "info"))
-                              'wireless)
-                             (else 'ethernet)))))
+         `((name .  ,ifce)
+           (class . ,(cond
+                      ((loopback-network-interface? ifce) 'loopback)
+                      ((zero? (system* "iw" "dev" ifce "info"))
+                       'wireless)
+                      (else 'ethernet)))))
        (all-network-interface-names)))
 
 (define my-buttons `((continue ,(N_ "_Continue") #t)
@@ -64,8 +64,8 @@
      ((eq? ch #\tab)
       (cond
        ((menu-active menu)
-	  (menu-set-active! menu #f)
-	  (buttons-select nav 0))
+        (menu-set-active! menu #f)
+        (buttons-select nav 0))
 
        ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
 	(menu-set-active! menu #t)
@@ -96,12 +96,12 @@
                (zero? (system* "dhclient" (assq-ref item 'name)))))))
 
      ((buttons-key-matches-symbol? nav ch 'test)
-	(let ((next  (make-page (page-surface page)
-				"Ping"
-				ping-page-refresh
-                                0
-				ping-page-key-handler)))
-          (page-enter next)))
+      (let ((next  (make-page (page-surface page)
+                              "Ping"
+                              ping-page-refresh
+                              0
+                              ping-page-key-handler)))
+        (page-enter next)))
 
      ((buttons-key-matches-symbol? nav ch 'continue)
 
@@ -127,9 +127,9 @@
 (define (network-page-init p)
   (let* ((s (page-surface p))
 	 (pr (make-boxed-window  #f
-	      (- (getmaxy s) 4) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
+                                 (- (getmaxy s) 4) (- (getmaxx s) 2)
+                                 2 1
+                                 #:title (page-title p)))
 	 (text-window (derwin
 		       (inner pr)
 		       5 (getmaxx (inner pr))
@@ -139,7 +139,7 @@
 	 (bwin (derwin (inner pr)
 		       3 (getmaxx (inner pr))
 		       (- (getmaxy (inner pr)) 3) 0
-			  #:panel #f))
+                       #:panel #f))
 	 (buttons (make-buttons my-buttons 1))
 
 	 (mwin (derwin (inner pr)
@@ -154,36 +154,39 @@
                         (interfaces))
 	        #:disp-proc
 	        (lambda (datum row)
-
                   (match (string-split
                           (car (slurp
-                                (string-append "ip -o link show "(assq-ref datum 'name))
+                                (string-append "ip -o link show "
+                                               (assq-ref datum 'name))
                                 #f)) #\space)
                     ((_ _ flags _ _ _ _ _ state . _)
 
-
-                  ;; Convert a network device name such as "enp0s25" to
-	          ;; something more descriptive like
-	          ;; "82567LM Gigabit Network Connection"
-	          (let* ((name (assq-ref datum 'name))
-                         (addr (string-tokenize name char-set:digit)))
-                    (match addr
-                      ((bus device . func)
-                       (format #f "~50a ~6a ~a"
-                       (car (assoc-ref
-                             (slurp (format #f "lspci -v -mm -s~x:~x.~x"
+                     ;; Convert a network device name such as "enp0s25" to
+                     ;; something more descriptive like
+                     ;; "82567LM Gigabit Network Connection"
+                     (let* ((name (assq-ref datum 'name))
+                            (addr (string-tokenize name char-set:digit)))
+                       (match addr
+                         ((bus device . func)
+                          (format #f "~50a ~6a ~a"
+                                  (assoc-ref
+                                   (slurp
+                                    (format #f "lspci -v -mm -s~x:~x.~x"
                                             (string->number bus 10)
                                             (string->number device 10)
                                             (if (null? func) 0
                                                 (string->number func 10)))
                                     (lambda (x)
-                                      (string-split x #\tab)))
-                             "Device:"))
-                       state flags))))))))))
+                                      (let ((idx (string-index x #\:)))
+                                        (cons (substring x 0 idx)
+                                              (string-trim
+                                               (substring x (1+ idx)))))))
+                                   "Device")
+                                  state flags))))))))))
 
     (addstr*   text-window  (format #f
-	      (gettext
-	       "To install GuixSD a connection to one of ~s must be available.  The following network devices exist on the system.  Select one to configure or \"Continue\" to proceeed.") %default-substitute-urls))
+                                    (gettext
+                                     "To install GuixSD a connection to one of ~s must be available.  The following network devices exist on the system.  Select one to configure or \"Continue\" to proceeed.") %default-substitute-urls))
 
 
     ;; Raise sigalarm every second to refresh the menu
