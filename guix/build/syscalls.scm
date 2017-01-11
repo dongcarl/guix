@@ -84,6 +84,7 @@
             IFF_UP
             IFF_BROADCAST
             IFF_LOOPBACK
+            IFF_RUNNING
             all-network-interface-names
             network-interface-names
             network-interface-flags
@@ -821,6 +822,7 @@ exception if it's already taken."
 (define IFF_UP #x1)                               ;Interface is up
 (define IFF_BROADCAST #x2)                        ;Broadcast address valid.
 (define IFF_LOOPBACK #x8)                         ;Is a loopback net.
+(define IFF_RUNNING  #x40)                        ;interface RFC2863 OPER_UP
 
 (define IF_NAMESIZE 16)                           ;maximum interface name size
 
