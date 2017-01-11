@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -193,7 +193,10 @@ which will process each string before returning it."
     (let  ((l (read-line port)))
       (if (eof-object? l)
 	  (reverse line-list)
-	  (lp (cons (if proc (proc l) l) line-list))))))
+	  (lp
+           (if (string= l "") ;; Ignore blank lines
+               line-list
+               (cons (if proc (proc l) l) line-list)))))))
 
 
 
