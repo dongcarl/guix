@@ -24,6 +24,7 @@
   #:use-module (gnu system installer wireless)
   #:use-module (guix build syscalls)
   #:use-module (ice-9 format)
+  #:use-module (ice-9 regex)
   #:use-module (ice-9 match)
   #:use-module (gurses menu)
   #:use-module (gurses buttons)
@@ -47,6 +48,36 @@
                       ((string-prefix? ifce "wl") 'wireless)
                       (else 'ethernet)))))
        (all-network-interface-names)))
+
+(define (match->elem m match-number)
+  (let ((elem (match:substring m match-number)))
+    (if elem
+        (string->number (string-drop elem 1))
+        0)))
+
+;; Convert a network device name such as "enp0s25" to
+;; something more descriptive like
+;; "82567LM Gigabit Network Connection"
+(define (name->description name)
+  (if (string=? name "lo")
+      "Loop back interface"
+      (let ((m (string-match "^..(P[[:digit:]]+)?(p[[:digit:]]+)(s[[:digit:]]+)(f[[:digit:]]+)?" name)))
+        (if (not m)
+            name
+            (let ((domain  (match->elem m 1))
+                  (bus     (match->elem m 2))
+                  (slot    (match->elem m 3))
+                  (func    (match->elem m 4)))
+              (assoc-ref
+               (slurp
+                (format #f "lspci -v -mm -s~x:~x:~x.~x"
+                        domain bus slot func)
+                (lambda (x)
+                  (let ((idx (string-index x #\:)))
+                    (cons (substring x 0 idx)
+                          (string-trim
+                           (substring x (1+ idx)))))))
+               "Device"))))))
 
 (define my-buttons `((continue ,(N_ "_Continue") #t)
 		     (test     ,(N_ "_Test") #t)))
@@ -153,35 +184,14 @@
                         (interfaces))
 	        #:disp-proc
 	        (lambda (datum row)
-                  (match (string-split
-                          (car (slurp
-                                (string-append "ip -o link show "
-                                               (assq-ref datum 'name))
-                                #f)) #\space)
-                    ((_ _ flags _ _ _ _ _ state . _)
-
-                     ;; Convert a network device name such as "enp0s25" to
-                     ;; something more descriptive like
-                     ;; "82567LM Gigabit Network Connection"
-                     (let* ((name (assq-ref datum 'name))
-                            (addr (string-tokenize name char-set:digit)))
-                       (match addr
-                         ((bus device . func)
-                          (format #f "~50a ~6a ~a"
-                                  (assoc-ref
-                                   (slurp
-                                    (format #f "lspci -v -mm -s~x:~x.~x"
-                                            (string->number bus 10)
-                                            (string->number device 10)
-                                            (if (null? func) 0
-                                                (string->number func 10)))
-                                    (lambda (x)
-                                      (let ((idx (string-index x #\:)))
-                                        (cons (substring x 0 idx)
-                                              (string-trim
-                                               (substring x (1+ idx)))))))
-                                   "Device")
-                                  state flags))))))))))
+                     (format #f "~55a ~a"
+                             (name->description (assq-ref datum 'name))
+                             (if (zero? (logand IFF_RUNNING
+                                         (network-interface-flags
+                                          (socket SOCK_STREAM AF_INET 0)
+                                          (assq-ref datum 'name))))
+                                 (gettext "Down")
+                                 (gettext "Running")))))))
 
     (addstr*   text-window  (format #f
                                     (gettext
