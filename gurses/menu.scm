@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 John Darrington <jmd@gnu.org>
+;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -78,6 +78,19 @@
   (menu-set-top-item! menu (max 0 (- (menu-top-item menu) step)))
   (menu-redraw menu))
 
+(define (menu-goto-start menu)
+  (menu-set-top-item! menu 0)
+  (menu-set-current-item! menu 0)
+  (menu-redraw menu))
+
+(define (menu-goto-end menu)
+  (let ((n-items (length (menu-items menu)))
+        (window-height (getmaxy (menu-window menu))))
+    (menu-set-top-item! menu (max 0 (- n-items window-height)))
+    (menu-set-current-item! menu (1- n-items))
+    (menu-redraw menu)))
+
+
 (define* (menu-down menu #:key (step 1))
   "Move the selected item down by STEP items.  Returns #f if on the last item."
   (if (< (menu-current-item menu) (1- (length (menu-items menu))))
@@ -141,7 +154,13 @@
    ((eq? ch KEY_PPAGE)
     (menu-active menu)
     (menu-up menu #:step (getmaxy (menu-window menu))))
-   
+
+   ((eq? ch KEY_HOME)
+    (menu-goto-start menu))
+
+   ((eq? ch KEY_END)
+    (menu-goto-end menu))
+
    ((or (eq? ch KEY_DOWN)
 	(eq? ch #\so))
     (if (menu-active menu)
