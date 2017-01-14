@@ -50,6 +50,7 @@
              (ice-9 match)
 	     (ncurses menu)
 	     (gnu system installer misc)
+             (gnu system installer filesystems)
 	     (ncurses form)
              (ncurses curses))
 
@@ -318,6 +319,9 @@ mounts return the device on which the path IN would be mounted."
 	      p))
 	p))
 
+  (define (pair->mp pr)
+    (file-system-spec-mount-point (cdr pr)))
+
   (if (not (absolute-file-name? in))
       (error (format #f "Path is not absolute")))
 
@@ -326,8 +330,8 @@ mounts return the device on which the path IN would be mounted."
 	 (map-in-order
 	  (lambda (p)
 	    (cons (car p)
-		  (string-split (normalise-directory-path (cdr p)) dir-sep)))
-	  (sort mp (lambda (x y) (string> (cdr x) (cdr y)))))))
+		  (string-split (normalise-directory-path (pair->mp p)) dir-sep)))
+	  (sort mp (lambda (x y) (string> (pair->mp x) (pair->mp y)))))))
     
     (let loop ((pp paths))
       (if (null? pp)

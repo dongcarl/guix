@@ -78,7 +78,7 @@
                            partition-menu-title))))
 
     (filesystems . ,(make-task filesystem-menu-title
-                               '(disk)
+                               '(disk hostname)
                                filesystem-task-complete?
                                (lambda (page)
                                  (make-filesystem-page
@@ -113,7 +113,6 @@
                                page
                                hostname-menu-title))))
 
-
     (role . ,(make-task role-menu-title
                             '()
                             (lambda () (and system-role (role? system-role)))
@@ -122,9 +121,8 @@
                                page
                                role-menu-title))))
 
-
     (generate . , (make-task generate-menu-title
-                             '(role filesystems timezone hostname)
+                             '(role filesystems timezone)
                              (lambda ()
                                (and config-file
                                     (file-exists? config-file)
@@ -178,7 +176,6 @@
 
 (define (do-task-list task-name-list page)
   "Queue the tasks whose names are the members of TASK-NAME-LIST"
-
   (for-each
    (lambda (task-name)
      (let ((task (assoc-ref main-options task-name)))
