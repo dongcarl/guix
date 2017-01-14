@@ -21,6 +21,7 @@
   #:export (form-set-value!)
   #:export (make-form)
   #:export (field-cursor-position)
+  #:export (field-symbol)
   #:export (form-post)
   #:export (form-items)
   #:export (form-window)
@@ -44,13 +45,14 @@
   (cursor-position field-cursor-position field-set-cursor-position!))
 
 (define-record-type <form>
-  (make-form' current-item enabled)
+  (make-form' current-item enabled callback)
   form?
   (current-item form-current-item form-set-current-item!)
   (enabled      form-enabled? form-set-enabled!)
   (items        form-items form-set-items!)
   (tabpos       form-tabpos form-set-tabpos!) ;; X Position of the entries
-  (window       form-window form-set-window!))
+  (window       form-window form-set-window!)
+  (callback     form-callback))
 
 (define (form-update-cursor form)
   "Updates the cursor for FIELD in FORM"
@@ -105,8 +107,8 @@ label eq? to N"
 		     (field-value ff)
 		     (loop (1+ idx)))))))))
 
-(define (make-form items)
-  (let ((form (make-form' 0 #t)))
+(define* (make-form items #:optional (callback #f))
+  (let ((form (make-form' 0 #t callback)))
     (form-set-items! form
 		     (list->array
 		      1 (map-in-order
@@ -191,8 +193,10 @@ label eq? to N"
 	      ((eq? ch #\enq)
 	       ;; Move to end of field
 	       (cursor-move form f (string-length (field-value f))))
-
 	      )
+        (when (form-callback form)
+              ((form-callback form) form))
+
 	(refresh (form-window form)))))
 
 (define (form-set-current-field form which)
