@@ -89,7 +89,7 @@
 
     (format . ,(make-task format-menu-title
                           '(filesystems)
-                          (lambda () #f)
+                          filesystems-are-current?
                           (lambda (page)
                             (make-format-page
                              page
@@ -144,7 +144,7 @@
                                 generate-menu-title))))
 
     (install .  ,(make-task installation-menu-title
-                            '(network generate)
+                            '(network generate format)
                             (lambda () #f)
                             (lambda (page)
                               (make-install-page
