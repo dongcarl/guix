@@ -34,6 +34,10 @@
   #:export (role?)
   #:export (make-role-page))
 
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
 
 (define-record-type <role>
   (make-role description packages package-modules services service-modules)
@@ -53,7 +57,7 @@
 	     role-page-key-handler))
 
 
-(define my-buttons `((cancel ,(N_ "Canc_el") #t)))
+(define my-buttons `((cancel ,(M_ "Canc_el") #t)))
 
 (define (role-page-key-handler page ch)
   (let ((menu (page-datum page 'menu))
@@ -108,19 +112,19 @@
   (menu-refresh (page-datum page 'menu)))
 
 
-(define roles `(,(make-role (N_ "Headless server")
+(define roles `(,(make-role (M_ "Headless server")
                             `(tcpdump)
                             `(admin)
                             `((dhcp-client-service)
                               (lsh-service #:port-number 2222)
                               %base-services)
                             `(networking ssh))
-                ,(make-role (N_ "Lightweight desktop or laptop")
+                ,(make-role (M_ "Lightweight desktop or laptop")
                             `(ratpoison i3-wm xmonad nss-certs)
                             `(wm ratpoison certs)
                             `(%desktop-services)
                             `(desktop))
-                ,(make-role (N_ "Heavy duty workstation")
+                ,(make-role (M_ "Heavy duty workstation")
                             `(nss-certs gvfs)
                             `(certs gnome)
                             `((gnome-desktop-service)

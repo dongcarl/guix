@@ -24,6 +24,11 @@
 
   #:export (make-dialog))
 
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
+
 ;; This module creates a single dialog with a simple message and an OK
 ;; button.
 
@@ -38,7 +43,7 @@
     page))
 
 
-(define my-buttons `((ok  ,(N_ "_OK") #t)))
+(define my-buttons `((ok  ,(M_ "_OK") #t)))
 
 (define (dialog-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation)))

@@ -30,7 +30,13 @@
 
 (define max-length ((const 63)))
 
-(define my-fields `((name   ,(N_ "Host Name") ,max-length)))
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
+
+
+(define my-fields `((name   ,(M_ "Host Name") ,max-length)))
 
 (define (valid-hostname? name)
   "Return #t iff NAME is a valid hostname as defined by RFC 1034"
@@ -109,7 +115,7 @@
       (form-enter form ch)))
     #f))
 
-(define my-buttons `((cancel ,(N_ "Cancel") #f)))
+(define my-buttons `((cancel ,(M_ "Cancel") #f)))
 
 (define (host-name-init p)
   (let* ((s (page-surface p))

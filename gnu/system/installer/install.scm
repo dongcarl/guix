@@ -32,6 +32,11 @@
 
   #:export (make-install-page))
 
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
+
 
 (define (make-install-page parent title)
   (let ((page (make-page (page-surface parent)
@@ -42,9 +47,9 @@
     page))
 
 
-(define my-buttons `((continue ,(N_ "_Continue") #t)
-                     (reboot ,(N_ "_Reboot") #t)
-                     (cancel ,(N_ "Canc_el") #t)))
+(define my-buttons `((continue ,(M_ "_Continue") #t)
+                     (reboot ,(M_ "_Reboot") #t)
+                     (cancel ,(M_ "Canc_el") #t)))
 
 (define (install-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))

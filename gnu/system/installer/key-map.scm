@@ -26,6 +26,12 @@
 
   #:export (make-file-browser))
 
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
+
+
 (define* (make-file-browser parent directory #:optional (exit-point #f))
   (let ((page (make-page (page-surface parent)
 			(gettext "File Browser")
@@ -39,7 +45,7 @@
     page))
 
 
-(define my-buttons `((cancel  ,(N_ "Canc_el") #t)))
+(define my-buttons `((cancel  ,(M_ "Canc_el") #t)))
 
 (define (file-browser-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))

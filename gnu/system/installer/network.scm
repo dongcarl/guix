@@ -33,6 +33,12 @@
 
   #:export (make-network-page))
 
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
+
+
 (define (make-network-page parent  title)
   (make-page (page-surface parent)
 	     title
@@ -79,8 +85,8 @@
                            (substring x (1+ idx)))))))
                "Device"))))))
 
-(define my-buttons `((continue ,(N_ "_Continue") #t)
-		     (test     ,(N_ "_Test") #t)))
+(define my-buttons `((continue ,(M_ "_Continue") #t)
+		     (test     ,(M_ "_Test") #t)))
 
 (define (network-page-key-handler page ch)
   (let ((menu (page-datum page 'menu))
@@ -115,7 +121,7 @@
      ((and (select-key? ch)
            (eq? 'wireless (assq-ref (menu-get-current-item menu) 'class)))
 
-      (let ((next (make-wireless-page page (N_ "Wireless interface setup")
+      (let ((next (make-wireless-page page (M_ "Wireless interface setup")
                                       (assq-ref (menu-get-current-item menu) 'name))))
         (page-enter next)))
      

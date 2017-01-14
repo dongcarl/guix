@@ -41,8 +41,6 @@
 	    window-pipe
             pipe-cmd
 
-	    N_
-	    
 	    select-key?))
 
 (use-modules (ice-9 popen)
@@ -54,10 +52,6 @@
 	     (ncurses form)
              (ncurses curses))
 
-(define-syntax N_
-  (syntax-rules ()
-    ((N_ str)
-     str)))
 
 (define (make-window-port win)
   "Return a port which writes to the curses window WIN"

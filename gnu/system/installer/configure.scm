@@ -37,6 +37,10 @@
 
   #:export (make-configure-page))
 
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
 
 (define (make-configure-page parent title)
   (let ((page (make-page (page-surface parent)
@@ -47,8 +51,8 @@
     page))
 
 
-(define my-buttons `((save ,(N_ "_Save") #t)
-                     (cancel ,(N_ "Canc_el") #t)))
+(define my-buttons `((save ,(M_ "_Save") #t)
+                     (cancel ,(M_ "Canc_el") #t)))
 
 
 ;; Kludge!  For testing.
