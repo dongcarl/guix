@@ -30,6 +30,10 @@
    #:export (filesystems-are-current?)
    #:export (make-format-page))
 
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
 
 (define (device-fs-uuid dev)
   "Retrieve the UUID of the filesystem on DEV, where DEV is the name of the 
@@ -60,8 +64,8 @@ match those uuids read from the respective partitions"
     page))
 
 
-(define my-buttons `((format ,(N_ "_Format") #t)
-                     (cancel ,(N_ "Canc_el") #t)))
+(define my-buttons `((format ,(M_ "_Format") #t)
+                     (cancel ,(M_ "Canc_el") #t)))
 
 
 (define (format-page-key-handler page ch)

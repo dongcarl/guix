@@ -33,6 +33,11 @@
   #:export (wireless-connect)
   #:export (make-wireless-page))
 
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
+
 
 (define (make-wireless-page parent title interface)
   (let ((page (make-page (page-surface parent)
@@ -45,7 +50,7 @@
     page))
 
 
-(define my-buttons `((cancel ,(N_ "Canc_el") #t)))
+(define my-buttons `((cancel ,(M_ "Canc_el") #t)))
 
 (define (wireless-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))
@@ -76,7 +81,7 @@
      ((select-key? ch)
       (let ((next (make-passphrase-page
                    page
-                   (N_ "Passphrase entry")
+                   (M_ "Passphrase entry")
                    (page-datum page 'ifce)
                    (assq-ref (menu-get-current-item menu) 'essid))))
         (page-enter next))))
@@ -132,8 +137,8 @@
                 (lambda (d _)
                   (format #f "~30a ~a" (assq-ref d 'essid)
                           (if (assq-ref d 'encryption)
-                              (N_ "Encr.")
-                              (N_ "Clear")))))))
+                              (M_ "Encr.")
+                              (M_ "Clear")))))))
 
     (addstr*   text-window  (format #f
                                     (gettext

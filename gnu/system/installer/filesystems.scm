@@ -45,6 +45,11 @@
   #:export (make-filesystem-page))
 
 
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
+
 ;; File system spec declaration.
 (define-record-type <file-system-spec>
   (make-file-system-spec' mount-point label type uuid)
@@ -69,7 +74,7 @@
   "Returns #f if the task is complete.  Otherwise a string explaining why not."
   (or
    (and (not (find-mount-device "/" mount-points))
-        (N_ "You must specify a mount point for the root (/)."))
+        (M_ "You must specify a mount point for the root (/)."))
 
 
    (let ((non-absolute-list
@@ -84,17 +89,17 @@
      (and (not (null? non-absolute-list))
           (ngettext
            (format #f
-                   (N_ "The mount point ~s is a relative path.  All mount points must be absolute.")
+                   (M_ "The mount point ~s is a relative path.  All mount points must be absolute.")
                    (car non-absolute-list))
            (format #f
-                   (N_ "The mount points ~s are relative paths.  All mount points must be absolute.")
+                   (M_ "The mount points ~s are relative paths.  All mount points must be absolute.")
                    non-absolute-list)
            (length non-absolute-list))))
 
    (and (< (size-of-partition (find-mount-device (%store-directory) mount-points))
            minimum-store-size)
         (format #f
-                (N_ "The filesystem for ~a requires at least ~aGB.")
+                (M_ "The filesystem for ~a requires at least ~aGB.")
                 (%store-directory) (/ minimum-store-size 1000)))
 
    (let loop ((ll mount-points)
@@ -104,7 +109,7 @@
        (((_ . (? file-system-spec? fss)) . rest)
         (if (member fss ac)
             (format #f
-                    (N_ "You have specified the mount point ~a more than once.")
+                    (M_ "You have specified the mount point ~a more than once.")
                     (file-system-spec-mount-point fss))
             (loop rest (cons fss ac))))))
 
@@ -120,9 +125,9 @@
      (if (null? partitions-without-filesystems)
          #f
          (ngettext
-          (format #f (N_ "The filesystem type for partition ~a is not valid.")
+          (format #f (M_ "The filesystem type for partition ~a is not valid.")
                   (car partitions-without-filesystems))
-          (format #f (N_ "The filesystem type for partitions ~a are not valid.")
+          (format #f (M_ "The filesystem type for partitions ~a are not valid.")
                   partitions-without-filesystems)
           (length partitions-without-filesystems))))))
 
@@ -134,8 +139,8 @@
 	     filesystem-page-key-handler))
 
 
-(define my-buttons `((continue ,(N_ "_Continue") #t)
-		     (cancel     ,(N_ "Canc_el") #t)))
+(define my-buttons `((continue ,(M_ "_Continue") #t)
+		     (cancel     ,(M_ "Canc_el") #t)))
 
 
 

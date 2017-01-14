@@ -29,9 +29,15 @@
   #:export (mount-point-refresh)
   #:export (mount-point-page-key-handler))
 
-(define my-fields `((mount-point ,(N_ "Mount Point") 40)
-                    (fs-type     ,(N_ "File System Type") 10)
-                    (label       ,(N_ "Label") 16)))
+
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
+
+(define my-fields `((mount-point ,(M_ "Mount Point") 40)
+                    (fs-type     ,(M_ "File System Type") 10)
+                    (label       ,(M_ "Label") 16)))
 
 (define (mount-point-refresh page)
   (when (not (page-initialised? page))
@@ -81,8 +87,8 @@
     (form-enter form ch))
   #f)
 
-(define my-buttons `((continue ,(N_ "Continue") #f)
-		     (cancel     ,(N_ "Cancel") #f)))
+(define my-buttons `((continue ,(M_ "Continue") #f)
+		     (cancel     ,(M_ "Cancel") #f)))
 
 (define (mount-point-page-init p)
   (let* ((s (page-surface p))

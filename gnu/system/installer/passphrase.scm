@@ -30,7 +30,12 @@
 
 (define max-length ((const 60)))
 
-(define my-fields `((passphrase   ,(N_ "Passphrase") ,max-length)))
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
+
+(define my-fields `((passphrase   ,(M_ "Passphrase") ,max-length)))
 
 (define (make-passphrase-page parent title ifce network)
   (let ((page
@@ -92,7 +97,7 @@
       (form-enter form ch)))
     #f))
 
-(define my-buttons `((cancel ,(N_ "Cancel") #f)))
+(define my-buttons `((cancel ,(M_ "Cancel") #f)))
 
 (define (passphrase-init p)
   (let* ((s (page-surface p))

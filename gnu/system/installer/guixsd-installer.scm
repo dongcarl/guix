@@ -47,6 +47,10 @@
              (srfi srfi-1)
 	     (srfi srfi-9))
 
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
 
 (define-record-type <task>
   (make-task title dependencies complete init)
@@ -56,15 +60,15 @@
   (complete task-complete?)
   (init task-init))
 
-(define partition-menu-title    (N_ "Partition the disk(s)"))
-(define filesystem-menu-title   (N_ "Allocate disk partitions"))
-(define format-menu-title       (N_ "Format the partitions"))
-(define network-menu-title      (N_ "Set up the network"))
-(define timezone-menu-title     (N_ "Set the time zone"))
-(define hostname-menu-title     (N_ "Set the host name"))
-(define installation-menu-title (N_ "Install the system"))
-(define role-menu-title         (N_ "Select a role for the system"))
-(define generate-menu-title     (N_ "Generate the configuration"))
+(define partition-menu-title    (M_ "Partition the disk(s)"))
+(define filesystem-menu-title   (M_ "Allocate disk partitions"))
+(define format-menu-title       (M_ "Format the partitions"))
+(define network-menu-title      (M_ "Set up the network"))
+(define timezone-menu-title     (M_ "Set the time zone"))
+(define hostname-menu-title     (M_ "Set the host name"))
+(define installation-menu-title (M_ "Install the system"))
+(define role-menu-title         (M_ "Select a role for the system"))
+(define generate-menu-title     (M_ "Generate the configuration"))
 
 (define (size-of-largest-disk)
   (fold (lambda (disk prev) (max (disk-size disk) prev))

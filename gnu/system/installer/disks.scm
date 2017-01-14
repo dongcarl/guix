@@ -27,7 +27,12 @@
   #:use-module (ice-9 format)
   #:export (make-disk-page))
 
-(define my-buttons `((continue ,(N_ "_Continue") #t)))
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
+
+(define my-buttons `((continue ,(M_ "_Continue") #t)))
 
 (define (make-disk-page parent  title)
   (make-page (page-surface parent)

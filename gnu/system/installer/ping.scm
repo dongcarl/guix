@@ -31,6 +31,10 @@
   #:export (ping-page-refresh)
   #:export (ping-page-key-handler))
 
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
 
 (define (substitute-is-reachable?)
   "Return #t if at least one substitute URL responds to pings"
@@ -45,9 +49,9 @@
                               (uri-host (string->uri x))))))
                 #f %default-substitute-urls))))))
 
-(define my-buttons `((test ,(N_ "_Test") #t)
-		     (continue  ,(N_ "_Continue") #t)
-		     (cancel     ,(N_ "Canc_el") #t)))
+(define my-buttons `((test ,(M_ "_Test") #t)
+		     (continue  ,(M_ "_Continue") #t)
+		     (cancel     ,(M_ "Canc_el") #t)))
 
 (define (ping-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))

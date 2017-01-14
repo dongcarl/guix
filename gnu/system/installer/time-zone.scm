@@ -26,6 +26,12 @@
 
   #:export (make-tz-browser))
 
+(define-syntax M_
+  (syntax-rules ()
+    ((M_ str)
+     str)))
+
+
 (define* (make-tz-browser parent directory #:optional (exit-point #f))
   (let ((page (make-page (page-surface parent)
 			(gettext "Time Zone")
@@ -39,7 +45,7 @@
     page))
 
 
-(define my-buttons `((cancel  ,(N_ "Canc_el") #t)))
+(define my-buttons `((cancel  ,(M_ "Canc_el") #t)))
 
 (define (time-zone-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))
