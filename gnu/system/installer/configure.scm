@@ -24,6 +24,7 @@
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer role)
   #:use-module (gnu system installer partition-reader)
+  #:use-module (gnu system installer filesystems)
   #:use-module (gnu system installer disks)
   #:use-module (ice-9 format)
   #:use-module (ice-9 rdelim)
@@ -129,8 +130,8 @@
 (define (generate-guix-config p width)
   (let ((grub-mount-point
          (find-mount-device "/boot/grub"
-                            mount-points)))
-    
+                                 mount-points)))
+
     (pretty-print `(use-modules
                     (gnu)
                     ,(when grub-mount-point
@@ -168,12 +169,12 @@
         (file-systems
          ,(append (list 'cons*)
                   (map (lambda (x)
-                         (let ((z (find-partition (car x))))
+                         (let ((fss (cdr x)))
                            `(file-system
-                              (device ,(car x))
-                              (title 'device)
-                              (mount-point ,(cdr x))
-                              (type ,(partition-fs z))))) mount-points)
+                              (device ,(file-system-spec-label fss))
+                              (title 'label)
+                              (mount-point ,(file-system-spec-mount-point fss))
+                              (type ,(file-system-spec-type fss))))) mount-points)
                   (list '%base-file-systems)))
         (users (cons* %base-user-accounts))
         (packages (cons*

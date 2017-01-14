@@ -30,10 +30,27 @@
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-9)
+
+  #:export (make-file-system-spec)
+  #:export (<file-system-spec>)
+  #:export (file-system-spec-mount-point)
+  #:export (file-system-spec-label)
+  #:export (file-system-spec-type)
 
   #:export (minimum-store-size)
   #:export (filesystem-task-complete?)
   #:export (make-filesystem-page))
+
+
+;; File system spec declaration.
+(define-record-type <file-system-spec>
+  (make-file-system-spec mount-point label type)
+  file-system-spec?
+  (mount-point      file-system-spec-mount-point)      ; string
+  (label            file-system-spec-label)            ; string
+  (type             file-system-spec-type))             ; symbol
+
 
 (define minimum-store-size 7000)
 
@@ -47,12 +64,15 @@
         (N_ "You must specify a mount point for the root (/)."))
 
 
-   (let ((non-absolute-list (fold (lambda (x prev)
-                (if (absolute-file-name? (cdr x))
-                    prev
-                    (cons (cdr x) prev)))
-              '()
-              mount-points)))
+   (let ((non-absolute-list
+          (fold (lambda (x prev)
+                  (match x
+                         ((dev . fss)
+                          (if (absolute-file-name? (file-system-spec-mount-point fss))
+                              prev
+                              (cons (file-system-spec-mount-point fss) prev)))))
+                '()
+                mount-points)))
      (and (not (null? non-absolute-list))
           (ngettext
            (format #f
@@ -73,27 +93,28 @@
               (ac '()))
      (match ll
        ('() #f)
-       (((_ . directory) . rest)
-        (if (member directory ac)
+       (((_ . (? file-system-spec? fss)) . rest)
+        (if (member fss ac)
             (format #f
                     (N_ "You have specified the mount point ~a more than once.")
-                    directory)
-            (loop rest (cons directory ac))))))
+                    (file-system-spec-mount-point fss))
+            (loop rest (cons fss ac))))))
 
    (let ((partitions-without-filesystems
           (fold (lambda (x prev)
-                  (if (not (string-prefix? "ext"
-                                           (partition-fs (string->partition
-                                                          (car x)))))
-                      (cons (car x) prev)
-                      prev)) '() mount-points)))
+                  (match x
+                         ((dev . (? file-system-spec? fss))
+                          (if (not (string-prefix? "ext"
+                                                   (file-system-spec-type fss)))
+                              (cons dev prev)
+                              prev)))) '() mount-points)))
 
      (if (null? partitions-without-filesystems)
          #f
          (ngettext
-          (format #f (N_ "The partition ~a does not contain a filesystem.")
+          (format #f (N_ "The filesystem type for partition ~a is not valid.")
                   (car partitions-without-filesystems))
-          (format #f (N_ "The partitions ~a do not contain filesystems.")
+          (format #f (N_ "The filesystem type for partitions ~a are not valid.")
                   partitions-without-filesystems)
           (length partitions-without-filesystems))))))
 
@@ -125,8 +146,8 @@
     (touchwin (outer (page-wwin page)))
     (refresh (outer (page-wwin page)))
     (refresh (inner (page-wwin page)))
-    (menu-refresh menu)
-    (menu-redraw menu)))
+    (menu-redraw menu)
+    (menu-refresh menu)))
 
 
 (define (size-of-partition device)
@@ -225,19 +246,22 @@
 		       (- (getmaxx (inner pr)) 0)
 		       (getmaxy text-window)  0 #:panel #f))
 
-	 (menu (make-menu  (partition-volume-pairs)
-			   #:disp-proc
-			   (lambda (d row)
-			     (let* ((part (car d))
-                                    (name (partition-name part)))
-
-			       (format #f "~30a ~7a ~16a ~a"
-				       name
-				       (number->size (partition-size part))
-				       (partition-fs part)
-				       (let ((x (assoc-ref mount-points name)))
-                                         (if x x ""))))))))
-
+	 (menu (make-menu
+                (partition-volume-pairs)
+                #:disp-proc
+                (lambda (d row)
+                  (let* ((part (car d))
+                         (name (partition-name part))
+                         (fs-spec
+                          (assoc-ref mount-points name)))
+                    
+                    (format #f "~30a ~7a ~16a ~a"
+                            name
+                            (number->size (partition-size part))
+                            (if fs-spec (file-system-spec-type fs-spec) "")
+                            (if fs-spec
+                                (file-system-spec-mount-point fs-spec) "")))))))
+    
     (push-cursor (page-cursor-visibility p))
     (page-set-wwin! p pr)
     (page-set-datum! p 'menu menu)
