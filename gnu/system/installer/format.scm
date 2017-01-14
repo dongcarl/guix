@@ -25,9 +25,31 @@
    #:use-module (ice-9 match)
    #:use-module (gurses buttons)
    #:use-module (ncurses curses)
-   
+   #:use-module (srfi srfi-1)
+
+   #:export (filesystems-are-current?)
    #:export (make-format-page))
 
+
+(define (device-fs-uuid dev)
+  "Retrieve the UUID of the filesystem on DEV, where DEV is the name of the 
+device such as /dev/sda1"
+  (car (assoc-ref
+        (slurp (string-append "blkid -o export " dev)
+               (lambda (x)
+                 (string-split x #\=))) "UUID")))
+
+(define (filesystems-are-current?)
+  "Returns #t iff there is at least one mount point AND all mount-points' uuids
+match those uuids read from the respective partitions"
+  (and (not (null? mount-points))
+       (fold (lambda (mp prev)
+               (and prev
+                    (match mp
+                           ((dev . (? file-system-spec? fss))
+                            (equal? (device-fs-uuid dev)
+                                    (file-system-spec-uuid fss))))))
+             #t mount-points)))
 
 (define (make-format-page parent title)
   (let ((page (make-page (page-surface parent)
