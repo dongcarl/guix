@@ -38,10 +38,13 @@
 (define (device-fs-uuid dev)
   "Retrieve the UUID of the filesystem on DEV, where DEV is the name of the
 device such as /dev/sda1"
-  (car (assoc-ref
-        (slurp (string-append "blkid -o export " dev)
-               (lambda (x)
-                 (string-split x #\=))) "UUID")))
+  (match (assoc-ref
+          (slurp (string-append "blkid -o export " dev)
+                 (lambda (x)
+                   (string-split x #\=))) "UUID")
+         (() #f)
+         ((? list? l)
+          (car l))))
 
 (define (filesystems-are-current?)
   "Returns #t iff there is at least one mount point AND all mount-points' uuids
