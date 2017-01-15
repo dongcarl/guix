@@ -59,7 +59,7 @@
 
     (cond
      ((buttons-key-matches-symbol? nav ch 'cancel)
-      ;; Close the menu and return 
+      ;; Close the menu and return
       (page-leave))
 
      ((eq? ch KEY_RIGHT)

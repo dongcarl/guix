@@ -161,7 +161,7 @@
     (addstr* text-window
              (gettext
               "Choose \"Continue\" to start installing the system."))
-    
+
     (push-cursor (page-cursor-visibility p))
     (page-set-wwin! p pr)
     (page-set-datum! p 'navigation buttons)

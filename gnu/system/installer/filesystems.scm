@@ -55,7 +55,7 @@
   (make-file-system-spec' mount-point label type uuid)
   file-system-spec?
   (mount-point      file-system-spec-mount-point)
-  (label            file-system-spec-label)      
+  (label            file-system-spec-label)
   (type             file-system-spec-type)
   (uuid             file-system-spec-uuid))
 
@@ -267,14 +267,14 @@
                          (name (partition-name part))
                          (fs-spec
                           (assoc-ref mount-points name)))
-                    
+
                     (format #f "~30a ~7a ~16a ~a"
                             name
                             (number->size (partition-size part))
                             (if fs-spec (file-system-spec-type fs-spec) "")
                             (if fs-spec
                                 (file-system-spec-mount-point fs-spec) "")))))))
-    
+
     (push-cursor (page-cursor-visibility p))
     (page-set-wwin! p pr)
     (page-set-datum! p 'menu menu)

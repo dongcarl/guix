@@ -100,9 +100,9 @@
      ((eq? ch KEY_UP)
       (buttons-unselect-all nav))
 
-     
+
      ((buttons-key-matches-symbol? nav ch 'cancel)
-      ;; Close the menu and return 
+      ;; Close the menu and return
       (page-leave))
 
 
@@ -116,7 +116,7 @@
         (set! config-file (port-filename cfg-port))
         (close-port cfg-port))
 
-      ;; Close the menu and return 
+      ;; Close the menu and return
       (page-leave))
      )
 
@@ -145,7 +145,7 @@
                   p #:width width)
     (newline p)
 
-    (pretty-print 
+    (pretty-print
      `(use-service-modules
        ,@(role-service-modules system-role)) p #:width width)
     (newline p)
@@ -169,7 +169,7 @@
                   (partition-volume-pairs)
                   (find-partition grub-mount-point))))
               (timeout 2))))
-        
+
         (file-systems
          ,(append (list 'cons*)
                   (map (lambda (x)
@@ -199,7 +199,7 @@
 	      (- (getmaxy s) 4) (- (getmaxx s) 2)
 	      2 1
 	      #:title (page-title p)))
-         
+
 	 (text-window (derwin
 		       (inner pr)
 		       3 (getmaxx (inner pr))
@@ -213,7 +213,7 @@
 	 (buttons (make-buttons my-buttons 1))
 
 
-         (config-window (make-boxed-window 
+         (config-window (make-boxed-window
                          (inner pr)
                          (- (getmaxy (inner pr))
                             (getmaxy bwin)

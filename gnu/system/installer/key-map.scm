@@ -57,7 +57,7 @@
       (cond
        ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
 	(buttons-unselect-all nav))
-       
+
        (else
 	(buttons-select-next nav))))
 
@@ -112,15 +112,15 @@
 			      (- (getmaxy (inner frame)) 3 (getmaxy text-window))
 			      (getmaxx (inner frame))
 			      (getmaxy text-window) 0 #:panel #f))
-	 
+	
 	 (menu (make-menu
 		(let ((dir (page-datum p 'directory)))
 		      (slurp (string-append "ls -1 "
 						dir)
 			      identity)))))
-    
+
     (menu-post menu menu-window)
-    
+
     (addstr* text-window
 	     (gettext "Select an item most closely matching your keyboard layout:" ))
     (push-cursor (page-cursor-visibility p))
@@ -133,5 +133,5 @@
     (refresh text-window)
     (refresh button-window)))
 
-			      
+			
 

@@ -57,7 +57,7 @@
       (cond
        ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
 	(buttons-unselect-all nav))
-       
+
        (else
 	(buttons-select-next nav))))
 
@@ -120,7 +120,7 @@
 			      (- (getmaxy (inner frame)) 3 (getmaxy text-window))
 			      (getmaxx (inner frame))
 			      (getmaxy text-window) 0 #:panel #f))
-	 
+	
 	 (menu (make-menu
 		(let nn ((ds (opendir (page-datum p 'directory)))
 			 (ll '()))
@@ -130,16 +130,16 @@
 			  (closedir ds)
 			  (sort ll string< ))
 			(nn ds
-			    (cond 
+			    (cond
 			     ((equal? "." o) ll)
 			     ((equal? ".." o) ll)
 			     ((>= (string-suffix-length o ".tab") 4) ll)
-			     (else 
+			     (else
 			      (cons o ll)))))))))
 	 )
-    
+
     (menu-post menu menu-window)
-    
+
     (addstr* text-window
 	     (gettext "Select the default time zone for the system:" ))
 

@@ -16,7 +16,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with GNU Guix.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (gnu system installer partition-reader) 
+(define-module (gnu system installer partition-reader)
   #:export (disk?
 	    partition?
 	    disk-vendor
@@ -31,13 +31,13 @@
 	    partition-name
 
 	    partition-volume-pairs
-	    
+	
 	    number->size
 
 	    find-partition
-	    
+	
             volumes)
-  
+
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 match)
   #:use-module (ice-9 popen)
@@ -48,7 +48,7 @@
 
 (define (number->size n)
   "Convert a number of megabytes into a human readable size representation"
-  (let ((pr 
+  (let ((pr
   (let loop ((q (* n 1000))
 	     (m 0))
     (if (and (integer? (/ q 100))
@@ -70,7 +70,7 @@ number of Megabytes"
   (let* ((threshold (1+ (string-index-right size char-set:digit)))
 	 (quantity (string->number (substring size 0 threshold)))
 	 (unit (substring size threshold))
-	 (multiplier 
+	 (multiplier
 	  (cond
 	   ((equal? "KB" unit)
 	    0.001)
@@ -123,7 +123,7 @@ number of Megabytes"
 (define (parse-disk port disk-list)
   (if (not (string=? "BYT" (read-line-drop-semi port)))
       (error "Expected BYT;"))
-  
+
   (let ((line (read-line-drop-semi port)))
     (match (string-split line #\:)
       ((name size type logical physical table vendor xx)
@@ -136,7 +136,7 @@ number of Megabytes"
   (let ((line (read-line-drop-semi port)))
     (match (string-split line #\:)
       ((number start stop size fs type flags)
-       (cons 
+       (cons
 	(make-partition number start stop
 			(size->number size)
 			fs type flags)

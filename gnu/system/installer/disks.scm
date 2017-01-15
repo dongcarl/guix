@@ -52,7 +52,7 @@
       (addstr win
 	      (justify* (gettext "Select a disk to partition (or repartition), or choose \"Continue\" to leave the disk(s) unchanged.")
 			(getmaxx win)))
-      
+
       (menu-set-items! menu (volumes))
       (touchwin (outer (page-wwin page)))
       (refresh (outer (page-wwin page)))
@@ -74,14 +74,14 @@
        ((menu-active menu)
 	  (menu-set-active! menu #f)
 	  (buttons-select nav 0))
-       
+
        ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
 	(menu-set-active! menu #t)
 	(buttons-unselect-all nav))
-       
+
        (else
 	(buttons-select-next nav))))
-     
+
      ((eq? ch KEY_LEFT)
       (menu-set-active! menu #f)
       (buttons-select-prev nav))
@@ -108,7 +108,7 @@
 
 (define (truncate-string ss w)
  (if (> (string-length ss) w)
-	  (string-append 
+	  (string-append
 	   (string-take ss (- w 3)) "...")
 	  ss))
 
@@ -128,7 +128,7 @@
 			      4
 			      (getmaxx (inner frame))
 			      0 0 #:panel #f))
-			      
+			
 	 (menu-window (derwin (inner frame)
 		       (- (getmaxy (inner frame)) 3 (getmaxy text-window))
 		        (getmaxx (inner frame))

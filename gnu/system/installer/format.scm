@@ -36,7 +36,7 @@
      str)))
 
 (define (device-fs-uuid dev)
-  "Retrieve the UUID of the filesystem on DEV, where DEV is the name of the 
+  "Retrieve the UUID of the filesystem on DEV, where DEV is the name of the
 device such as /dev/sda1"
   (car (assoc-ref
         (slurp (string-append "blkid -o export " dev)
@@ -91,9 +91,9 @@ match those uuids read from the respective partitions"
      ((eq? ch KEY_UP)
       (buttons-unselect-all nav))
 
-     
+
      ((buttons-key-matches-symbol? nav ch 'cancel)
-      ;; Close the menu and return 
+      ;; Close the menu and return
       (page-leave))
 
 
@@ -111,12 +111,12 @@ match those uuids read from the respective partitions"
                                       "-v"
                                       dev))
                      )))) mount-points)
-        
+
         (close-port window-port))
-      
+
       ;;(page-leave)
       ))
-     
+
     #f))
 
 (define (format-page-refresh page)
@@ -134,7 +134,7 @@ match those uuids read from the respective partitions"
 	      (- (getmaxy s) 4) (- (getmaxx s) 2)
 	      2 1
 	      #:title (page-title p)))
-         
+
 	 (text-window (derwin
 		       (inner pr)
 		       3 (getmaxx (inner pr))
@@ -148,7 +148,7 @@ match those uuids read from the respective partitions"
 	 (buttons (make-buttons my-buttons 1))
 
 
-         (config-window (make-boxed-window 
+         (config-window (make-boxed-window
                          (inner pr)
                          (- (getmaxy (inner pr))
                             (getmaxy bwin)
@@ -166,7 +166,7 @@ match those uuids read from the respective partitions"
                             mount-points))))
 
 
-        
+
     (push-cursor (page-cursor-visibility p))
     (page-set-wwin! p pr)
     (page-set-datum! p 'navigation buttons)

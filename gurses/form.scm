@@ -67,7 +67,7 @@
 	    (make-list (field-size field) (underline #\space))
 	    #:y n
 	    #:x (form-tabpos form))
-  
+
   (addstr (form-window form) (field-value field)
 	  #:y n
 	  #:x (form-tabpos form)))
@@ -78,7 +78,7 @@
     (let ((f (array-ref (form-items form) n)))
       (field-set-value! f str)
       (redraw-field form f n)))
-   
+
    ((symbol? n)
     (let loop ((idx 0))
       (if (array-in-bounds? (form-items form) idx)
@@ -142,7 +142,7 @@ label eq? to N"
 	       (field-set-value! f (string-join
 				    (list left right)
 				    (make-string 1 ch)))
-	       
+	
 	       (field-set-cursor-position! f (1+ (field-cursor-position f)))
 	       (addch (form-window form) (normal ch)))
 
@@ -150,7 +150,7 @@ label eq? to N"
 	       (field-set-value! f (string-append left right))
 	       (redraw-current-field form f)
 	       (form-update-cursor form))
-	      
+	
 	      ((eq? ch KEY_BACKSPACE)
 	       (if (positive? (field-cursor-position f))
 		   (begin
@@ -166,30 +166,30 @@ label eq? to N"
 	       (field-set-value! f (substring (field-value f)
 					      0 (field-cursor-position f)))
 	       (redraw-current-field form f))
-	      
+	
 	      ((or (eq? ch KEY_DOWN)
 		   (eq? ch #\so)
 		   (eq? ch #\tab))
 	       (form-next-field form)
 	       (cursor-move form f 0))
-	      
+	
 	      ((or (eq? ch KEY_UP)
 		   (eq? ch #\dle))
 	       (form-previous-field form)
 	       (cursor-move form f 0))
-	      
+	
 	      ((eq? ch KEY_RIGHT)
 	       (if (< (field-cursor-position f) (string-length (field-value f)))
 		   (cursor-move form f (1+ (field-cursor-position f)))))
-	      
+	
 	      ((eq? ch KEY_LEFT)
 	       (if (positive? (field-cursor-position f))
 		   (cursor-move form f (1- (field-cursor-position f)))))
-	      
+	
 	      ((eq? ch #\soh)
 	       ;; Move to start of field
 	       (cursor-move form f 0))
-	      
+	
 	      ((eq? ch #\enq)
 	       ;; Move to end of field
 	       (cursor-move form f (string-length (field-value f))))
@@ -217,7 +217,7 @@ label eq? to N"
 
 (define (form-post form win)
   (form-set-window! form win)
-  (let ((xpos 
+  (let ((xpos
 	 ;; Print the labels and return the length of the longest
 	 (let loop ((fields (form-items form))
 		    (pos 0)
@@ -231,7 +231,7 @@ label eq? to N"
 					    (string-length (field-label f)))))))))
 
     (form-set-tabpos! form xpos)
-    
+
     ;; Print the field entry areas
     (let loop ((fields (form-items form))
 	       (pos 0))

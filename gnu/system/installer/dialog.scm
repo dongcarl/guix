@@ -53,7 +53,7 @@
       (cond
        ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
 	(buttons-unselect-all nav))
-       
+
        (else
 	(buttons-select-next nav))))
 
@@ -94,7 +94,7 @@
 		   (if (promise? m) (force m) m))
 	  (addstr text-window
 		  (if (promise? m) (force m) m))))
-    
+
   (push-cursor (page-cursor-visibility p))
   (page-set-wwin! p frame)
   (page-set-datum! p 'text-window text-window)

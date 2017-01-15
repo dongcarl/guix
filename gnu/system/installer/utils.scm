@@ -33,7 +33,7 @@
 	    make-boxed-window
             inner
             outer
-	    
+	
 	    open-input-pipe-with-fallback
 
 	    find-mount-device
@@ -118,7 +118,7 @@
 	       (+ n (1+ len)))
 
 	   (if (linefull? n width)
-	       (string-append acc 
+	       (string-append acc
 			      (make-string (- width len) #\space))
 	       (string-append acc word " "))))))
 
@@ -148,7 +148,7 @@ This version assumes some external entity puts in the carriage returns."
 	   (+ n (string-length appendage))
 
 	   (string-append acc appendage)))))
-  
+
   (justify' (string-split text char-set:blank) 0  ""))
 
 
@@ -231,7 +231,7 @@ which will process each string before returning it."
 	((eqv? ch KEY_UP)
 	 (menu-driver menu REQ_UP_ITEM)
 	 ))
-    
+
     (refresh win)))
 
 
@@ -326,7 +326,7 @@ mounts return the device on which the path IN would be mounted."
 	    (cons (car p)
 		  (string-split (normalise-directory-path (pair->mp p)) dir-sep)))
 	  (sort mp (lambda (x y) (string> (pair->mp x) (pair->mp y)))))))
-    
+
     (let loop ((pp paths))
       (if (null? pp)
 	  #f
