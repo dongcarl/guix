@@ -114,7 +114,8 @@ match those uuids read from the respective partitions"
 
         (close-port window-port))
 
-      ;;(page-leave)
+      (when (filesystems-are-current?)
+            (page-leave))
       ))
 
     #f))
