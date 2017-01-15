@@ -92,7 +92,7 @@
 
      ((select-key? ch)
       (set! system-role (menu-get-current-item menu))
-      
+
       (page-leave))
 
      ((buttons-key-matches-symbol? nav ch 'cancel)
@@ -158,7 +158,7 @@
 	 (menu (make-menu roles
                           #:disp-proc (lambda (datum row)
                                         (role-description datum)))))
-         
+
     (addstr*   text-window  (format #f
 	      (gettext
 	       "Select from the list below the role which most closely matches the purpose of the system to be installed.")))

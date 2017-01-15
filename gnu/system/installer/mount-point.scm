@@ -63,7 +63,7 @@
       (page-leave))
 
      ((buttons-key-matches-symbol? nav ch 'cancel)
-      ;; Close the menu and return 
+      ;; Close the menu and return
       (page-leave))
 
      ((or (eq? ch KEY_RIGHT)
@@ -97,17 +97,17 @@
 	      (- (getmaxy s) 4) (- (getmaxx s) 2)
 	      2 1
 	      #:title (page-title p)))
-	 
+	
 	 (text-window (derwin (inner pr) 3 (getmaxx (inner pr))
 			      0 0))
-	 
+	
 	 (bwin (derwin (inner pr)
 		       3 (getmaxx (inner pr))
 		       (- (getmaxy (inner pr)) 3) 0
 		       #:panel #f))
-	 
+	
 	 (nav (make-buttons my-buttons 1))
-	 
+	
 	 (fw (derwin (inner pr)
 		     (length my-fields)
 		     (getmaxx (inner pr))
@@ -124,7 +124,7 @@
                                           host-name "-"
                                           (form-get-value f 'mount-point)))))))))
 
-    (page-set-datum! p 'navigation nav)    
+    (page-set-datum! p 'navigation nav)
     (let ((dev (page-datum p 'device)))
       (addstr*
        text-window
@@ -148,9 +148,9 @@
                              (file-system-spec-mount-point fss))
             (form-set-value! form 'fs-type
                              (file-system-spec-type fss))))
-    
+
     (form-set-current-field form 0)
-    
+
     (push-cursor (page-cursor-visibility p))
     (buttons-post nav bwin)
     (page-set-datum! p 'form form)

@@ -124,7 +124,7 @@
       (let ((next (make-wireless-page page (M_ "Wireless interface setup")
                                       (assq-ref (menu-get-current-item menu) 'name))))
         (page-enter next)))
-     
+
      ((select-key? ch)
       (let ((item (menu-get-current-item menu)))
         (when (eq? (assq-ref item 'class) 'ethernet)

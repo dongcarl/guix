@@ -29,7 +29,7 @@
   #:export (buttons-n-buttons)
   #:export (buttons-get-current-selection)
   #:export (buttons-key-matches-symbol?)
-  
+
   #:use-module (ncurses curses)
   #:use-module (srfi srfi-9))
 
@@ -58,7 +58,7 @@
     (color-set! b color)
     (box b 0 0)
     (refresh b))
-  
+
 (define (buttons-unselect-all buttons)
   (let* ((arry (buttons-array buttons))
 	 (current (buttons-selected buttons))
@@ -99,7 +99,7 @@
 (define* (buttons-select-next buttons #:key (wrap #f))
   (let ((current (buttons-selected buttons)))
     (if (and wrap
-	     (>= current 
+	     (>= current
 		 (1- (array-length (buttons-array buttons)))))
 	(buttons-select buttons 0)
 	(buttons-select buttons (1+ current)))))
@@ -159,6 +159,6 @@
 	       (and=> (buttons-get-current-selection nav)
 		      (lambda (x) (eq? x symbol)))))
   #f))
-		      
+		
 
 

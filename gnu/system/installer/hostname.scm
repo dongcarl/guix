@@ -124,17 +124,17 @@
 	      (- (getmaxy s) 4) (- (getmaxx s) 2)
 	      2 1
 	      #:title (page-title p)))
-	 
+	
 	 (text-window (derwin (inner pr) 5 (getmaxx (inner pr))
 			      0 0))
-	 
+	
 	 (bwin (derwin (inner pr)
 		       3 (getmaxx (inner pr))
 		       (- (getmaxy (inner pr)) 3) 0
 		       #:panel #f))
-	 
+	
 	 (nav (make-buttons my-buttons 1))
-	 
+	
 	 (fw (derwin (inner pr)
 		     2
 		     (getmaxx (inner pr))
@@ -143,11 +143,11 @@
 
 	 (form (make-form my-fields)))
 
-    (page-set-datum! p 'navigation nav)    
+    (page-set-datum! p 'navigation nav)
     (page-set-datum! p 'text-window text-window)
     (page-set-datum! p 'form form)
     (push-cursor (page-cursor-visibility p))
-    
+
     (form-post form fw)
     (buttons-post nav bwin)
     (page-set-wwin! p pr)

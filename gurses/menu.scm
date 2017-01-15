@@ -17,7 +17,7 @@
 ;;; along with GNU Guix.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (gurses menu)
-  
+
   #:export (make-menu)
   #:export (menu-post)
   #:export (menu-refresh)
@@ -33,9 +33,9 @@
   #:export (menu-set-active-attr!)
   #:export (menu-set-active-color!)
   #:export (menu-top-item)
-  
+
   #:export (menu-get-current-item)
-  
+
   #:export (std-menu-key-handler)
 
   #:use-module (ncurses curses)
@@ -134,7 +134,7 @@
   (let ((win (menu-window menu))
 	(colour (if (menu-active menu) (menu-active-color menu) 0))
 	(attr (if (menu-active menu) (menu-active-attr menu) A_DIM)))
-    
+
     (bkgd win (color 0 (normal #\space)))
     (chgat win -1 attr colour #:y
 	   (- (menu-current-item menu) (menu-top-item menu))
