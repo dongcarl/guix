@@ -197,6 +197,19 @@
            (do-task task-name page))))
    task-name-list))
 
+
+(define (uniquify in)
+  "Remove duplicates from the list IN. Keep the items which are closest to the
+tail of the list."
+  (let loop ((l (reverse in))
+             (acc '()))
+    (if (null? l)
+        acc
+        (loop (cdr l)
+              (if (member (car l) (cdr l))
+                  acc
+                  (cons (car l) acc))))))
+
 (define (main-page-key-handler page ch)
   (let ((main-menu (page-datum page 'menu)))
     (std-menu-key-handler main-menu ch)
@@ -204,6 +217,7 @@
      ((eq? ch #\newline)
       (let ((item (menu-get-current-item main-menu)))
         (do-task (car item) page)
+        (set! page-stack (uniquify page-stack))
         ((page-refresh (car page-stack)) (car page-stack)))))))
 
 (define (main-page-init page)
