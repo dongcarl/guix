@@ -62,6 +62,42 @@ manual."
                            "-f" (string-append #$guix "/share/info/guix.info")
                            "-n" "System Installation"))))
 
+(define (guix-installer)
+  "Return a script that spawns the guix installer."
+  (program-file "guix-installer"
+                #~(begin
+                    (setenv "TZDIR"
+                            (string-append #$tzdata "/share/zoneinfo"))
+                    (setenv "PATH"
+                            (string-join
+                             (list
+                              (string-append #$bash       "/bin")
+                              (string-append #$coreutils  "/bin")  ; for ls (!)
+                              (string-append #$btrfs-progs "/bin")
+                              (string-append #$e2fsprogs  "/sbin")
+                              (string-append #$(current-guix)  "/bin") ; for guix system init
+                              (string-append #$inetutils  "/bin") ; for ping
+                              (string-append #$iproute    "/sbin")
+                              (string-append #$isc-dhcp   "/sbin")
+                              (string-append #$iw         "/sbin")
+                              (string-append #$kbd        "/bin")
+                              (string-append #$parted     "/sbin")
+                              (string-append #$pciutils   "/sbin")
+                              (string-append #$shepherd   "/bin")  ; for herd
+                              (string-append #$shepherd   "/sbin") ; for reboot
+                              (string-append #$util-linux "/bin")  ; for mount
+                              (string-append #$util-linux "/sbin")
+                              (string-append #$wireless-tools "/sbin") ; for iwlist
+                              (string-append #$wpa-supplicant-minimal   "/sbin")
+                              (string-append #$which      "/bin"))
+                             ":"))
+                    (setenv "GUILE_LOAD_PATH"
+                            (string-append #$guile-ncurses "/share/guile/site/2.0"))
+                    ;; "(current-guix)" should probably be changed to "guix"
+                    ;; at some point.
+                    (execl (string-append #$(current-guix) "/bin/guix")
+                           "guix" "system" "installer"))))
+
 (define %backing-directory
   ;; Sub-directory used as the backing store for copy-on-write.
   "/tmp/guix-inst")

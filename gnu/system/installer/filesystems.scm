@@ -116,11 +116,12 @@
    (let ((partitions-without-filesystems
           (fold (lambda (x prev)
                   (match x
-                         ((dev . (? file-system-spec? fss))
-                          (if (not (string-prefix? "ext"
-                                                   (file-system-spec-type fss)))
-                              (cons dev prev)
-                              prev)))) '() mount-points)))
+                         ((dev . ($ <file-system-spec> mp label type uuid))
+                          (cond
+                           ((string-prefix? "ext" type) prev)
+                           ((equal? "btrfs" type) prev)
+                           (else (cons dev prev))))))
+                '() mount-points)))
 
      (if (null? partitions-without-filesystems)
          #f
