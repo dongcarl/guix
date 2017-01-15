@@ -34,9 +34,11 @@
 
   #:export (make-file-system-spec)
   #:export (<file-system-spec>)
+  #:export (file-system-spec?)
   #:export (file-system-spec-mount-point)
   #:export (file-system-spec-label)
   #:export (file-system-spec-type)
+  #:export (file-system-spec-uuid)
 
   #:export (minimum-store-size)
   #:export (filesystem-task-complete?)
@@ -45,11 +47,17 @@
 
 ;; File system spec declaration.
 (define-record-type <file-system-spec>
-  (make-file-system-spec mount-point label type)
+  (make-file-system-spec' mount-point label type uuid)
   file-system-spec?
-  (mount-point      file-system-spec-mount-point)      ; string
-  (label            file-system-spec-label)            ; string
-  (type             file-system-spec-type))             ; symbol
+  (mount-point      file-system-spec-mount-point)
+  (label            file-system-spec-label)      
+  (type             file-system-spec-type)
+  (uuid             file-system-spec-uuid))
+
+(define (make-file-system-spec mount-point label type)
+  (let ((uuid (slurp "uuidgen" identity)))
+    (make-file-system-spec' mount-point label type (car uuid))))
+
 
 
 (define minimum-store-size 7000)
