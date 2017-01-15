@@ -32,16 +32,13 @@
      str)))
 
 
-(define* (make-tz-browser parent directory #:optional (exit-point #f))
+(define (make-tz-browser parent directory)
   (let ((page (make-page (page-surface parent)
 			(gettext "Time Zone")
 			time-zone-page-refresh
                         0
 			time-zone-page-key-handler)))
     (page-set-datum! page 'directory directory)
-    (if exit-point
-	(page-set-datum! page 'exit-point exit-point)
-	(page-set-datum! page 'exit-point (page-datum parent 'exit-point)))
     page))
 
 
@@ -71,19 +68,20 @@
 	     (st (lstat new-dir)))
 	(if (and (file-exists? new-dir)
 		 (eq? 'directory (stat:type st)))
-	    (let ((p (make-tz-browser
-		      page new-dir)))
+	    (let ((p (make-tz-browser page new-dir)))
 	      (page-set-datum! p 'stem
 			       (if (page-datum page 'stem)
 				   (string-append (page-datum page 'stem) "/" i)
 				   i))
+              ;; Don't go back to the current page!
+              (set! page-stack (cdr page-stack))
               (page-enter p))
 	    (begin
 	      (set! time-zone
 		(if (page-datum page 'stem)
 		    (string-append (page-datum page 'stem) "/" i)
 		    i))
-	      (page-leave (page-datum page 'exit-point))
+	      (page-leave)
 	      #f)))
       ))
   (std-menu-key-handler menu ch)
