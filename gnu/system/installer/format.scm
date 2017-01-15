@@ -44,7 +44,8 @@ device such as /dev/sda1"
                    (string-split x #\=))) "UUID")
          (() #f)
          ((? list? l)
-          (car l))))
+          (car l))
+         (_ #f)))
 
 (define (filesystems-are-current?)
   "Returns #t iff there is at least one mount point AND all mount-points' uuids
