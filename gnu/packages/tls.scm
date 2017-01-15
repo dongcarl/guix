@@ -1,10 +1,11 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2012, 2013, 2014, 2015, 2016 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2012, 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2014, 2015, 2016 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2014 Ian Denhardt <ian@zenhack.net>
 ;;; Copyright © 2013, 2015 Andreas Enge <andreas@enge.fr>
 ;;; Copyright © 2015 David Thompson <davet@gnu.org>
 ;;; Copyright © 2015, 2016 Leo Famulari <leo@famulari.name>
+;;; Copyright © 2015, 2016, 2017 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 ng0 <ng0@we.make.ritual.n0.is>
 ;;; Copyright © 2016 Hartmut Goebel <h.goebel@crazy-compilers.com>
@@ -139,6 +140,7 @@ living in the same process.")
   (package
     (name "gnutls")
     (version "3.5.4")
+    (replacement gnutls-3.5.8)
     (source (origin
              (method url-fetch)
              (uri
@@ -210,6 +212,20 @@ required structures.")
     (license license:lgpl2.1+)
     (properties '((ftp-server . "ftp.gnutls.org")
                   (ftp-directory . "/gcrypt/gnutls")))))
+
+(define gnutls-3.5.8                              ;fixes GNUTLS-SA-2017-{1,2}
+  (package
+    (inherit gnutls)
+    (version "3.5.8")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://gnupg/gnutls/v"
+                                  (version-major+minor version)
+                                  "/gnutls-" version ".tar.xz"))
+              (sha256
+               (base32
+                "1zyl2z63s68hx1dpxqx0lykmlf3rwrzlrf44sq3h7dvjmr1z55qf"))))
+    (replacement #f)))
 
 (define-public openssl
   (package
@@ -455,13 +471,13 @@ security, and applying best practice development processes.")
 (define-public python-acme
   (package
     (name "python-acme")
-    (version "0.9.3")
+    (version "0.10.1")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "acme" version))
       (sha256
-        (base32
-         "16a02bb0apnk1bm68bcabdmmwd6rnvnjzanrmcb46bpbapwz3vx6"))))
+       (base32
+        "04d2464klbhvrsrlmca10qxyd968qz7xizdppr53cihnlfq2y77m"))))
     (build-system python-build-system)
     (arguments
      `(#:phases
@@ -504,13 +520,13 @@ security, and applying best practice development processes.")
 (define-public certbot
   (package
     (name "certbot")
-    (version "0.9.3")
+    (version "0.10.1")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri name version))
               (sha256
                (base32
-                "1c7k4lfq5j78d1rvrwrb9082ngwibz92cwkf4kazaa9b76w9q538"))))
+                "0hx71ba7w8kf8hpg1wy5zf8ggczb57g3kcsdg83kxjpqnfnrkmp0"))))
     (build-system python-build-system)
     (arguments
      `(#:python ,python-2

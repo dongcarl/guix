@@ -5288,13 +5288,20 @@ existing databases over the internet.")
               (sha256
                (base32
                 "1fj6wjvnjygzm9br3sw9gya6d18yly1rm69yaiar9spfbkvv4wai"))))
-    (build-system gnu-build-system)
+    (build-system glib-or-gtk-build-system)
     (arguments
      `(#:configure-flags '("--localstatedir=/tmp"
                            "--sysconfdir=/tmp")
        #:imported-modules ((guix build python-build-system)
-                           ,@%gnu-build-system-modules)
+                           ,@%glib-or-gtk-build-system-modules)
        #:phases (modify-phases %standard-phases
+                  (add-after 'install 'wrap-program
+                    (lambda* (#:key outputs #:allow-other-keys)
+                      (let ((out               (assoc-ref outputs "out"))
+                            (gi-typelib-path   (getenv "GI_TYPELIB_PATH")))
+                        (wrap-program (string-append out "/bin/gnome-tweak-tool")
+                          `("GI_TYPELIB_PATH" ":" prefix (,gi-typelib-path))))
+                      #t))
                   (add-after 'install 'wrap
                     (@@ (guix build python-build-system) wrap)))))
     (native-inputs
@@ -5302,9 +5309,10 @@ existing databases over the internet.")
        ("pkg-config" ,pkg-config)))
     (inputs
      `(("python" ,python-2)
-       ("python2-pygobject" ,python2-pygobject)))
-    (propagated-inputs
-     `(("libnotify" ,libnotify)
+       ("python2-pygobject" ,python2-pygobject)
+       ("gnome-desktop" ,gnome-desktop)
+       ("libsoup" ,libsoup)
+       ("libnotify" ,libnotify)
        ("gobject-introspection" ,gobject-introspection)
        ("gsettings-desktop-schemas" ,gsettings-desktop-schemas)
        ("gtk+" ,gtk+)))
@@ -5347,7 +5355,7 @@ functionality and behavior.")
 (define-public arc-theme
   (package
     (name "arc-theme")
-    (version "20160605")
+    (version "20161119")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/horst3180/arc-theme"
@@ -5355,7 +5363,7 @@ functionality and behavior.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0sq2031xda8jn2ws0x2bvhq77jfh7xy0c3kg86v6vm2kbrrss7y6"))))
+                "1kbhaxmydyip3vdw4kf8rk776jcd9wf0w7z6h2i4naxdn4rsnw54"))))
     (build-system gnu-build-system)
     (arguments
      '(#:phases

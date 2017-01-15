@@ -11,6 +11,7 @@
 ;;; Copyright © 2016 Christopher Baines <mail@cbaines.net>
 ;;; Copyright © 2016 Mike Gerwitz <mtg@gnu.org>
 ;;; Copyright © 2016 Troy Sankey <sankeytms@gmail.com>
+;;; Copyright © 2017 Leo Famulari <leo@famulari.name>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -46,6 +47,7 @@
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages ncurses)
   #:use-module (gnu packages security-token)
+  #:use-module (gnu packages swig)
   #:use-module (gnu packages tls)
   #:use-module (guix packages)
   #:use-module (guix download)
@@ -352,7 +354,7 @@ libskba (working with X.509 certificates and CMS data).")
 (define-public gpgme
   (package
     (name "gpgme")
-    (version "1.6.0")
+    (version "1.8.0")
     (source
      (origin
       (method url-fetch)
@@ -360,7 +362,7 @@ libskba (working with X.509 certificates and CMS data).")
                           ".tar.bz2"))
       (sha256
        (base32
-        "17892sclz3yg45wbyqqrzzpq3l0icbnfl28f101b3062g8cy97dh"))))
+        "0csx3qnycwm0n90ql6gs65if5xi4gqyzzy21fxs2xqicghjrfq2r"))))
     (build-system gnu-build-system)
     (propagated-inputs
      ;; Needs to be propagated because gpgme.h includes gpg-error.h.
@@ -368,7 +370,15 @@ libskba (working with X.509 certificates and CMS data).")
     (inputs
      `(("gnupg" ,gnupg-2.0)
        ("libassuan" ,libassuan)))
-    (arguments '(#:make-flags '("GPG=gpg2")))
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-after 'configure 'patch-cmake-file
+           (lambda _
+             ;; Work around <https://bugs.gnupg.org/gnupg/issue2877>.
+             (substitute* "lang/cpp/src/GpgmeppConfig.cmake.in"
+               (("@libsuffix@") ".so"))
+             #t)))))
     (home-page "https://www.gnupg.org/related_software/gpgme/")
     (synopsis "Library providing simplified access to GnuPG functionality")
     (description
@@ -382,6 +392,33 @@ programming task, it is suggested that all software should try to use GPGME
 instead.  This way bug fixes or improvements can be done at a central place
 and every application benefits from this.")
     (license license:lgpl2.1+)))
+
+(define-public python-gpg
+  (package
+    (name "python-gpg")
+    (version (package-version gpgme))
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "gpg" version))
+              (sha256
+               (base32
+                "1x74i6q713c0bckls7rdm8kgsmllf9qvy9x62jghszlhgjkyh9nd"))))
+    (build-system python-build-system)
+    (arguments
+     '(#:tests? #f)) ; No test suite.
+    (inputs
+     `(("gpgme" ,gpgme)))
+    (native-inputs
+     `(("swig" ,swig)))
+    (home-page (package-home-page gpgme))
+    (synopsis "Python bindings for GPGME GnuPG cryptography library")
+    (description "This package provides Python bindings to the GPGME GnuPG
+cryptographic library.  It is developed in the GPGME source code, and then
+distributed separately.")
+    (license license:lgpl2.1+)))
+
+(define-public python2-gpg
+  (package-with-python2 python-gpg))
 
 (define-public python-pygpgme
   (package
@@ -397,7 +434,8 @@ and every application benefits from this.")
        ;; Unfortunately, we have to disable some tests due to some gpg-agent
        ;; goofiness... see:
        ;;   https://bugs.launchpad.net/pygpgme/+bug/999949
-       (patches (search-patches "pygpgme-disable-problematic-tests.patch"))))
+       (patches (search-patches "pygpgme-disable-problematic-tests.patch"
+                                "python-pygpgme-fix-pinentry-tests.patch"))))
     (arguments
      `(#:phases
        (modify-phases %standard-phases

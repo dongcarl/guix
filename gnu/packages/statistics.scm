@@ -712,13 +712,13 @@ legends.")
 (define-public r-ggplot2
   (package
     (name "r-ggplot2")
-    (version "2.2.0")
+    (version "2.2.1")
     (source
      (origin
        (method url-fetch)
        (uri (cran-uri "ggplot2" version))
        (sha256
-        (base32 "1nicx903gl9hg8g1yl5v3n8p2pds756yln6bbclkkd3kal4dkmv4"))))
+        (base32 "0543782ddv2hp6s0l702mnxfg8n7a6qlbm8bm55x22hnqgz8kg2z"))))
     (build-system r-build-system)
     (propagated-inputs
      `(("r-digest" ,r-digest)
@@ -1819,14 +1819,14 @@ collation, and NAMESPACE files.")
 (define-public r-openssl
   (package
     (name "r-openssl")
-    (version "0.9.5")
+    (version "0.9.6")
     (source
      (origin
        (method url-fetch)
        (uri (cran-uri "openssl" version))
        (sha256
         (base32
-         "1lal8mmcwjhhln10mfi96ipv3d364k0wiviiln220wvhddcpr9pp"))))
+         "0ffwllii8xl6sa2v66134g0fwaw1y3zn3mvaa4nrc120vv5d3mkd"))))
     (build-system r-build-system)
     (inputs
      `(("openssl" ,openssl)))
@@ -1876,13 +1876,13 @@ functions make it easy to control additional request components.")
 (define-public r-git2r
   (package
     (name "r-git2r")
-    (version "0.17.0")
+    (version "0.18.0")
     (source (origin
               (method url-fetch)
               (uri (cran-uri "git2r" version))
               (sha256
                (base32
-                "0hm6bn6hsqy220zfkfdc8w13w8crd5ifxp68d81lwrnhp5k6axhp"))))
+                "0bgzdsdi9n6l8pchivs6a2g4ksa56qs8hygpyv2c0ndqmx4jxcwi"))))
     (build-system r-build-system)
     ;; This R package contains modified sources of libgit2.  This modified
     ;; version of libgit2 is built as the package is built.  Hence libgit2 is
@@ -2013,13 +2013,13 @@ disk (or a connection).")
 (define-public r-plotrix
   (package
     (name "r-plotrix")
-    (version "3.6-3")
+    (version "3.6-4")
     (source (origin
               (method url-fetch)
               (uri (cran-uri "plotrix" version))
               (sha256
                (base32
-                "0h97jra8zqssi9j4i0psa6c7ya49ya8jd2qc18lc61a4s2yn8w91"))))
+                "1wxzjnzvkl3aga51ad2xhv4s7v46kvnp4z0nz4cb9cn10057sfw8"))))
     (build-system r-build-system)
     (home-page "http://cran.r-project.org/web/packages/plotrix")
     (synopsis "Various plotting functions")
@@ -3534,14 +3534,14 @@ package instead.")
 (define-public r-hmisc
   (package
     (name "r-hmisc")
-    (version "4.0-1")
+    (version "4.0-2")
     (source
      (origin
        (method url-fetch)
        (uri (cran-uri "Hmisc" version))
        (sha256
         (base32
-         "1dlm2gj1b9l6nf9w9zc0cn8d2japhx6cwifzmgjv4gg4skazlldq"))))
+         "1lg9k0kj803wsm3h0a991q9l2lrgsqryzfv2z79b88kjbfapqpqr"))))
     (properties `((upstream-name . "Hmisc")))
     (build-system r-build-system)
     (native-inputs
@@ -3549,6 +3549,7 @@ package instead.")
     (propagated-inputs
      `(("r-acepack" ,r-acepack)
        ("r-base64" ,r-base64)
+       ("r-base64enc" ,r-base64enc)
        ("r-data-table" ,r-data-table)
        ("r-formula" ,r-formula)
        ("r-ggplot2" ,r-ggplot2)
@@ -3952,6 +3953,31 @@ representation of R code.")
 such that the arrangement of points within a category reflects the density of
 data at that region, and avoids over-plotting.")
     (license license:gpl2+)))
+
+(define-public r-ggthemes
+  (package
+    (name "r-ggthemes")
+    (version "3.3.0")
+    (source (origin
+              (method url-fetch)
+              (uri (cran-uri "ggthemes" version))
+              (sha256
+               (base32
+                "1qdxg2siwsiq32fmgcxn4vihgxad9v8q0aqigl7a94c26bwxs7y2"))))
+    (build-system r-build-system)
+    (propagated-inputs
+     `(("r-assertthat" ,r-assertthat)
+       ("r-colorspace" ,r-colorspace)
+       ("r-ggplot2" ,r-ggplot2)
+       ("r-scales" ,r-scales)))
+    (home-page "https://cran.rstudio.com/web/packages/ggthemes")
+    (synopsis "Extra themes, scales and geoms for @code{ggplot2}")
+    (description "This package provides extra themes and scales for
+@code{ggplot2} that replicate the look of plots by Edward Tufte and
+Stephen Few in Fivethirtyeight, The Economist, Stata, Excel, and The
+Wall Street Journal, among others.  This package also provides
+@code{geoms} for Tufte's box plot and range frame.")
+    (license license:gpl2)))
 
 (define-public r-statmod
   (package

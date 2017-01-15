@@ -8,7 +8,8 @@
 ;;; Copyright © 2015 Amirouche Boubekki <amirouche@hypermove.net>
 ;;; Copyright © 2014 John Darrington <jmd@gnu.org>
 ;;; Copyright © 2016 Leo Famulari <leo@famulari.name>
-;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
+;;; Copyright © 2016, 2017 Leo Famulari <leo@famulari.name>
+;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2016 Eric Bavier <bavier@member.fsf.org>
 ;;; Copyright © 2016 Arun Isaac <arunisaac@systemreboot.net>
@@ -258,6 +259,7 @@ extracting icontainer icon files.")
 (define-public libtiff
   (package
    (name "libtiff")
+   (replacement libtiff/fixed)
    (version "4.0.7")
    (source (origin
             (method url-fetch)
@@ -289,6 +291,28 @@ collection of tools for doing simple manipulations of TIFF images.")
    (license (license:non-copyleft "file://COPYRIGHT"
                                   "See COPYRIGHT in the distribution."))
    (home-page "http://www.simplesystems.org/libtiff/")))
+
+(define libtiff/fixed
+  (package
+    (inherit libtiff)
+    (source
+      (origin
+        (inherit (package-source libtiff))
+        (patches (search-patches "libtiff-heap-overflow-tiffcp.patch"
+                                 "libtiff-null-dereference.patch"
+                                 "libtiff-heap-overflow-tif-dirread.patch"
+                                 "libtiff-heap-overflow-pixarlog-luv.patch"
+                                 "libtiff-divide-by-zero.patch"
+                                 "libtiff-divide-by-zero-ojpeg.patch"
+                                 "libtiff-tiffcp-underflow.patch"
+                                 "libtiff-invalid-read.patch"
+                                 "libtiff-CVE-2016-10092.patch"
+                                 "libtiff-heap-overflow-tiffcrop.patch"
+                                 "libtiff-divide-by-zero-tiffcrop.patch"
+                                 "libtiff-CVE-2016-10093.patch"
+                                 "libtiff-divide-by-zero-tiffcp.patch"
+                                 "libtiff-assertion-failure.patch"
+                                 "libtiff-CVE-2016-10094.patch"))))))
 
 (define-public libwmf
   (package
@@ -580,7 +604,7 @@ compose, and analyze GIF images.")
        ("libtiff" ,libtiff)
        ("giflib" ,giflib)
        ("bzip2" ,bzip2)))
-    (home-page "http://sourceforge.net/projects/enlightenment/")
+    (home-page "https://sourceforge.net/projects/enlightenment/")
     (synopsis
      "Loading, saving, rendering and manipulating image files")
     (description
@@ -875,14 +899,14 @@ convert, manipulate, filter and display a wide variety of image formats.")
 (define-public jasper
   (package
     (name "jasper")
-    (version "2.0.6")
+    (version "2.0.10")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://www.ece.uvic.ca/~frodo/jasper"
                                   "/software/jasper-" version ".tar.gz"))
               (sha256
                (base32
-                "0g6fl8rrbspa9vpswixmpxrg71l19kqgc2b5cak7vmwxphj01wbk"))))
+                "1s022mfxyw8jw60fgyj60lbm9h6bc4nk2751b0in8qsjwcl59n2l"))))
     (build-system cmake-build-system)
     (inputs `(("libjpeg" ,libjpeg)))
     (synopsis "JPEG-2000 library")

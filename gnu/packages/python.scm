@@ -11,7 +11,7 @@
 ;;; Copyright © 2015, 2016 Christopher Allan Webber <cwebber@dustycloud.org>
 ;;; Copyright © 2015 Eric Dvorsak <eric@dvorsak.fr>
 ;;; Copyright © 2015, 2016 David Thompson <davet@gnu.org>
-;;; Copyright © 2015, 2016 Leo Famulari <leo@famulari.name>
+;;; Copyright © 2015, 2016, 2017 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2015 Ben Woodcroft <donttrustben@gmail.com>
 ;;; Copyright © 2015, 2016 Erik Edrosa <erik.edrosa@gmail.com>
 ;;; Copyright © 2015, 2016 Efraim Flashner <efraim@flashner.co.il>
@@ -958,13 +958,11 @@ Python 3 support.")
 (define-public python2-setuptools
   (package-with-python2 python-setuptools))
 
-;;; Pycrypto is abandoned upstream [0] and contains at least one bug that can be
-;;; exploited to achieve arbitrary code execution [1].
+;;; Pycrypto is abandoned upstream:
+;;;
+;;; https://github.com/dlitz/pycrypto/issues/173
 ;;;
 ;;; TODO Remove this package from GNU Guix.
-;;;
-;;; [0] https://github.com/dlitz/pycrypto/issues/173
-;;; [1] https://github.com/dlitz/pycrypto/issues/176
 (define-public python-pycrypto
   (package
     (name "python-pycrypto")
@@ -972,8 +970,8 @@ Python 3 support.")
     (source
      (origin
       (method url-fetch)
-      (uri (string-append "https://pypi.python.org/packages/source/p/"
-                          "pycrypto/pycrypto-" version ".tar.gz"))
+      (uri (pypi-uri "pycrypto" version))
+      (patches (search-patches "python-pycrypto-CVE-2013-7459.patch"))
       (sha256
        (base32
         "0g0ayql5b9mkjam8hym6zyg6bv77lbh66rv1fyvgqb17kfc1xkpj"))))
@@ -1323,7 +1321,7 @@ Python 3.3+.")
     (arguments `(#:python ,python-2
                  #:tests? #f))                    ; invalid command "test"
     (home-page "https://fedorahosted.org/dogtail/")
-    (synopsis "GUI test tool and automation framework written in ​Python")
+    (synopsis "GUI test tool and automation framework written in Python")
     (description
      "Dogtail is a GUI test tool and automation framework written in Python.
 It uses Accessibility (a11y) technologies to communicate with desktop
@@ -2371,14 +2369,14 @@ is used by the Requests library to verify HTTPS requests.")
 (define-public python-click
   (package
     (name "python-click")
-    (version "6.6")
+    (version "6.7")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri "click" version))
        (sha256
         (base32
-         "1sggipyz52crrybwbr9xvwxd4aqigvplf53k9w3ygxmzivd1jsnc"))))
+         "02qkfpykbq35id8glfgwc38yc430427yd05z1wc5cnld8zgicmgi"))))
     (build-system python-build-system)
     (arguments
      `(#:phases
@@ -3465,14 +3463,14 @@ association studies (GWAS) on extremely large data sets.")
 (define-public python-pygit2
   (package
     (name "python-pygit2")
-    (version "0.24.2")
+    (version "0.25.0")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri "pygit2" version))
        (sha256
         (base32
-         "0shnafv9zc483wmcr4fzgvirg1qzz42xpdqd4a3ad39sdj1qbbia"))))
+         "0wf5rp0fvrw7j3j18dvwjq6xqlbm611wd55aphrfpps0v1gxh3ny"))))
     (build-system python-build-system)
     (propagated-inputs
      `(("python-six" ,python-six)
@@ -6555,7 +6553,7 @@ suitable for a wide range of protocols based on the ASN.1 specification.")
     (build-system python-build-system)
     (propagated-inputs
      `(("python-pyasn1" ,python-pyasn1)))
-    (home-page "http://sourceforge.net/projects/pyasn1/")
+    (home-page "https://sourceforge.net/projects/pyasn1/")
     (synopsis "ASN.1 codec implementations")
     (description
      "Pyasn1-modules is a collection of Python modules providing ASN.1 types and
@@ -6773,26 +6771,21 @@ library.")
 (define-public python-pip
   (package
     (name "python-pip")
-    (version "8.0.2")
+    (version "9.0.1")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri "pip" version))
        (sha256
         (base32
-         "08cm8d4228fj0qnrysy3qv1a6022zr3dcs25amd14lgxil6vvx26"))))
+         "03clr9c1dih5n9c00c592zzvf6r1ffimywkaq9agcqdllzhl7wh9"))))
     (build-system python-build-system)
-    (native-inputs
-      `(;; Tests
-        ("python-virtualenv" ,python-virtualenv)
-        ("python-mock" ,python-mock)
-        ("python-pytest" ,python-pytest)
-        ("python-scripttest" ,python-scripttest)))
+    (arguments
+     '(#:tests? #f))          ; there are no tests in the pypi archive.
     (home-page "https://pip.pypa.io/")
-    (synopsis
-      "Package manager for Python software")
+    (synopsis "Package manager for Python software")
     (description
-      "Pip is a package manager for Python software, that finds packages on the
+     "Pip is a package manager for Python software, that finds packages on the
 Python Package Index (PyPI).")
     (license license:expat)))
 
@@ -8231,13 +8224,13 @@ processes across test runs.")
 (define-public python-icalendar
   (package
     (name "python-icalendar")
-    (version "3.11")
+    (version "3.11.2")
     (source (origin
              (method url-fetch)
              (uri (pypi-uri "icalendar" version))
              (sha256
               (base32
-               "01v2f3swd5s72x65cdihw83dx1z799b4i49a6ncg7vqmcm20wapd"))))
+               "17rcy6rb9kqjf4p707ivmx7phjq7ngcz3bf7zriwxrqgrjagj7ag"))))
     (build-system python-build-system)
     (propagated-inputs
      `(("python-dateutil-2" ,python-dateutil-2)
@@ -8767,10 +8760,10 @@ normally the case.")
 (define-public python2-pytest-subtesthack
   (package-with-python2 python-pytest-subtesthack))
 
-(define-public python2-xdo
+(define-public python-xdo
   (package
-    (name "python2-xdo")
-    (version "0.2")
+    (name "python-xdo")
+    (version "0.3")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -8778,11 +8771,10 @@ normally the case.")
                     "python-xdo_" version ".orig.tar.gz"))
               (sha256
                (base32
-                "1kl5c1p0dyxf62plnk6fl77ycfb4whwjms16r14dxx8kn90hlqz4"))))
+                "1vqh1n5yy5dhnq312kwrl90fnck4v26is3lq3lxdvcn60vv19da0"))))
     (build-system python-build-system)
     (arguments
-     `(#:python ,python-2
-       #:tests? #f))  ; no tests provided
+     `(#:tests? #f))  ; no tests provided
     (inputs
      `(("xdotool" ,xdotool)
        ("libX11" ,libx11)))
@@ -8792,6 +8784,9 @@ normally the case.")
 input.  (Note that this is mostly a legacy library; you may wish to look at
 python-xdo for newer bindings.)")
     (license license:bsd-3)))
+
+(define-public python2-xdo
+  (package-with-python2 python-xdo))
 
 (define-public python-wtforms
   (package
@@ -10156,7 +10151,7 @@ different processes.  This allows better error handling when running code over
 multiple processes (imagine multiprocessing, billiard, futures, celery etc).
 
 @item Parse traceback strings and raise with the parsed tracebacks.
-@end itemize")
+@end enumerate\n")
     (license license:bsd-3)))
 
 (define-public python2-tblib
@@ -11693,6 +11688,74 @@ provide extendible implementations of common aspects of a cloud so that you can
 focus on building massively scalable web applications.")
     (license license:expat)))
 
+(define-public python-snowballstemmer
+  (package
+    (name "python-snowballstemmer")
+    (version "1.2.1")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "snowballstemmer" version))
+              (sha256
+               (base32
+                "0a0idq4y5frv7qsg2x62jd7rd272749xk4x99misf5rcifk2d7wi"))))
+    (build-system python-build-system)
+    (arguments
+     `(;; No tests exist
+       #:tests? #f))
+    (home-page "https://github.com/shibukawa/snowball_py")
+    (synopsis "Snowball stemming library collection for Python")
+    (description "This package provides 16 word stemmer algorithms generated
+from Snowball algorithms.  It includes the 15 original ones plus the Poerter
+English stemmer.")
+    (license license:bsd-3)))
+
+(define-public python2-snowballstemmer
+  (package-with-python2 python-snowballstemmer))
+
+(define-public python-sphinx-cloud-sptheme
+  (package
+    (name "python-sphinx-cloud-sptheme")
+    (version "1.7.1")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "cloud_sptheme" version))
+              (sha256
+               (base32
+                "0zm9ap4p5dzln8f1m2immadaxv2xpg8jg4w53y52rhfl7pdb58vy"))))
+    (build-system python-build-system)
+    (native-inputs
+     `(("python-sphinx" ,python-sphinx)))
+    (home-page "https://bitbucket.org/ecollins/cloud_sptheme")
+    (synopsis "'Cloud' theme for Sphinx documenter")
+    (description "This package contains the \"Cloud\" theme for Sphinx and some
+related extensions.")
+    (license license:bsd-3)))
+
+(define-public python2-sphinx-cloud-sptheme
+  (package-with-python2 python-sphinx-cloud-sptheme))
+
+(define-public python-sphinx-alabaster-theme
+  (package
+    (name "python-sphinx-alabaster-theme")
+    (version "0.7.9")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "alabaster" version))
+              (sha256
+               (base32
+                "027anxzcb951gjlcc43y3rbn9qrw36d16vj9wd2smv5410xx9bs7"))))
+    (build-system python-build-system)
+    (propagated-inputs
+     `(("python-pygments" ,python-pygments)))
+    (home-page "https://alabaster.readthedocs.io/")
+    (synopsis "Configurable sidebar-enabled Sphinx theme")
+    (description "Alabaster is a visually (c)lean, responsive, configurable
+theme for the Sphinx documentation system.  It's the default theme of Sphinx.")
+    (license license:bsd-3)))
+
+(define-public python2-sphinx-alabaster-theme
+  (package-with-python2 python-sphinx-alabaster-theme))
+
 (define-public python-betamax
   (package
     (name "python-betamax")
@@ -12268,3 +12331,47 @@ possible on all supported Python versions.")
 
 (define-public python2-xopen
   (package-with-python2 python-xopen))
+
+(define-public python2-cheetah
+  (package
+    (name "python2-cheetah")
+    (version "2.4.4")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "Cheetah" version))
+        (sha256
+          (base32
+            "0l5mm4lnysjkzpjr95q5ydm9xc8bv43fxmr79ypybrf1y0lq4c5y"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:python ,python-2))
+    (propagated-inputs
+     `(("python2-markdown" ,python2-markdown)))
+    (home-page "https://pythonhosted.org/Cheetah/")
+    (synopsis "Template engine")
+    (description "Cheetah is a text-based template engine and Python code
+generator.
+
+Cheetah can be used as a standalone templating utility or referenced as
+a library from other Python applications.  It has many potential uses,
+but web developers looking for a viable alternative to ASP, JSP, PHP and
+PSP are expected to be its principle user group.
+
+Features:
+@enumerate
+@item Generates HTML, SGML, XML, SQL, Postscript, form email, LaTeX, or any other
+   text-based format.
+@item Cleanly separates content, graphic design, and program code.
+@item Blends the power and flexibility of Python with a simple template language
+   that non-programmers can understand.
+@item Gives template writers full access to any Python data structure, module,
+   function, object, or method in their templates.
+@item Makes code reuse easy by providing an object-orientated interface to
+   templates that is accessible from Python code or other Cheetah templates.
+   One template can subclass another and selectively reimplement sections of it.
+@item Provides a simple, yet powerful, caching mechanism that can dramatically
+   improve the performance of a dynamic website.
+@item Compiles templates into optimized, yet readable, Python code.
+@end enumerate")
+    (license (license:x11-style "file://LICENSE"))))

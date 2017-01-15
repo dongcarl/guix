@@ -73,6 +73,7 @@ MODULES =					\
   guix/build-system/haskell.scm			\
   guix/build-system/perl.scm			\
   guix/build-system/python.scm			\
+  guix/build-system/ocaml.scm			\
   guix/build-system/waf.scm			\
   guix/build-system/r.scm			\
   guix/build-system/ruby.scm			\
@@ -98,6 +99,7 @@ MODULES =					\
   guix/build/gnu-dist.scm			\
   guix/build/perl-build-system.scm		\
   guix/build/python-build-system.scm		\
+  guix/build/ocaml-build-system.scm		\
   guix/build/r-build-system.scm			\
   guix/build/ruby-build-system.scm		\
   guix/build/waf-build-system.scm		\
@@ -161,6 +163,7 @@ MODULES =					\
 if HAVE_GUILE_JSON
 
 MODULES +=					\
+  guix/docker.scm	   			\
   guix/import/github.scm   			\
   guix/import/json.scm				\
   guix/import/crate.scm				\
@@ -193,8 +196,8 @@ dist_noinst_DATA = guix/tests.scm guix/tests/http.scm
 
 # Linux-Libre configurations.
 KCONFIGS =					\
-  gnu/packages/linux-libre-4.8-i686.conf	\
-  gnu/packages/linux-libre-4.8-x86_64.conf	\
+  gnu/packages/linux-libre-4.9-i686.conf	\
+  gnu/packages/linux-libre-4.9-x86_64.conf	\
   gnu/packages/linux-libre-4.4-i686.conf	\
   gnu/packages/linux-libre-4.4-x86_64.conf	\
   gnu/packages/linux-libre-4.1-i686.conf	\

@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2014, 2015, 2016 Ricardo Wurmus <rekado@elephly.net>
+;;; Copyright © 2014, 2015, 2016, 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2015, 2016 Ben Woodcroft <donttrustben@gmail.com>
 ;;; Copyright © 2015, 2016 Pjotr Prins <pjotr.guix@thebird.nl>
 ;;; Copyright © 2015 Andreas Enge <andreas@enge.fr>
@@ -1097,7 +1097,7 @@ confidence to have in an alignment.")
        ("pigz" ,pigz)
        ("zlib" ,zlib)))
     (supported-systems '("x86_64-linux"))
-    (home-page "http://sourceforge.net/p/bless-ec/wiki/Home/")
+    (home-page "https://sourceforge.net/p/bless-ec/wiki/Home/")
     (synopsis "Bloom-filter-based error correction tool for NGS reads")
     (description
      "@dfn{Bloom-filter-based error correction solution for high-throughput
@@ -1478,15 +1478,15 @@ high-throughput sequencing data – with an emphasis on simplicity.")
 (define-public cd-hit
   (package
     (name "cd-hit")
-    (version "4.6.5")
+    (version "4.6.6")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/weizhongli/cdhit"
                                   "/releases/download/V" version
-                                  "/cd-hit-v" version "-2016-0304.tar.gz"))
+                                  "/cd-hit-v" version "-2016-0711.tar.gz"))
               (sha256
                (base32
-                "15db0hq38yyifwqx9b6l34z14jcq576dmjavhj8a426c18lvnhp3"))))
+                "1w8hd4fszgg29nqiz569fldwy012la77nljcmlhglgicws56z54p"))))
     (build-system gnu-build-system)
     (arguments
      `(#:tests? #f ; there are no tests
@@ -5808,14 +5808,14 @@ generate FASTA, JSON, YAML, RDF, JSON-LD, HTML, CSV, tabular output etc.")
 (define-public bioruby
   (package
     (name "bioruby")
-    (version "1.5.0")
+    (version "1.5.1")
     (source
      (origin
        (method url-fetch)
        (uri (rubygems-uri "bio" version))
        (sha256
         (base32
-         "01k2fyjl5fpx4zn8g6gqiqvsg2j1fgixrs9p03vzxckynxdq3wmc"))))
+         "0hdl0789c9n4mprnx5pgd46bfwl8d000rqpamj5h6kkjgspijv49"))))
     (build-system ruby-build-system)
     (propagated-inputs
      `(("ruby-libxml" ,ruby-libxml)))
@@ -6160,13 +6160,13 @@ possible.")
 (define-public r-genomeinfodb
   (package
     (name "r-genomeinfodb")
-    (version "1.10.1")
+    (version "1.10.2")
     (source (origin
               (method url-fetch)
               (uri (bioconductor-uri "GenomeInfoDb" version))
               (sha256
                (base32
-                "1d3wwlzx0dk08wps35ilr4mg3f29f0fa72hcnzzsp5npaaxi1zrk"))))
+                "0zh894qd1sgpjbn0wfvq6hs2dzn7y1pyicvzk2aa48y3zbidanv7"))))
     (properties
      `((upstream-name . "GenomeInfoDb")))
     (build-system r-build-system)
@@ -6305,13 +6305,13 @@ different technologies, including microarrays, RNA-seq, and quantitative PCR.")
 (define-public r-genomicranges
   (package
     (name "r-genomicranges")
-    (version "1.26.1")
+    (version "1.26.2")
     (source (origin
               (method url-fetch)
               (uri (bioconductor-uri "GenomicRanges" version))
               (sha256
                (base32
-                "039nxccg9i2an8q2wni79x8dr9p1fcfcqvih9hg9w243pczg2g3c"))))
+                "0if5dswkp77lyqppd0z2iyvnwag9h1gsr03707s8npcx13mzpsia"))))
     (properties
      `((upstream-name . "GenomicRanges")))
     (build-system r-build-system)
@@ -7100,6 +7100,41 @@ musculus (Mouse) as provided by UCSC (mm10, December 2011) and stored
 in Biostrings objects.")
     (license license:artistic2.0)))
 
+(define-public r-txdb-mmusculus-ucsc-mm10-knowngene
+  (package
+    (name "r-txdb-mmusculus-ucsc-mm10-knowngene")
+    (version "3.4.0")
+    (source (origin
+              (method url-fetch)
+              ;; We cannot use bioconductor-uri here because this tarball is
+              ;; located under "data/annotation/" instead of "bioc/".
+              (uri (string-append "http://www.bioconductor.org/packages/"
+                                  "release/data/annotation/src/contrib/"
+                                  "TxDb.Mmusculus.UCSC.mm10.knownGene_"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "08gava9wsvpcqz51k2sni3pj03n5155v32d9riqbf305nbirqbkb"))))
+    (properties
+     `((upstream-name . "TxDb.Mmusculus.UCSC.mm10.knownGene")))
+    (build-system r-build-system)
+    ;; As this package provides little more than a very large data file it
+    ;; doesn't make sense to build substitutes.
+    (arguments `(#:substitutable? #f))
+    (propagated-inputs
+     `(("r-bsgenome" ,r-bsgenome)
+       ("r-genomicfeatures" ,r-genomicfeatures)
+       ("r-annotationdbi" ,r-annotationdbi)))
+    (home-page
+     "http://bioconductor.org/packages/TxDb.Mmusculus.UCSC.mm10.knownGene/")
+    (synopsis "Annotation package for TxDb knownGene object(s) for Mouse")
+    (description
+     "This package loads a TxDb object, which is an R interface to
+prefabricated databases contained in this package.  This package provides
+the TxDb object of Mouse data as provided by UCSC (mm10, December 2011)
+based on the knownGene track.")
+    (license license:artistic2.0)))
+
 (define-public r-bsgenome-celegans-ucsc-ce6
   (package
     (name "r-bsgenome-celegans-ucsc-ce6")
@@ -7869,3 +7904,120 @@ replacement for strverscmp.")
 samples into a single report.  It contains modules for a large number of
 common bioinformatics tools.")
     (license license:gpl3)))
+
+(define-public r-chipseq
+  (package
+    (name "r-chipseq")
+    (version "1.24.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (bioconductor-uri "chipseq" version))
+       (sha256
+        (base32
+         "115ayp82rs99iaswrx45skw1i5iacgwzz5k8rzijbp5qic0554n0"))))
+    (build-system r-build-system)
+    (propagated-inputs
+     `(("r-biocgenerics" ,r-biocgenerics)
+       ("r-genomicranges" ,r-genomicranges)
+       ("r-iranges" ,r-iranges)
+       ("r-s4vectors" ,r-s4vectors)
+       ("r-shortread" ,r-shortread)))
+    (home-page "http://bioconductor.org/packages/chipseq")
+    (synopsis "Package for analyzing ChIPseq data")
+    (description
+     "This package provides tools for processing short read data from ChIPseq
+experiments.")
+    (license license:artistic2.0)))
+
+(define-public r-copyhelper
+  (package
+    (name "r-copyhelper")
+    (version "1.6.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "http://bioconductor.org/packages/release/"
+                           "data/experiment/src/contrib/CopyhelpeR_"
+                           version ".tar.gz"))
+       (sha256
+        (base32
+         "0x7cyynjmxls9as2gg0iyp9x5fpalxmdjq914ss7i84i9zyk5bhq"))))
+    (properties `((upstream-name . "CopyhelpeR")))
+    (build-system r-build-system)
+    (home-page "http://bioconductor.org/packages/CopyhelpeR/")
+    (synopsis "Helper files for CopywriteR")
+    (description
+     "This package contains the helper files that are required to run the
+Bioconductor package CopywriteR.  It contains pre-assembled 1kb bin GC-content
+and mappability files for the reference genomes hg18, hg19, hg38, mm9 and
+mm10.  In addition, it contains a blacklist filter to remove regions that
+display copy number variation.  Files are stored as GRanges objects from the
+GenomicRanges Bioconductor package.")
+    (license license:gpl2)))
+
+(define-public r-copywriter
+  (package
+    (name "r-copywriter")
+    (version "2.6.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (bioconductor-uri "CopywriteR" version))
+       (sha256
+        (base32
+         "1bwwnsyk7cpgwkagsnn5mv6fv233b0rkhjvbadrh70h8m4anawfj"))))
+    (properties `((upstream-name . "CopywriteR")))
+    (build-system r-build-system)
+    (propagated-inputs
+     `(("r-biocparallel" ,r-biocparallel)
+       ("r-chipseq" ,r-chipseq)
+       ("r-copyhelper" ,r-copyhelper)
+       ("r-data-table" ,r-data-table)
+       ("r-dnacopy" ,r-dnacopy)
+       ("r-futile-logger" ,r-futile-logger)
+       ("r-genomeinfodb" ,r-genomeinfodb)
+       ("r-genomicalignments" ,r-genomicalignments)
+       ("r-genomicranges" ,r-genomicranges)
+       ("r-gtools" ,r-gtools)
+       ("r-iranges" ,r-iranges)
+       ("r-matrixstats" ,r-matrixstats)
+       ("r-rsamtools" ,r-rsamtools)
+       ("r-s4vectors" ,r-s4vectors)))
+    (home-page "https://github.com/PeeperLab/CopywriteR")
+    (synopsis "Copy number information from targeted sequencing")
+    (description
+     "CopywriteR extracts DNA copy number information from targeted sequencing
+by utilizing off-target reads.  It allows for extracting uniformly distributed
+copy number information, can be used without reference, and can be applied to
+sequencing data obtained from various techniques including chromatin
+immunoprecipitation and target enrichment on small gene panels.  Thereby,
+CopywriteR constitutes a widely applicable alternative to available copy
+number detection tools.")
+    (license license:gpl2)))
+
+(define-public r-sva
+  (package
+    (name "r-sva")
+    (version "3.22.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (bioconductor-uri "sva" version))
+       (sha256
+        (base32
+         "1wc1fjm6dzlsqqagm43y57w8jh8nsh0r0m8z1p6ximcb5gxqh7hn"))))
+    (build-system r-build-system)
+    (propagated-inputs
+     `(("r-genefilter" ,r-genefilter)))
+    (home-page "http://bioconductor.org/packages/sva")
+    (synopsis "Surrogate variable analysis")
+    (description
+     "This package contains functions for removing batch effects and other
+unwanted variation in high-throughput experiment.  It also contains functions
+for identifying and building surrogate variables for high-dimensional data
+sets.  Surrogate variables are covariates constructed directly from
+high-dimensional data like gene expression/RNA sequencing/methylation/brain
+imaging data that can be used in subsequent analyses to adjust for unknown,
+unmodeled, or latent sources of noise.")
+    (license license:artistic2.0)))

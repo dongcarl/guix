@@ -1889,8 +1889,8 @@ analogue-like user interface.")
                #t)))))
       (inputs
        `(("lilv" ,lilv)
-         ("fftw" ,fftw-with-threads)
-         ("fftwf" ,fftwf-with-threads)
+         ("fftw" ,fftw)
+         ("fftwf" ,fftwf)
          ("lv2" ,lv2)
          ("jack" ,jack-1)
          ("readline" ,readline)))
@@ -1941,13 +1941,13 @@ event-based scripts for scrobbling, notifications, etc.")
 (define-public python-mutagen
   (package
     (name "python-mutagen")
-    (version "1.35.1")
+    (version "1.36")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "mutagen" version))
               (sha256
                (base32
-                "0klk68c1n3285vvm2xzk8ii7mlqp1dxii04askan0gi1wlpagka9"))))
+                "1kabb9b81hgvpd3wcznww549vss12b1xlvpnxg1r6n4c7gikgvnp"))))
     (build-system python-build-system)
     (native-inputs
      `(("python-pytest" ,python-pytest)))
@@ -2056,13 +2056,13 @@ websites such as Libre.fm.")
 (define-public beets
   (package
     (name "beets")
-    (version "1.4.2")
+    (version "1.4.3")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "beets" version))
               (sha256
                (base32
-                "0sna2hx8sdaa36jnvw5a7m31wzfm717lw2ixh906fsfp43i74k5m"))))
+                "0r743a2pv1iyw50jsdl01v2ml3pdkhdp920a5d1wsacak48vwgxr"))))
     (build-system python-build-system)
     (arguments
      `(#:phases
@@ -2179,7 +2179,7 @@ with a number of bugfixes and changes to improve IT playback.")
 (define-public moc
   (package
     (name "moc")
-    (version "2.5.1")
+    (version "2.5.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "http://ftp.daper.net/pub/soft/"
@@ -2187,7 +2187,13 @@ with a number of bugfixes and changes to improve IT playback.")
                                   name "-" version ".tar.bz2"))
               (sha256
                (base32
-                "1wn4za08z64bhsgfhr9c0crfyvy8c3b6a337wx7gz19am5srqh8v"))))
+                "026v977kwb0wbmlmf6mnik328plxg8wykfx9ryvqhirac0aq39pk"))
+              (modules '((guix build utils)))
+              (snippet
+               ;; Remove use of __DATE__ and __TIME__ for reproducibility.
+               '(substitute* "main.c"
+                  (("printf \\(\"            Built : %s\", __DATE__\\);") "")
+                  (("printf \\(\" %s\", __TIME__\\);") "")))))
     (build-system gnu-build-system)
     (inputs
      `(("alsa-lib" ,alsa-lib)

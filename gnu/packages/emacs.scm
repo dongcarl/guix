@@ -2,7 +2,7 @@
 ;;; Copyright © 2014 Taylan Ulrich Bayirli/Kammer <taylanbayirli@gmail.com>
 ;;; Copyright © 2013, 2014, 2015, 2016 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2014, 2015, 2016 Mark H Weaver <mhw@netris.org>
-;;; Copyright © 2014, 2015, 2016 Alex Kost <alezost@gmail.com>
+;;; Copyright © 2014, 2015, 2016, 2017 Alex Kost <alezost@gmail.com>
 ;;; Copyright © 2015 Federico Beffa <beffa@fbengineering.ch>
 ;;; Copyright © 2015, 2016 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2016 Chris Marusich <cmmarusich@gmail.com>
@@ -398,7 +398,7 @@ configuration files, such as .gitattributes, .gitignore, and .git/config.")
 (define-public emacs-with-editor
   (package
     (name "emacs-with-editor")
-    (version "2.5.8")
+    (version "2.5.9")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -407,7 +407,7 @@ configuration files, such as .gitattributes, .gitignore, and .git/config.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1dghd0m5zwayv553g4cr990s4ig5lyh0b52qfdv5rbqnndpj3cjn"))))
+                "0znfznyqr360ryi7za9szbz1l5236v2cig25s4k7kkw0w8828xzh"))))
     (build-system emacs-build-system)
     (propagated-inputs
      `(("emacs-dash" ,emacs-dash)))
@@ -423,7 +423,7 @@ on stdout instead of using a socket as the Emacsclient does.")
 (define-public magit
   (package
     (name "magit")
-    (version "2.8.0")
+    (version "2.10.0")
     (source (origin
              (method url-fetch)
              (uri (string-append
@@ -431,7 +431,7 @@ on stdout instead of using a socket as the Emacsclient does.")
                    version "/" name "-" version ".tar.gz"))
              (sha256
               (base32
-               "1znvb7inwinrhifqzwp4lp9j6yp1l25j7riczc0zmvcjbpl5yhfq"))))
+               "1w74vy46z922kfs7gjkrng7wjpi481calpasqmjzpn3hqvgsd5d1"))))
     (build-system gnu-build-system)
     (native-inputs `(("texinfo" ,texinfo)
                      ("emacs" ,emacs-minimal)))
@@ -559,7 +559,7 @@ support for Git-SVN.")
               (file-name (string-append "magit-popup-" version ".el"))
               (sha256
                (base32
-                "0lmw824zp8c0vhikfkiay9wn4nmaksz6mfy0fldvy4wlx5c26yh3"))))
+                "0s04jnskmggwn69ln05qfwwa32va0q5ri7dwx917wkqz17w5zi62"))))
     (build-system emacs-build-system)
     (propagated-inputs
      `(("emacs-dash" ,emacs-dash)))
@@ -1248,7 +1248,7 @@ and stored in memory.")
 (define-public emacs-bui
   (package
     (name "emacs-bui")
-    (version "1.0.1")
+    (version "1.1.0")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -1257,7 +1257,7 @@ and stored in memory.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0vsh1v99xxm6hhqp0vg9fbs230kawa7xb5dnd8fidf3vwm622aqh"))))
+                "112k0mq6xpy0r47vk66miw7rxbkv3d06pv3pd0vcmrhcnhnnk486"))))
     (build-system emacs-build-system)
     (propagated-inputs
      `(("dash" ,emacs-dash)))
@@ -1272,7 +1272,7 @@ type, for example: packages, buffers, files, etc.")
 (define-public emacs-guix
   (package
     (name "emacs-guix")
-    (version "0.2.1")
+    (version "0.2.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/alezost/guix.el"
@@ -1280,7 +1280,7 @@ type, for example: packages, buffers, files, etc.")
                                   "/emacs-guix-" version ".tar.gz"))
               (sha256
                (base32
-                "0nhx0c3xc16frpyqikaml73hjyn8a0jijq5ibq8a4zrjiw1pqxwy"))))
+                "1i47yh24xvgmnc778765g3j9ip0xb2y85v6w83r4qmkigk9rl2ck"))))
     (build-system gnu-build-system)
     (arguments
      `(#:configure-flags
@@ -1412,6 +1412,32 @@ strings.")
     (synopsis "Emacs API for working with files and directories")
     (description "This package provides an Emacs library for working with
 files and directories.")
+    (license license:gpl3+)))
+
+(define-public emacs-git-gutter
+  (package
+    (name "emacs-git-gutter")
+    (version "0.90")
+    (source (origin
+             (method url-fetch)
+             (uri (string-append
+                   "https://github.com/syohex/" name "/archive/"
+                   version ".tar.gz"))
+             (file-name (string-append name "-" version ".tar.gz"))
+             (sha256
+              (base32
+               "1nmhvhpq1l56mj2yq3ag23rw3x4xgnsy8szp30s26l0yjnkhc4qg"))))
+    (build-system emacs-build-system)
+    (home-page "https://github.com/syohex/emacs-git-gutter")
+    (synopsis "See and manage hunks of text in a version control system")
+    (description
+     "This package is an Emacs minor mode for displaying and interacting with
+hunks of text managed in a version control system.  Added modified and deleted
+areas can be indicated with symbols on the edge of the buffer, and commands
+can be used to move between and perform actions on these hunks.
+
+Git, Mercurial, Subversion and Bazaar are supported, and many parts of the
+display and behaviour is easily customisable.")
     (license license:gpl3+)))
 
 (define-public emacs-el-mock
@@ -2303,7 +2329,7 @@ dark background.")
 (define-public emacs-smartparens
   (package
     (name "emacs-smartparens")
-    (version "1.8.0")
+    (version "1.9.0")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -2312,7 +2338,7 @@ dark background.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0xsqiklg0q4w6gj0js1hvsz4lkypvcx6c9kzb1mz232gwlqx1azw"))))
+                "12065r7h1s9v8lnq5mk3654dkw4cq60ky8aniqq5n2ivv6qd2d4q"))))
     (build-system emacs-build-system)
     (propagated-inputs `(("emacs-dash" ,emacs-dash)))
     (home-page "https://github.com/Fuco1/smartparens")
