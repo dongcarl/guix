@@ -51,7 +51,7 @@
          `((name .  ,ifce)
            (class . ,(cond
                       ((loopback-network-interface? ifce) 'loopback)
-                      ((string-prefix? ifce "wl") 'wireless)
+                      ((string-prefix? "wl" ifce) 'wireless)
                       (else 'ethernet)))))
        (all-network-interface-names)))
 
