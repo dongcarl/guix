@@ -106,13 +106,15 @@ match those uuids read from the respective partitions"
         (for-each
          (lambda (x)
            (match x
-                  ((dev . (? file-system-spec? fss))
-                   (let ((cmd (string-append "mkfs." (file-system-spec-type fss))))
+                  ((dev . ($ <file-system-spec> mp label type uuid))
+                   (let ((cmd (string-append "mkfs." type)))
                      (zero? (pipe-cmd window-port
                                       cmd cmd
-                                      "-L" (file-system-spec-label fss)
-                                      "-U" (file-system-spec-uuid fss)
-                                      "-v"
+                                      "-L" label
+                                      "-U" uuid
+                                      (if (equal? type "btrfs")
+                                          "-f"
+                                          "-v")
                                       dev))
                      )))) mount-points)
 

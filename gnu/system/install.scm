@@ -132,6 +132,7 @@ manual."
                              (list
                               (string-append #$bash       "/bin")
                               (string-append #$coreutils  "/bin")  ; for ls (!)
+                              (string-append #$btrfs-progs "/bin")
                               (string-append #$e2fsprogs  "/sbin")
                               (string-append #$(current-guix)  "/bin") ; for guix system init
                               (string-append #$inetutils  "/bin") ; for ping
