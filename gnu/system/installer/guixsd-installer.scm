@@ -33,6 +33,7 @@
              (gnu system installer role)
 	     (gnu system installer network)
              (gnu system installer install)
+             (gnu system installer format)
 	     (gnu system installer page)
              (gnu system installer ping)
 	     (gnu system installer dialog)
@@ -57,6 +58,7 @@
 
 (define partition-menu-title    (N_ "Partition the disk(s)"))
 (define filesystem-menu-title   (N_ "Allocate disk partitions"))
+(define format-menu-title       (N_ "Format the partitions"))
 (define network-menu-title      (N_ "Set up the network"))
 (define timezone-menu-title     (N_ "Set the time zone"))
 (define hostname-menu-title     (N_ "Set the host name"))
@@ -84,6 +86,14 @@
                                  (make-filesystem-page
                                   page
                                   filesystem-menu-title))))
+
+    (format . ,(make-task format-menu-title
+                          '(filesystems)
+                          (lambda () #f)
+                          (lambda (page)
+                            (make-format-page
+                             page
+                             format-menu-title))))
 
     (network . ,(make-task network-menu-title
                            '()
