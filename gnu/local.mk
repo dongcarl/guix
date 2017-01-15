@@ -471,6 +471,7 @@ GNU_SYSTEM_MODULES =				\
   %D%/system/installer/mount-point.scm          \
   %D%/system/installer/guixsd-installer.scm     \
   %D%/system/installer/disks.scm                \
+  %D%/system/installer/format.scm               \
   %D%/system/installer/ping.scm                 \
   %D%/system/installer/key-map.scm              \
   %D%/system/installer/role.scm                 \
