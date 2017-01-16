@@ -62,12 +62,12 @@
 (define valid-file-system-types `(ext2 ext3 ext4 btrfs swap))
 
 (define (make-file-system-spec mount-point label type)
-  (let ((uuid (slurp "uuidgen" identity)))
-    (make-file-system-spec' mount-point label
-                            (if (memq (string->symbol type) valid-file-system-types)
+  (if (memq (string->symbol type) valid-file-system-types)
+      (let ((uuid (slurp "uuidgen" identity)))
+        (make-file-system-spec' mount-point label
                                 (string->symbol type)
-                                #f)
-                            (car uuid))))
+                                (car uuid)))
+      #f))
 
 
 
