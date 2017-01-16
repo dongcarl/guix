@@ -54,12 +54,14 @@
 
     (cond
      ((buttons-key-matches-symbol? nav ch 'continue)
-      (set! mount-points
-            (assoc-set! mount-points dev
-                        (make-file-system-spec
-                         (form-get-value form 'mount-point)
-                         (form-get-value form 'label)
-                         (form-get-value form 'fs-type))))
+      (let ((fss
+             (make-file-system-spec
+              (form-get-value form 'mount-point)
+              (form-get-value form 'label)
+              (form-get-value form 'fs-type))))
+        (when fss
+              (set! mount-points
+                    (assoc-set! mount-points dev fss))))
       (page-leave))
 
      ((buttons-key-matches-symbol? nav ch 'cancel)
