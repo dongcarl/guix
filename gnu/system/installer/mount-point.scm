@@ -147,7 +147,8 @@
             (form-set-value! form 'mount-point
                              (file-system-spec-mount-point fss))
             (form-set-value! form 'fs-type
-                             (file-system-spec-type fss))))
+                             (symbol->string
+                             (file-system-spec-type fss)))))
 
     (form-set-current-field form 0)
 

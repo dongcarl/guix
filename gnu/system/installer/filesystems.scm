@@ -56,12 +56,18 @@
   file-system-spec?
   (mount-point      file-system-spec-mount-point)
   (label            file-system-spec-label)
-  (type             file-system-spec-type)
+  (type             file-system-spec-type)  ; symbol
   (uuid             file-system-spec-uuid))
+
+(define valid-file-system-types `(ext2 ext3 ext4 btrfs swap))
 
 (define (make-file-system-spec mount-point label type)
   (let ((uuid (slurp "uuidgen" identity)))
-    (make-file-system-spec' mount-point label type (car uuid))))
+    (make-file-system-spec' mount-point label
+                            (if (memq (string->symbol type) valid-file-system-types)
+                                (string->symbol type)
+                                #f)
+                            (car uuid))))
 
 
 
@@ -81,7 +87,9 @@
           (fold (lambda (x prev)
                   (match x
                          ((dev . fss)
-                          (if (absolute-file-name? (file-system-spec-mount-point fss))
+                          (if (or
+                               (eq? (file-system-spec-type fss) 'swap)
+                               (absolute-file-name? (file-system-spec-mount-point fss)))
                               prev
                               (cons (file-system-spec-mount-point fss) prev)))))
                 '()
@@ -117,10 +125,8 @@
           (fold (lambda (x prev)
                   (match x
                          ((dev . ($ <file-system-spec> mp label type uuid))
-                          (cond
-                           ((string-prefix? "ext" type) prev)
-                           ((equal? "btrfs" type) prev)
-                           (else (cons dev prev))))))
+                          (if type prev
+                              (cons dev prev)))))
                 '() mount-points)))
 
      (if (null? partitions-without-filesystems)

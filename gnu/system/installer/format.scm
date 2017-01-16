@@ -107,16 +107,36 @@ match those uuids read from the respective partitions"
          (lambda (x)
            (match x
                   ((dev . ($ <file-system-spec> mp label type uuid))
-                   (let ((cmd (string-append "mkfs." type)))
-                     (zero? (pipe-cmd window-port
-                                      cmd cmd
-                                      "-L" label
-                                      "-U" uuid
-                                      (if (equal? type "btrfs")
+                   (let ((type-str (symbol->string type)))
+                     (cond
+                      ((string-prefix? "ext" type-str)
+                       (let ((cmd (string-append "mkfs." type-str)))
+                         (zero? (pipe-cmd window-port
+                                          cmd cmd
+                                          "-L" label
+                                          "-U" uuid
+                                          "-v"
+                                          dev))))
+
+                      ((eq? type 'btrfs)
+                       (let ((cmd (string-append "mkfs.btrfs")))
+                         (zero? (pipe-cmd window-port
+                                          cmd cmd
+                                          "-L" label
+                                          "-U" uuid
                                           "-f"
-                                          "-v")
-                                      dev))
-                     )))) mount-points)
+                                          dev))))
+
+                      ((eq? type 'swap)
+                       (let ((cmd (string-append "mkswap")))
+                         (zero? (pipe-cmd window-port
+                                          cmd cmd
+                                          "-L" label
+                                          "-U" uuid
+                                          "-f"
+                                          dev))))
+
+                      ))))) mount-points)
 
         (close-port window-port))
 
