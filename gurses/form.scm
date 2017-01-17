@@ -33,6 +33,7 @@
   #:export (get-current-field)
 
   #:use-module (ncurses curses)
+  #:use-module (ice-9 match)
   #:use-module (srfi srfi-9))
 
 (define-record-type <field>
@@ -112,7 +113,10 @@ label eq? to N"
     (form-set-items! form
 		     (list->array
 		      1 (map-in-order
-			 (lambda (x) (make-field (car x) (cadr x) (caddr x) "" 0))
+			 (lambda (x)
+                           (match x
+                                  ((symbol label size)
+                                   (make-field symbol label size "" 0))))
 			 items)))
     form))
 
