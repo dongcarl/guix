@@ -258,9 +258,8 @@ tail of the list."
   (touchwin (outer (page-wwin page)))
   (refresh (outer (page-wwin page)))
   (refresh (inner (page-wwin page)))
-  (menu-refresh (page-datum page 'menu))
-  (menu-redraw (page-datum page 'menu)))
-
+  (menu-redraw (page-datum page 'menu))
+  (menu-refresh (page-datum page 'menu)))
 
 
 (define-public (guixsd-installer)
