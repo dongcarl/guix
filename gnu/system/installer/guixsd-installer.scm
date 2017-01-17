@@ -222,32 +222,41 @@ tail of the list."
 (define (main-page-init page)
   (let* ((frame (make-boxed-window (page-surface page) (lines) (cols) 0 0
                                    #:title (page-title page)))
-         (background (inner frame)))
+         (background (inner frame))
 
-    (let ((win (derwin background (- (getmaxy background) 3)
-		       (- (getmaxx background) 2) 0 1 #:panel #f))
-	  (main-menu (make-menu main-options
-				#:disp-proc (lambda (datum row)
-                                              (format #f "~a"
-                                                      (task-title (cdr datum)))))))
 
-      (page-set-wwin! page frame)
-      (page-set-datum! page 'menu main-menu)
-      (menu-post main-menu win))
+	 (text-window (derwin background 4 (getmaxx background)
+			      0 0))
+
+         (win (derwin background (- (getmaxy background) (getmaxy text-window) 3)
+                      (- (getmaxx background) 2) (getmaxy text-window) 1 #:panel #f))
+
+         (main-menu (make-menu main-options
+                               #:disp-proc (lambda (datum row)
+                                             (format #f "~a"
+                                                     (task-title (cdr datum)))))))
+
+    (addstr* text-window (format  #f
+      (gettext
+       "To start the complete installation process, choose ~s.  Alternatively, you may run each step individually for a slower, more controlled experience.")  installation-menu-title))
+
+    (page-set-wwin! page frame)
+    (page-set-datum! page 'menu main-menu)
+    (menu-post main-menu win)
 
     (push-cursor (page-cursor-visibility page))
     ;; Do the key action labels
     (let ((ypos (1- (getmaxy background)))
-	  (str0 (gettext "Get a Shell <F1>"))
-	  (str1 (gettext "Language <F9>"))
-	  (str2 (gettext "Keyboard <F10>")))
+          (str0 (gettext "Get a Shell <F1>"))
+          (str1 (gettext "Language <F9>"))
+          (str2 (gettext "Keyboard <F10>")))
 
       (addstr background str0 #:y ypos #:x 0)
       (addstr background str1 #:y ypos #:x
-	      (truncate (/ (- (getmaxx background)
-			      (string-length str1)) 2)))
+              (truncate (/ (- (getmaxx background)
+                              (string-length str1)) 2)))
       (addstr background str2 #:y ypos #:x
-	      (- (getmaxx background) (string-length str2))))))
+              (- (getmaxx background) (string-length str2))))))
 
 
 (define (main-page-refresh page)
