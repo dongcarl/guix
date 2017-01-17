@@ -135,7 +135,11 @@
 				    (if (and (eq? c #\_) use-underscore)
 					output
 					(cons
-					 (if us (bold c) (normal c))
+					 (if us
+                                             ;; On some terminals bold isn't visible
+                                             ;; Inverse is much clearer.
+                                             (inverse c)
+                                             (normal c))
 					 output))
 				    (cdr input))))))
 		 (label (car label.mark))
