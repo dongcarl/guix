@@ -82,6 +82,14 @@
    (and (not (find-mount-device "/" mount-points))
         (M_ "You must specify a mount point for the root (/)."))
 
+   (fold (lambda (x prev)
+           (or prev
+               (match x
+                      ((dev . ($ <file-system-spec> mp label type uuid))
+                       (if (and (eq? type 'swap) (not (zero? (string-length mp))))
+                           (gettext "Swap systems should not have a mount point")
+                           #f)))))
+         #f mount-points)
 
    (let ((non-absolute-list
           (fold (lambda (x prev)
