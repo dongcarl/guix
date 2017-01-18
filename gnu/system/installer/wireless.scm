@@ -181,49 +181,49 @@
       s))
 
 (define (get-wifi ifce)
-  (begin (system* "ip" "link" "set" ifce "up")
-         (fold
-          (lambda (x prev)
-            (let ((mtch (string-match "Cell [0-9][0-9] - " x)))
-              (cond (mtch
-                     (cons
-                      (list
-                       `(address . ,
-                                 (drop-prefix "Address: "
-                                              (string-drop x (string-length (match:substring mtch))))))
-                      prev))
+  (system* "ip" "link" "set" ifce "up")
+  (fold
+   (lambda (x prev)
+     (let ((mtch (string-match "Cell [0-9][0-9] - " x)))
+       (cond (mtch
+              (cons
+               (list
+                `(address . ,
+                          (drop-prefix "Address: "
+                                       (string-drop x (string-length (match:substring mtch))))))
+               prev))
 
-                    ((string-prefix? "Encryption key:" x)
-                     (cons
-                      (append (car prev)
-                              (list `(encryption .
-                                                 ,(string-suffix? "on" x))))
-                      (cdr prev)))
+             ((string-prefix? "Encryption key:" x)
+              (cons
+               (append (car prev)
+                       (list `(encryption .
+                                          ,(string-suffix? "on" x))))
+               (cdr prev)))
 
-                    ((string-prefix? "Quality=" x)
-                     (let ((lvl (string-match "level=(-?[0-9][0-9]*) dBm" x)))
-                       (if lvl
-                           (cons
-                            (append (car prev)
-                                    (list
-                                     `(signal . ,(string->number (match:substring lvl 1))))
-                                    )
-                            (cdr prev))
-                           prev)))
+             ((string-prefix? "Quality=" x)
+              (let ((lvl (string-match "level=(-?[0-9][0-9]*) dBm" x)))
+                (if lvl
+                    (cons
+                     (append (car prev)
+                             (list
+                              `(signal . ,(string->number (match:substring lvl 1))))
+                             )
+                     (cdr prev))
+                    prev)))
 
-                    ((string-prefix? "ESSID:" x)
-                     (cons
-                      (append (car prev)
-                              (list
-                               `(essid . ,(drop-prefix "ESSID:"
-                                                       (drop-quotes
-                                                        x))))
-                              )
-                      (cdr prev)))
+             ((string-prefix? "ESSID:" x)
+              (cons
+               (append (car prev)
+                       (list
+                        `(essid . ,(drop-prefix "ESSID:"
+                                                (drop-quotes
+                                                 x))))
+                       )
+               (cdr prev)))
 
-                    (else
-                     prev))))
-          '() (scan-wifi ifce))))
+             (else
+              prev))))
+   '() (scan-wifi ifce)))
 
 
 
