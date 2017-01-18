@@ -155,8 +155,8 @@
     (network-page-init page)
     (page-set-initialised! page #t))
   (touchwin (outer (page-wwin page)))
-  (refresh (outer (page-wwin page)))
-  (refresh (inner (page-wwin page)))
+  (refresh* (outer (page-wwin page)))
+  (refresh* (inner (page-wwin page)))
   (menu-refresh (page-datum page 'menu)))
 
 
@@ -214,6 +214,6 @@
     (page-set-datum! p 'navigation buttons)
     (menu-post menu mwin)
     (buttons-post buttons bwin)
-    (refresh (outer pr))
-    (refresh text-window)
-    (refresh bwin)))
+    (refresh* (outer pr))
+    (refresh* text-window)
+    (refresh* bwin)))

@@ -65,9 +65,9 @@
      text-window
      (gettext
       (format #f "Enter the host name for the new system.  Only letters, digits and hyphens are allowed. The first character may not be a hyphen.  A maximum of ~a characters are allowed." max-length)))
-    (refresh text-window)
-    (refresh (outer (page-wwin page)))
-    (refresh (form-window form))))
+    (refresh* text-window)
+    (refresh* (outer (page-wwin page)))
+    (refresh* (form-window form))))
 
 (define (host-name-key-handler page ch)
   (let ((form  (page-datum page 'form))
@@ -151,5 +151,5 @@
     (form-post form fw)
     (buttons-post nav bwin)
     (page-set-wwin! p pr)
-    (refresh (outer pr))))
+    (refresh* (outer pr))))
 

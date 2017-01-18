@@ -68,7 +68,7 @@
   (when (not (page-initialised? page))
     (dialog-page-init page)
     (page-set-initialised! page #t))
-  (refresh (page-datum page 'text-window)))
+  (refresh* (page-datum page 'text-window)))
 
 (define (dialog-page-init p)
   (let* ((s (page-surface p))
@@ -101,10 +101,10 @@
   (page-set-datum! p 'navigation buttons)
   (buttons-post buttons button-window)
   (buttons-select buttons 0)
-  (refresh (outer frame))
-  (refresh (inner frame))
-  (refresh text-window)
-  (refresh button-window)))
+  (refresh* (outer frame))
+  (refresh* (inner frame))
+  (refresh* text-window)
+  (refresh* button-window)))
 
 
 

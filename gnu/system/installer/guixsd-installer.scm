@@ -265,8 +265,8 @@ tail of the list."
     (page-set-initialised! page #t))
 
   (touchwin (outer (page-wwin page)))
-  (refresh (outer (page-wwin page)))
-  (refresh (inner (page-wwin page)))
+  (refresh* (outer (page-wwin page)))
+  (refresh* (inner (page-wwin page)))
   (menu-redraw (page-datum page 'menu))
   (menu-refresh (page-datum page 'menu)))
 

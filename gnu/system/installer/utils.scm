@@ -40,6 +40,7 @@
 
 	    window-pipe
             pipe-cmd
+            refresh*
 
 	    select-key?))
 
@@ -50,8 +51,15 @@
 	     (gnu system installer misc)
              (gnu system installer filesystems)
 	     (ncurses form)
+             (ncurses panel)
              (ncurses curses))
 
+(define (refresh* win)
+  (if (panel? win)
+      (begin
+        (update-panels)
+        (doupdate))
+      (refresh win)))
 
 (define (make-window-port win)
   "Return a port which writes to the curses window WIN"
@@ -65,7 +73,7 @@
    (vector
     (lambda (c) (addch win c))
     (lambda (s) (addstr win s))
-    (lambda () (refresh win))
+    (lambda () (refresh* win))
     #f
     #f)
    "w"))
@@ -232,7 +240,7 @@ which will process each string before returning it."
 	 (menu-driver menu REQ_UP_ITEM)
 	 ))
 
-    (refresh win)))
+    (refresh* win)))
 
 
 
@@ -293,7 +301,7 @@ pair whose car is the inner window and whose cdr is the frame."
 	  (addstr win title #:y 1
 		  #:x (round (/ (- (getmaxx win) (string-length title)) 2)))))
 
-    (refresh sw)
+    (refresh* sw)
     ;; Return the inner and outer windows
     (cons sw win)))
 

@@ -126,8 +126,8 @@
     (install-page-init page)
     (page-set-initialised! page #t))
   (touchwin (outer (page-wwin page)))
-  (refresh (outer (page-wwin page)))
-  (refresh (inner (page-wwin page))))
+  (refresh* (outer (page-wwin page)))
+  (refresh* (inner (page-wwin page))))
 
 
 (define (install-page-init p)
@@ -167,7 +167,7 @@
     (page-set-datum! p 'navigation buttons)
     (page-set-datum! p 'config-window (inner config-window))
     (buttons-post buttons bwin)
-    (refresh (outer pr))
-    (refresh text-window)
-    (refresh bwin)))
+    (refresh* (outer pr))
+    (refresh* text-window)
+    (refresh* bwin)))
 

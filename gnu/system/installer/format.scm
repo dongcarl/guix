@@ -151,8 +151,8 @@ match those uuids read from the respective partitions"
     (format-page-init page)
     (page-set-initialised! page #t))
   (touchwin (outer (page-wwin page)))
-  (refresh (outer (page-wwin page)))
-  (refresh (inner (page-wwin page))))
+  (refresh* (outer (page-wwin page)))
+  (refresh* (inner (page-wwin page))))
 
 
 (define (format-page-init p)
@@ -199,9 +199,9 @@ match those uuids read from the respective partitions"
     (page-set-datum! p 'navigation buttons)
     (page-set-datum! p 'config-window (inner config-window))
     (buttons-post buttons bwin)
-    (refresh (outer pr))
-    (refresh text-window)
+    (refresh* (outer pr))
+    (refresh* text-window)
 
-    (refresh (outer config-window))
+    (refresh* (outer config-window))
 
-    (refresh bwin)))
+    (refresh* bwin)))

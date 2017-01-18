@@ -87,8 +87,8 @@
     (file-browser-page-init page)
     (page-set-initialised! page #t))
   (touchwin (outer (page-wwin page)))
-  (refresh (outer (page-wwin page)))
-  (refresh (inner (page-wwin page)))
+  (refresh* (outer (page-wwin page)))
+  (refresh* (inner (page-wwin page)))
   (menu-refresh (page-datum page 'menu)))
 
 (define (file-browser-page-init p)
@@ -128,10 +128,10 @@
     (page-set-datum! p 'menu menu)
     (page-set-datum! p 'navigation buttons)
     (buttons-post buttons button-window)
-    (refresh (outer frame))
-    (refresh (inner frame))
-    (refresh text-window)
-    (refresh button-window)))
+    (refresh* (outer frame))
+    (refresh* (inner frame))
+    (refresh* text-window)
+    (refresh* button-window)))
 
 			
 

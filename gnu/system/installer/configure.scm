@@ -127,8 +127,8 @@
     (configure-page-init page)
     (page-set-initialised! page #t))
   (touchwin (outer (page-wwin page)))
-  (refresh (outer (page-wwin page)))
-  (refresh (inner (page-wwin page))))
+  (refresh* (outer (page-wwin page)))
+  (refresh* (inner (page-wwin page))))
 
 
 (define (generate-guix-config p width)
@@ -245,9 +245,9 @@
     (page-set-wwin! p pr)
     (page-set-datum! p 'navigation buttons)
     (buttons-post buttons bwin)
-    (refresh (outer pr))
-    (refresh text-window)
+    (refresh* (outer pr))
+    (refresh* text-window)
 
-    (refresh (outer config-window))
+    (refresh* (outer config-window))
 
-    (refresh bwin)))
+    (refresh* bwin)))
