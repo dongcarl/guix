@@ -34,6 +34,7 @@
 
   #:use-module (ncurses curses)
   #:use-module (ice-9 match)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9))
 
 (define-record-type <field>
@@ -62,12 +63,21 @@
 	  (+ (field-cursor-position field)
 	     (form-tabpos form)))))
 
+(define (draw-field-space win field y x)
+  "Draws the template for FIELD at Y, X"
+  (addchstr win
+	    (make-list
+             (if (list? (field-size field))
+                 (fold (lambda (x prev) (max prev (string-length x))) 0
+                       (field-size field))
+                 (field-size field))
+             (underline #\space))
+	    #:y y
+	    #:x x))
+
 (define (redraw-field form field n)
   "Redraw the FIELD in FORM"
-  (addchstr (form-window form)
-	    (make-list (field-size field) (underline #\space))
-	    #:y n
-	    #:x (form-tabpos form))
+  (draw-field-space (form-window form) field n (form-tabpos form))
 
   (addstr (form-window form) (field-value field)
 	  #:y n
@@ -241,7 +251,7 @@ label eq? to N"
 	       (pos 0))
       (if (array-in-bounds? fields pos)
 	  (let ((f (array-ref fields pos)))
-	    (addchstr win (make-list (field-size f) (underline #\space)) #:y pos #:x xpos)
+            (draw-field-space win f pos xpos)
 	    (loop fields (1+ pos)))))))
 
 (define (get-current-field form)
