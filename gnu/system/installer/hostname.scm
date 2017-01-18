@@ -126,7 +126,7 @@
 	      #:title (page-title p)))
 	
 	 (text-window (derwin (inner pr) 5 (getmaxx (inner pr))
-			      0 0))
+			      0 0 #:panel #f))
 	
 	 (bwin (derwin (inner pr)
 		       3 (getmaxx (inner pr))
@@ -138,7 +138,7 @@
 	 (fw (derwin (inner pr)
 		     2
 		     (getmaxx (inner pr))
-		     (getmaxy text-window) 0))
+		     (getmaxy text-window) 0 #:panel #f))
 
 
 	 (form (make-form my-fields)))

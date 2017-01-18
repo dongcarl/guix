@@ -253,7 +253,7 @@
                                  #:title (page-title p)))
 
 	 (text-window (derwin (inner pr) 3 (getmaxx (inner pr))
-			      0 0))
+			      0 0 #:panel #f))
 
 	 (bwin (derwin (inner pr)
 		       3 (getmaxx (inner pr))

@@ -147,7 +147,7 @@
 		 (width (+ (length label) 2))
 		 (w (derwin win 3 width 0
 			    (round (- (* (1+ i) (/ (getmaxx win) (1+ n)))
-				      (/ width 2))))))
+				      (/ width 2))) #:panel #f)))
 	    (box w   0 0)
 	    (addchstr w label #:y 1 #:x 1)
 	    (loop (cdr bl) (1+ i) (acons mark (list w key) alist))))))))

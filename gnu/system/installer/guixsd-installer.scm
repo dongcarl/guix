@@ -226,7 +226,7 @@ tail of the list."
 
 
 	 (text-window (derwin background 4 (getmaxx background)
-			      0 0))
+			      0 0 #:panel #f))
 
          (win (derwin background (- (getmaxy background) (getmaxy text-window) 3)
                       (- (getmaxx background) 2) (getmaxy text-window) 1 #:panel #f))
