@@ -178,7 +178,7 @@
                               (device ,(file-system-spec-label fss))
                               (title 'label)
                               (mount-point ,(file-system-spec-mount-point fss))
-                              (type ,(file-system-spec-type fss)))))
+                              (type ,(symbol->string (file-system-spec-type fss))))))
                        (filter (lambda (x)
                                  (let ((fss (cdr x)))
                                    (not (eq? 'swap (file-system-spec-type fss)))))
