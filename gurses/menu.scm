@@ -39,6 +39,7 @@
   #:export (std-menu-key-handler)
 
   #:use-module (ncurses curses)
+  #:use-module (ncurses panel)
   #:use-module (srfi srfi-9))
 
 (define-record-type <menu>
@@ -139,7 +140,11 @@
     (chgat win -1 attr colour #:y
 	   (- (menu-current-item menu) (menu-top-item menu))
 	   #:x 0)
-    (refresh win)))
+    (if (panel? win)
+        (begin
+          (update-panels)
+          (doupdate))
+        (refresh win))))
 
 
 
