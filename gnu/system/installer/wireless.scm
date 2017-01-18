@@ -136,9 +136,10 @@
                 #:disp-proc
                 (lambda (d _)
                   (format #f "~30a ~a" (assq-ref d 'essid)
-                          (if (assq-ref d 'encryption)
-                              (M_ "Encr.")
-                              (M_ "Clear")))))))
+                          (or
+                           (and=> (assq-ref d 'encryption)
+                                  symbol->string)
+                            (M_ "clear")))))))
 
     (addstr*   text-window  (format #f
                                     (gettext
@@ -197,8 +198,19 @@
               (cons
                (append (car prev)
                        (list `(encryption .
-                                          ,(string-suffix? "on" x))))
+                                          ;; Assume WEP encryption until we know
+                                          ;; otherwise.
+                                          ,(if (string-suffix? "on" x) 'wep #f))))
                (cdr prev)))
+
+             ((string-match "^IE:  *IEEE 802.11i" x)
+              ;; If we find the above string, and encryption is on, then the encrpytion
+              ;; type is probably WPA2
+              (let ((current-ap (car prev)))
+                (if (assq-ref current-ap 'encryption)
+                    (cons  (assq-set! current-ap 'encryption 'wpa2)
+                           (cdr prev))
+                    prev)))
 
              ((string-prefix? "Quality=" x)
               (let ((lvl (string-match "level=(-?[0-9][0-9]*) dBm" x)))
