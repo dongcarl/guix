@@ -44,8 +44,8 @@
     (mount-point-page-init page)
     (page-set-initialised! page #t))
   (let ((form  (page-datum page 'form)))
-    (refresh (outer (page-wwin page)))
-    (refresh (form-window form))))
+    (refresh* (outer (page-wwin page)))
+    (refresh* (form-window form))))
 
 (define (mount-point-page-key-handler page ch)
   (let ((form  (page-datum page 'form))
@@ -159,5 +159,5 @@
     (page-set-datum! p 'form form)
 
     (page-set-wwin! p pr)
-    (refresh (outer pr))))
+    (refresh* (outer pr))))
 

@@ -61,9 +61,9 @@
      (gettext
       (format #f "Enter the passphrase for the network ~a."
               (page-datum page 'network))))
-    (refresh text-window)
-    (refresh (outer (page-wwin page)))
-    (refresh (form-window form))))
+    (refresh* text-window)
+    (refresh* (outer (page-wwin page)))
+    (refresh* (form-window form))))
 
 (define (passphrase-key-handler page ch)
   (let ((form  (page-datum page 'form))
@@ -133,4 +133,4 @@
     (form-post form fw)
     (buttons-post nav bwin)
     (page-set-wwin! p pr)
-    (refresh (outer pr))))
+    (refresh* (outer pr))))

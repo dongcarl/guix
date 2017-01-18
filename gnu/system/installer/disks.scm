@@ -55,8 +55,8 @@
 
       (menu-set-items! menu (volumes))
       (touchwin (outer (page-wwin page)))
-      (refresh (outer (page-wwin page)))
-      (refresh (inner (page-wwin page)))
+      (refresh* (outer (page-wwin page)))
+      (refresh* (inner (page-wwin page)))
       (menu-redraw menu)
       (menu-refresh menu)))
 
@@ -153,5 +153,5 @@
     (page-set-datum! p 'navigation buttons)
     (menu-post menu menu-window)
     (buttons-post buttons button-window)
-    (refresh (outer frame))
-    (refresh button-window)))
+    (refresh* (outer frame))
+    (refresh* button-window)))

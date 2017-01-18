@@ -97,13 +97,13 @@
 	    (addstr test-window
 		    (gettext "Test failed. No servers reached.")))
 
-	(refresh test-window)))) #f))
+	(refresh* test-window)))) #f))
 
 (define (ping-page-refresh page)
   (when (not (page-initialised? page))
     (ping-page-init page)
     (page-set-initialised! page #t))
-  (refresh (page-datum page 'test-window)))
+  (refresh* (page-datum page 'test-window)))
 
 (define (ping-page-init p)
   (let* ((s (page-surface p))
@@ -135,5 +135,5 @@
     (page-set-datum! p 'test-window test-window)
     (page-set-datum! p 'navigation buttons)
     (buttons-post buttons button-window)
-    (refresh text-window)
-    (refresh button-window)))
+    (refresh* text-window)
+    (refresh* button-window)))
