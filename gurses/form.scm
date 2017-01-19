@@ -38,12 +38,14 @@
   #:use-module (srfi srfi-9))
 
 (define-record-type <field>
-  (make-field symbol label size value cursor-position)
+  (make-field symbol label size choices popup value cursor-position)
   field?
   (symbol          field-symbol)
   (label           field-label)
-  (size            field-size)
-  (value           field-value    field-set-value!)
+  (size            field-size)     ; The maximum length of values for this field
+  (choices         field-choices)  ; A list of acceptable values for this field
+  (popup           field-popup     field-set-popup!)
+  (value           field-value     field-set-value!)
   (cursor-position field-cursor-position field-set-cursor-position!))
 
 (define-record-type <form>
@@ -125,8 +127,15 @@ label eq? to N"
 		      1 (map-in-order
 			 (lambda (x)
                            (match x
-                                  ((symbol label size)
-                                   (make-field symbol label size "" 0))))
+                                  ((symbol label (? list? things))
+                                   (make-field symbol label
+                                               (apply max
+                                                      (map (lambda (x)
+                                                             (string-length x))
+                                                           things))
+                                               things #f "" 0))
+                                  ((symbol label (? integer? size))
+                                   (make-field symbol label size #f #f "" 0))))
 			 items)))
     form))
 
