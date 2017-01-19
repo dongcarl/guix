@@ -36,7 +36,8 @@
      str)))
 
 (define my-fields `((mount-point ,(M_ "Mount Point") 40)
-                    (fs-type     ,(M_ "File System Type") 10)
+                    (fs-type     ,(M_ "File System Type")
+                                  ("ext2" "ext3" "ext4" "btrfs" "swap"))
                     (label       ,(M_ "Label") 16)))
 
 (define (mount-point-refresh page)
