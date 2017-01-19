@@ -128,12 +128,24 @@ label eq? to N"
 			 (lambda (x)
                            (match x
                                   ((symbol label (? list? things))
-                                   (make-field symbol label
-                                               (apply max
+                                   (let ((width (apply max
                                                       (map (lambda (x)
                                                              (string-length x))
-                                                           things))
-                                               things #f "" 0))
+                                                           things))))
+                                   (make-field symbol label width things
+                                               (let ((p
+                                                      (newwin (+ 2 (length things))
+                                                              (+ 2 width) 0 0 #:panel #t)))
+                                                 (box p 0 0)
+                                                 (let loop ((ll things)
+                                                            (y 0))
+                                                   (if (not (null? ll))
+                                                       (begin
+                                                         (addstr p (car ll)
+                                                                 #:y (1+ y) #:x 1)
+                                                         (loop (cdr ll) (1+ y)))))
+                                                 p)
+                                               "" 0)))
                                   ((symbol label (? integer? size))
                                    (make-field symbol label size #f #f "" 0))))
 			 items)))
