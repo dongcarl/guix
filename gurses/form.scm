@@ -33,6 +33,7 @@
   #:export (get-current-field)
 
   #:use-module (ncurses curses)
+  #:use-module (ncurses panel)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9))
@@ -135,7 +136,7 @@ label eq? to N"
                                    (make-field symbol label width things
                                                (let ((p
                                                       (newwin (+ 2 (length things))
-                                                              (+ 2 width) 0 0 #:panel #t)))
+                                                              (+ 2 width) 0 0 #:panel #f)))
                                                  (box p 0 0)
                                                  (let loop ((ll things)
                                                             (y 0))
@@ -234,9 +235,23 @@ label eq? to N"
 
 	(refresh (form-window form)))))
 
+(define (ensure-panel! win)
+  (if (not (panel? win))
+      (make-panel! win)))
+
 (define (form-set-current-field form which)
+  (let* ((old-field  (get-current-field form))
+         (popup (field-popup old-field)))
+    (when popup
+          (hide-panel popup)))
   (form-set-current-item! form which)
+  (let* ((new-field  (array-ref (form-items form) which))
+        (popup (field-popup new-field)))
+    (when popup
+          (ensure-panel! popup)
+          (show-panel popup)))
   (move (form-window form) which (form-tabpos form)))
+
 
 (define (form-next-field form)
   (if (< (form-current-item form) (1- (array-length (form-items form))))
@@ -266,6 +281,18 @@ label eq? to N"
 					    (string-length (field-label f)))))))))
 
     (form-set-tabpos! form xpos)
+
+    (let loop ((fields (form-items form))
+               (pos 0))
+      (when (array-in-bounds? fields pos)
+            (let* ((f (array-ref fields pos))
+                  (p (field-popup f)))
+              (when p
+                    (ensure-panel! win)
+                    (mvwin p
+                           (+ (getbegy win) pos)
+                           (+ (form-tabpos form) (getbegx win))))
+              (loop fields (1+ pos)))))
 
     ;; Print the field entry areas
     (let loop ((fields (form-items form))
