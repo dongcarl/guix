@@ -34,17 +34,18 @@
 
   #:use-module (ncurses curses)
   #:use-module (ncurses panel)
+  #:use-module (gurses menu)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9))
 
 (define-record-type <field>
-  (make-field symbol label size choices popup value cursor-position)
+  (make-field symbol label size menu popup value cursor-position)
   field?
   (symbol          field-symbol)
   (label           field-label)
   (size            field-size)     ; The maximum length of values for this field
-  (choices         field-choices)  ; A list of acceptable values for this field
+  (menu            field-menu)     ; A menu of acceptable values for this field
   (popup           field-popup     field-set-popup!)
   (value           field-value     field-set-value!)
   (cursor-position field-cursor-position field-set-cursor-position!))
@@ -130,23 +131,18 @@ label eq? to N"
                            (match x
                                   ((symbol label (? list? things))
                                    (let ((width (apply max
-                                                      (map (lambda (x)
-                                                             (string-length x))
-                                                           things))))
-                                   (make-field symbol label width things
-                                               (let ((p
-                                                      (newwin (+ 2 (length things))
-                                                              (+ 2 width) 0 0 #:panel #f)))
-                                                 (box p 0 0)
-                                                 (let loop ((ll things)
-                                                            (y 0))
-                                                   (if (not (null? ll))
-                                                       (begin
-                                                         (addstr p (car ll)
-                                                                 #:y (1+ y) #:x 1)
-                                                         (loop (cdr ll) (1+ y)))))
-                                                 p)
-                                               "" 0)))
+                                                       (map (lambda (x)
+                                                              (string-length x))
+                                                            things)))
+                                         (menu (make-menu things)))
+                                     (make-field
+                                      symbol label width menu
+                                      (let ((p (newwin (+ 2 (length things))
+                                                       (+ 4 width) 0 0 #:panel #f)))
+                                        (box p 0 0)
+                                        (menu-post menu p)
+                                        p)
+                                      "" 0)))
                                   ((symbol label (? integer? size))
                                    (make-field symbol label size #f #f "" 0))))
 			 items)))
@@ -246,11 +242,27 @@ label eq? to N"
           (hide-panel popup)))
   (form-set-current-item! form which)
   (let* ((new-field  (array-ref (form-items form) which))
-        (popup (field-popup new-field)))
+         (popup (field-popup new-field))
+         (win (form-window form))
+         (menu (field-menu new-field)))
     (when popup
           (ensure-panel! popup)
-          (show-panel popup)))
-  (move (form-window form) which (form-tabpos form)))
+          (show-panel popup)
+          (keypad! win #t)
+          (menu-refresh menu)
+          (let loop ((ch (getch win)))
+            (if (eq? ch #\newline)
+                (field-set-value! new-field (menu-get-current-item menu))
+                (begin
+                  (std-menu-key-handler menu ch)
+                  (menu-redraw menu)
+                  (menu-refresh menu)
+                  (update-panels)
+                  (doupdate)
+                  (loop (getch win)))))
+          (hide-panel popup)
+          (redraw-field form new-field (form-current-item form))
+          (move win which (form-tabpos form)))))
 
 
 (define (form-next-field form)
