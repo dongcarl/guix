@@ -21,6 +21,7 @@
   #:use-module (gnu system installer ping)
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer utils)
+  #:use-module (gnu system installer filesystems)
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (gurses buttons)
@@ -90,7 +91,11 @@
           (lambda ()
             (and
              (mkdir-p target)
-             (mount root-device target "ext4" #:update-mtab? #f)
+
+             (mount root-device target
+                    (symbol->string
+                     (file-system-spec-type (assoc-ref mount-points root-device)))
+                    #:update-mtab? #f)
 
              (zero? (pipe-cmd window-port  "herd"
                               "herd" "start" "cow-store" target))
