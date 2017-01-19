@@ -102,12 +102,12 @@
 	      #:title (page-title p)))
 	
 	 (text-window (derwin (inner pr) 3 (getmaxx (inner pr))
-			      0 0 #:panel #f))
+			      0 0 #:panel #t))
 	
 	 (bwin (derwin (inner pr)
 		       3 (getmaxx (inner pr))
 		       (- (getmaxy (inner pr)) 3) 0
-		       #:panel #f))
+		       #:panel #t))
 	
 	 (nav (make-buttons my-buttons 1))
 	

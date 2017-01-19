@@ -284,8 +284,7 @@ which will process each string before returning it."
 pair whose car is the inner window and whose cdr is the frame."
   (let* ((win  (if orig
 		   (derwin orig height width starty startx #:panel #f)
-		   (newwin      height width starty startx #:panel #f)
-	       ))
+		   (newwin      height width starty startx #:panel #f)))
 	 (ystart (if title 3 1))
 	 (sw (derwin win (- (getmaxy win) ystart 1)
 		     (- (getmaxx win) 2)
