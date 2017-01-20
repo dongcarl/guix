@@ -33,6 +33,7 @@
   #:use-module (srfi srfi-9)
 
   #:export (make-file-system-spec)
+  #:export (valid-file-system-types)
   #:export (<file-system-spec>)
   #:export (file-system-spec?)
   #:export (file-system-spec-mount-point)
@@ -59,10 +60,10 @@
   (type             file-system-spec-type)  ; symbol
   (uuid             file-system-spec-uuid))
 
-(define valid-file-system-types `(ext2 ext3 ext4 btrfs swap))
+(define valid-file-system-types `("ext2" "ext3" "ext4" "btrfs" "swap"))
 
 (define (make-file-system-spec mount-point label type)
-  (if (memq (string->symbol type) valid-file-system-types)
+  (if (member type valid-file-system-types)
       (let ((uuid (slurp "uuidgen" identity)))
         (make-file-system-spec' mount-point label
                                 (string->symbol type)
