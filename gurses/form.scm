@@ -137,9 +137,8 @@ label eq? to N"
                                          (menu (make-menu things)))
                                      (make-field
                                       symbol label width menu
-                                      (let ((p (newwin (+ 2 (length things))
-                                                       (+ 4 width) 0 0 #:panel #f)))
-                                        (box p 0 0)
+                                      (let ((p (newwin (length things)
+                                                        width 0 0 #:panel #f)))
                                         (menu-post menu p)
                                         p)
                                       "" 0)))
