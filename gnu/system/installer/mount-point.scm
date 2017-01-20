@@ -112,7 +112,10 @@
 	 (nav (make-buttons my-buttons 1))
 	
 	 (fw (derwin (inner pr)
-		     (length my-fields)
+                     (-
+                      (getmaxy (inner pr))
+                      (getmaxy text-window)
+                      (getmaxy bwin))
 		     (getmaxx (inner pr))
 		     (getmaxy text-window) 0 #:panel #f))
 
