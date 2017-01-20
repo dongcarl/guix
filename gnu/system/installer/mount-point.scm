@@ -35,10 +35,10 @@
     ((M_ str)
      str)))
 
-(define my-fields `((mount-point ,(M_ "Mount Point") 40)
-                    (fs-type     ,(M_ "File System Type")
-                                  ("ext2" "ext3" "ext4" "btrfs" "swap"))
-                    (label       ,(M_ "Label") 16)))
+(define (my-fields) `((mount-point ,(M_ "Mount Point") 40)
+                      (fs-type     ,(M_ "File System Type")
+                                   ,valid-file-system-types)
+                      (label       ,(M_ "Label") 16)))
 
 (define (mount-point-refresh page)
   (when (not (page-initialised? page))
@@ -121,7 +121,7 @@
 
 
 	 (form (make-form
-                my-fields
+                (my-fields)
                 (lambda (f)
                   (let ((field (get-current-field f)))
                     (if (eq? (field-symbol field) 'mount-point)
