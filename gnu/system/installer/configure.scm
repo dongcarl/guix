@@ -145,15 +145,17 @@
                   p #:width width)
     (newline p)
 
-    (pretty-print
-     `(use-service-modules
-       ,@(role-service-modules system-role)) p #:width width)
-    (newline p)
+    (when system-role
+          (pretty-print
+           `(use-service-modules
+             ,@(role-service-modules system-role)) p #:width width)
+          (newline p))
 
-    (pretty-print
-     `(use-package-modules
-       ,@(role-package-modules system-role)) p #:width width)
-    (newline p)
+    (when system-role
+          (pretty-print
+           `(use-package-modules
+             ,@(role-package-modules system-role)) p #:width width)
+          (newline p))
 
     (pretty-print
      `(operating-system
@@ -193,14 +195,17 @@
                        mount-points)))
         (users (cons* %base-user-accounts))
         (packages (cons*
-                   ,@(role-packages system-role)
+                   ,@(if system-role
+                         (role-packages system-role)
+                         '())
                    %base-packages))
         (services (cons*
                    ,@(if key-map
                         `((console-keymap-service ,key-map))
                         `())
-                   ,@(role-services system-role)
-                   ))
+                   ,@(if system-role
+                         (role-services system-role)
+                         '())))
         (name-service-switch %mdns-host-lookup-nss)) p #:width width)))
 
 
