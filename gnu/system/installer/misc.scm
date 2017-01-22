@@ -20,6 +20,7 @@
   #:use-module (ncurses curses)
 
   #:export (livery-title)
+  #:export (strong-colour)
   #:export (time-zone)
   #:export (host-name)
   #:export (config-file)
@@ -29,6 +30,7 @@
   #:export (mount-points))
 
 (define livery-title 1)
+(define strong-colour 2)
 
 (define mount-points '())
 
@@ -58,7 +60,7 @@
     (acro         . ,normal)
     (email        . ,normal)
     (emph         . ,dim)
-    (strong       . ,(lambda (x) (color 2 x)))
+    (strong       . ,(lambda (x) (color strong-colour x)))
     (sample       . ,normal)
     (sc           . ,normal)
     (titlefont    . ,normal)
