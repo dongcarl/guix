@@ -75,7 +75,7 @@
                  (fold (lambda (x prev) (max prev (string-length x))) 0
                        (field-size field))
                  (field-size field))
-             (underline #\space))
+             (inverse #\space))
 	    #:y y
 	    #:x x))
 
@@ -83,7 +83,7 @@
   "Redraw the FIELD in FORM"
   (draw-field-space (form-window form) field n (form-tabpos form))
 
-  (addstr (form-window form) (field-value field)
+  (addchstr (form-window form) (inverse (field-value field))
 	  #:y n
 	  #:x (form-tabpos form)))
 
@@ -175,7 +175,7 @@ label eq? to N"
 				    (make-string 1 ch)))
 	
 	       (field-set-cursor-position! f (1+ (field-cursor-position f)))
-	       (addch (form-window form) (normal ch)))
+	       (addch (form-window form) (inverse ch)))
 
 	      ((eq? ch KEY_DC)
 	       (field-set-value! f (string-append left right))
