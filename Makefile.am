@@ -33,6 +33,7 @@ MODULES =					\
   gurses/buttons.scm                            \
   gurses/form.scm                               \
   gurses/menu.scm                               \
+  gurses/stexi.scm                              \
   guix/base32.scm				\
   guix/base64.scm				\
   guix/cpio.scm					\

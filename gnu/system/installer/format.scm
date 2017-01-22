@@ -26,6 +26,8 @@
    #:use-module (gurses buttons)
    #:use-module (ncurses curses)
    #:use-module (srfi srfi-1)
+   #:use-module (texinfo)
+   #:use-module (gurses stexi)
 
    #:export (filesystems-are-current?)
    #:export (make-format-page))
@@ -184,14 +186,15 @@ match those uuids read from the respective partitions"
                          (getmaxy text-window)
                          0)))
 
-    (addstr* text-window
-              (gettext
-               (format #f
-                       "The partitions ~s will be formatted.  All data on these partitions will be destroyed if you continue."
-                       (map (lambda (x)
-                              (car x))
-                            mount-points))))
-
+    (render-stexi
+     text-window
+     (texi-fragment->stexi
+      (gettext
+       (format #f
+               "The partitions ~s will be formatted.  @strong{Any existing data on these partitions will be destroyed if you continue!!}"
+               (map (lambda (x) (car x))
+                    mount-points))))
+     #:markup-table installer-texinfo-markup)
 
 
     (push-cursor (page-cursor-visibility p))
