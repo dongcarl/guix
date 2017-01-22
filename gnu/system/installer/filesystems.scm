@@ -40,6 +40,7 @@
   #:export (file-system-spec-label)
   #:export (file-system-spec-type)
   #:export (file-system-spec-uuid)
+  #:export (file-system-spec-not-valid?)
 
   #:export (minimum-store-size)
   #:export (filesystem-task-complete?)
@@ -62,6 +63,25 @@
 
 (define valid-file-system-types `("ext2" "ext3" "ext4" "btrfs" "swap"))
 
+(define (file-system-spec-not-valid? fss)
+  (or
+   (and (not (file-system-spec? fss))
+        (M_ "Invalid file system specification"))
+
+   (and (not (member (symbol->string (file-system-spec-type fss))
+                     valid-file-system-types))
+        (format #f (M_ "~a is not a valid file system type.")
+                (file-system-spec-type fss)))
+
+   (and (eq? (file-system-spec-type fss) 'swap)
+        (not (zero? (string-length (file-system-spec-mount-point fss))))
+        (M_ "Swap systems should not have a mount point."))
+
+   (and (not (eq? (file-system-spec-type fss) 'swap))
+        (not (absolute-file-name? (file-system-spec-mount-point fss)))
+        (format #f (M_ "~a is not an absolute file name.")
+                (file-system-spec-mount-point fss)))))
+
 (define (make-file-system-spec mount-point label type)
   (if (member type valid-file-system-types)
       (let ((uuid (slurp "uuidgen" identity)))
@@ -83,35 +103,14 @@
    (and (not (find-mount-device "/" mount-points))
         (M_ "You must specify a mount point for the root (/)."))
 
-   (fold (lambda (x prev)
-           (or prev
-               (match x
-                      ((dev . ($ <file-system-spec> mp label type uuid))
-                       (if (and (eq? type 'swap) (not (zero? (string-length mp))))
-                           (gettext "Swap systems should not have a mount point")
-                           #f)))))
-         #f mount-points)
-
-   (let ((non-absolute-list
-          (fold (lambda (x prev)
-                  (match x
-                         ((dev . fss)
-                          (if (or
-                               (eq? (file-system-spec-type fss) 'swap)
-                               (absolute-file-name? (file-system-spec-mount-point fss)))
-                              prev
-                              (cons (file-system-spec-mount-point fss) prev)))))
-                '()
-                mount-points)))
-     (and (not (null? non-absolute-list))
-          (ngettext
-           (format #f
-                   (M_ "The mount point ~s is a relative path.  All mount points must be absolute.")
-                   (car non-absolute-list))
-           (format #f
-                   (M_ "The mount points ~s are relative paths.  All mount points must be absolute.")
-                   non-absolute-list)
-           (length non-absolute-list))))
+   (let loop ((ll mount-points))
+     (match ll
+            ('() #f)
+            (((_ . (? file-system-spec? fss)) . rest)
+             (let ((msg (file-system-spec-not-valid? fss)))
+               (if msg
+                   msg
+                   (loop (cdr ll)))))))
 
    (and (< (size-of-partition (find-mount-device (%store-directory) mount-points))
            minimum-store-size)
@@ -128,24 +127,7 @@
             (format #f
                     (M_ "You have specified the mount point ~a more than once.")
                     (file-system-spec-mount-point fss))
-            (loop rest (cons fss ac))))))
-
-   (let ((partitions-without-filesystems
-          (fold (lambda (x prev)
-                  (match x
-                         ((dev . ($ <file-system-spec> mp label type uuid))
-                          (if type prev
-                              (cons dev prev)))))
-                '() mount-points)))
-
-     (if (null? partitions-without-filesystems)
-         #f
-         (ngettext
-          (format #f (M_ "The filesystem type for partition ~a is not valid.")
-                  (car partitions-without-filesystems))
-          (format #f (M_ "The filesystem type for partitions ~a are not valid.")
-                  partitions-without-filesystems)
-          (length partitions-without-filesystems))))))
+            (loop rest (cons fss ac))))))))
 
 (define (make-filesystem-page parent  title)
   (make-page (page-surface parent)
