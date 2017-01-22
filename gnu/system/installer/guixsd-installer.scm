@@ -288,6 +288,7 @@ tail of the list."
       (start-color!)
 
       (init-pair! livery-title COLOR_RED COLOR_BLACK)
+      (init-pair! 2 COLOR_MAGENTA COLOR_BLACK)
 
       (curs-set 0)
 

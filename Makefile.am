@@ -38,6 +38,10 @@ include gnu/local.mk
 
 MODULES =					\
   guix/base16.scm				\
+  gurses/buttons.scm                            \
+  gurses/form.scm                               \
+  gurses/menu.scm                               \
+  gurses/stexi.scm                              \
   guix/base32.scm				\
   guix/base64.scm				\
   guix/cpio.scm					\
