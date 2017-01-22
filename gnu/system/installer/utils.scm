@@ -17,7 +17,7 @@
 ;;; along with GNU Guix.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (gnu system installer utils)
-  #:export (justify
+  #:export (
 	    justify*
 	    addstr*
 	    slurp
@@ -105,32 +105,6 @@
               (loop (read-char (car pipep)))))
           (close-port (car pipep))))
     (cdr (waitpid pid))))
-
-(define (justify text width)
-  "A naive function to split a string into lines no more than width characters long."
-  (define (justify' l n acc)
-    (if (null? l)
-	acc
-	(let* ((word (car l))
-	       (len (string-length word)))
-
-	  (define (linefull? n w)
-	    (> (+ len n) w))
-
-	  (justify'
-	   (if (linefull? n width)
-	       l
-	       (cdr l))
-	   (if (linefull? n width)
-	       0
-	       (+ n (1+ len)))
-
-	   (if (linefull? n width)
-	       (string-append acc
-			      (make-string (- width len) #\space))
-	       (string-append acc word " "))))))
-
-  (justify' (string-split text char-set:blank) 0  ""))
 
 (define (justify* text width)
   "A naive function to split a string into lines no more than width characters long.
