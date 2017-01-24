@@ -79,12 +79,20 @@
       (page-leave))
 
      ((select-key? ch)
-      (let ((next (make-passphrase-page
-                   page
-                   (M_ "Passphrase entry")
-                   (page-datum page 'ifce)
-                   (assq-ref (menu-get-current-item menu) 'essid))))
-        (page-enter next))))
+      (let ((ap (menu-get-current-item menu))
+            (ifce (page-datum page 'ifce)))
+        (if (assq-ref ap 'encryption)
+            (let ((next (make-passphrase-page
+                         page
+                         (M_ "Passphrase entry")
+                         ifce
+                         (assq-ref ap 'essid))))
+              (page-enter next))
+            (begin
+              (and (zero? (system* "ip" "link" "set" ifce "up"))
+                   (zero? (system* "iw" "dev" ifce "connect" (assq-ref ap 'essid)))
+                   (zero? (system* "dhclient" ifce)))
+              (page-leave))))))
 
     (std-menu-key-handler menu ch)
 
