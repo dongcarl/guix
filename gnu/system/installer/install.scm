@@ -52,6 +52,28 @@
                      (reboot ,(M_ "_Reboot") #t)
                      (cancel ,(M_ "Canc_el") #t)))
 
+
+;; We have to use this "hard" way of rebooting, because
+;; we have instructed the user to remove the device which
+;; contains our root filesystem
+(define (force-reboot)
+  (catch
+   #t
+   (lambda ()
+     (let ((p (open "/proc/sys/kernel/sysrq" O_WRONLY)))
+       (display "1\n" p)
+       (close p))
+
+     (let ((p (open "/proc/sysrq-trigger" O_WRONLY)))
+       (display "b\n" p)
+       (close p)))
+
+   (lambda (key . args)
+     #f)
+   (lambda (key subr message args . rest)
+     #f)))
+
+
 (define (install-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))
         (config-window  (page-datum page 'config-window)))
@@ -80,7 +102,7 @@
       (page-leave))
 
      ((buttons-key-matches-symbol? nav ch 'reboot)
-      (system* "reboot"))
+      (force-reboot))
 
      ((buttons-key-matches-symbol? nav ch 'continue)
       (let ((target "/target")
