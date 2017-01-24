@@ -37,7 +37,7 @@
 
 (define (my-fields) `((mount-point ,(M_ "Mount Point") 40)
                       (fs-type     ,(M_ "File System Type")
-                                   ,valid-file-system-types)
+                                   ,(append valid-file-system-types (list "<unused>")))
                       (label       ,(M_ "Label") 16)))
 
 (define (mount-point-refresh page)
@@ -124,11 +124,20 @@
                 (my-fields)
                 (lambda (f)
                   (let ((field (get-current-field f)))
-                    (if (eq? (field-symbol field) 'mount-point)
-                        (form-set-value! f 'label
-                                         (string-append
-                                          host-name "-"
-                                          (form-get-value f 'mount-point)))))))))
+                    (case (field-symbol field)
+                      ((mount-point)
+                       (form-set-value! f 'label
+                                        (string-append
+                                         host-name "-"
+                                         (form-get-value f 'mount-point))))
+                      ((fs-type)
+                       (cond
+                        ((equal? "swap" (form-get-value f 'fs-type))
+                         (form-set-value! f 'label "swap-space")
+                         (form-set-value! f 'mount-point ""))
+                        ((equal? "<unused>" (form-get-value f 'fs-type))
+                         (form-set-value! f 'label "")
+                         (form-set-value! f 'mount-point ""))))))))))
 
     (page-set-datum! p 'navigation nav)
     (let ((dev (page-datum p 'device)))
