@@ -37,14 +37,14 @@
 
 (define my-fields `((passphrase   ,(M_ "Passphrase") ,max-length)))
 
-(define (make-passphrase-page parent title ifce network)
+(define (make-passphrase-page parent title ifce access-point)
   (let ((page
          (make-page (page-surface parent)
                     title
                     passphrase-refresh
                     1
                     passphrase-key-handler)))
-    (page-set-datum! page 'network network)
+    (page-set-datum! page 'access-point access-point)
     (page-set-datum! page 'ifce ifce)
     page))
 
@@ -54,13 +54,16 @@
     (page-set-initialised! page #t))
 
   (let ((form  (page-datum page 'form))
+        (access-point (page-datum page 'access-point))
         (text-window (page-datum page 'text-window)))
+
     (clear text-window)
     (addstr*
      text-window
      (gettext
       (format #f "Enter the passphrase for the network ~a."
-              (page-datum page 'network))))
+              (assq-ref access-point 'essid))))
+
     (refresh* text-window)
     (refresh* (outer (page-wwin page)))
     (refresh* (form-window form))))
@@ -68,6 +71,7 @@
 (define (passphrase-key-handler page ch)
   (let ((form  (page-datum page 'form))
         (nav   (page-datum page 'navigation))
+        (access-point (page-datum page 'access-point))
         (dev   (page-datum page 'device)))
 
     (cond
@@ -89,7 +93,7 @@
      ((select-key? ch)
       (wireless-connect
        (page-datum page 'ifce)
-       (page-datum page 'network)
+       (assq-ref access-point 'essid)
        (form-get-value form 'passphrase))
       (page-leave (cdr (cdr page-stack))))
 

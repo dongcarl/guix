@@ -86,7 +86,7 @@
                          page
                          (M_ "Passphrase entry")
                          ifce
-                         (assq-ref ap 'essid))))
+                         ap)))
               (page-enter next))
             (begin
               (and (zero? (system* "ip" "link" "set" ifce "up"))
