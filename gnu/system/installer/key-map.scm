@@ -32,16 +32,13 @@
      str)))
 
 
-(define* (make-file-browser parent directory #:optional (exit-point #f))
+(define* (make-file-browser parent directory)
   (let ((page (make-page (page-surface parent)
 			(gettext "File Browser")
 			file-browser-page-refresh
                         0
 			file-browser-page-key-handler)))
     (page-set-datum! page 'directory directory)
-    (if exit-point
-	(page-set-datum! page 'exit-point exit-point)
-	(page-set-datum! page 'exit-point (page-datum parent 'exit-point)))
     page))
 
 
@@ -72,11 +69,13 @@
 	(if (eq? 'directory (stat:type (stat new-dir)))
 	    (let ((p (make-file-browser
 		      page new-dir)))
+              ;; Don't go back to the current page!
+              (set! page-stack (cdr page-stack))
               (page-enter p))
 	    (begin
               (system* "loadkeys" i)
               (set! key-map i)
-              (page-leave (page-datum page 'exit-point))
+              (page-leave)
               #f)))))
     (std-menu-key-handler menu ch)
     #f))

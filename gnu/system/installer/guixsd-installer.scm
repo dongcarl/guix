@@ -177,8 +177,7 @@
        (let* ((keymap-directory
                (string-append (dirname loadkeys-directory) "/../share/keymaps"))
               (p (make-file-browser
-                  page keymap-directory
-                  page-stack)))
+                  page keymap-directory)))
          (page-enter p)))))))
 
 (define (do-task task-name page)
