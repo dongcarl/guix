@@ -101,6 +101,10 @@ described by the stexi STXI"
 		 (loop (cdr in)
 		       (parse-fragment (car in) acc normal))))))))
 
+
+(define (xchar->char ch)
+  (car (xchar-chars ch)))
+
 (define (offset-to-end-of-word ccs)
   "Return the number of xchars until the end of the current word."
 
@@ -109,14 +113,14 @@ described by the stexi STXI"
      cs
      ('() dist)
      (((? xchar? first) . rest)
-      (if (char-set-contains? char-set:blank (car (xchar-chars first)))
+      (if (char-set-contains? char-set:blank (xchar->char first))
           dist
           (offset-to-end-of-word' rest (1+ dist))))))
 
   (offset-to-end-of-word' ccs 0))
 
 (define (remove-leading-whitespace cs)
-  (if (char-set-contains? char-set:blank (car (xchar-chars (car cs))))
+  (if (char-set-contains? char-set:blank (xchar->char (car cs)))
       (cdr cs)
       cs))
 
@@ -160,7 +164,7 @@ string of length LEN"
       (if (null? in)
 	  n
 	  (let ((white (char-set-contains? char-set:blank
-					   (car (xchar-chars (car in))))))
+					   (xchar->char (car in)))))
 	    (loop (cdr in) (1+ x) (if (and prev-white (not white))
 				      (1+ n)
 				      n) white)))))
@@ -179,7 +183,7 @@ string of length LEN"
                   "You asked to pad to ~a but the string is already ~a characters long."
                   len (length str))))
 
-          (if (eqv? (car (xchar-chars (last str))) #\newline)
+          (if (eqv? (xchar->char (last str)) #\newline)
               str ; Don't justify the last line of a paragraph
               (let loop ((in str)
                          (out '())
@@ -189,7 +193,7 @@ string of length LEN"
                 (if (null? in)
                     (reverse out)
                     (let* ((white (char-set-contains? char-set:blank
-                                                      (car (xchar-chars (car in)))))
+                                                      (xchar->char (car in))))
                            (end-of-word (and white (not prev-white)))
                            (words-processed (if end-of-word (1+ words) words))
                            (spaces-inserted (if end-of-word
