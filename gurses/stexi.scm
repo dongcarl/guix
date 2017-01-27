@@ -131,20 +131,20 @@ described by the stexi STXI"
 
 (define (line-split cs line-length)
   "Return a pair whose car is the first LINE-LENGTH elements of cs and whose
-cdr is the rest"
+cdr is the remainder"
   (let loop ((in cs)
 	     (count 0)
 	     (line0 '())
-	     (rest '()))
-    (if (null? in)
-	(let* ((trimmed-line (remove-leading-whitespace line0))
-	       (len (length trimmed-line)))
-	  (cons (reverse trimmed-line)
-		(reverse rest)))
+	     (remainder '()))
+    (match
+     in
+     (() (let ((trimmed-line (remove-leading-whitespace line0)))
+           (cons (reverse trimmed-line) (reverse remainder))))
 
-	(if (< (+ (offset-to-end-of-word in) count) line-length)
-	    (loop (cdr in) (1+ count) (cons  (car in) line0) rest)
-	    (loop (cdr in) (1+ count) line0 (cons (car in) rest))))))
+     ((first . rest)
+      (if (< (+ (offset-to-end-of-word in) count) line-length)
+          (loop rest (1+ count) (cons  first line0) remainder)
+          (loop rest (1+ count) line0 (cons first remainder)))))))
 
 (define (paragraph-format cs line-length)
   (let loop ((pr (line-split cs line-length))
