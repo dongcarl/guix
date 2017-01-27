@@ -149,9 +149,10 @@ cdr is the remainder"
 (define (paragraph-format cs line-length)
   (let loop ((pr (line-split cs line-length))
 	     (acc '()))
-    (if (null? (cdr pr))
-	(cons (car pr) acc)
-	(loop (line-split (cdr pr) line-length) (cons (car pr) acc)))))
+    (match pr
+           ((only) (cons only acc))
+           ((first . rest)
+            (loop (line-split rest line-length) (cons first acc))))))
 
 (define (justify text line-length)
   (reverse (paragraph-format text line-length )))
