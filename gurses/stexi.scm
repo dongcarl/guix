@@ -105,13 +105,13 @@ described by the stexi STXI"
   "Return the number of xchars until the end of the current word."
 
   (define (offset-to-end-of-word' cs dist)
-    (cond
-     ((zero? (length cs))
-      dist)
-     ((char-set-contains? char-set:blank (car (xchar-chars (car cs))))
-      dist)
-     (else
-      (offset-to-end-of-word' (cdr cs) (1+ dist)))))
+    (match
+     cs
+     ('() dist)
+     (((? xchar? first) . rest)
+      (if (char-set-contains? char-set:blank (car (xchar-chars first)))
+          dist
+          (offset-to-end-of-word' rest (1+ dist))))))
 
   (offset-to-end-of-word' ccs 0))
 
