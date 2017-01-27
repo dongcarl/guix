@@ -166,12 +166,14 @@ string of length LEN"
 	       (x 0)
 	       (n 0)
 	       (prev-white #t))
-      (if (null? in)
-	  n
-	  (let ((white (xchar-blank? (car in))))
-            (loop (cdr in) (1+ x) (if (and prev-white (not white))
-                                      (1+ n)
-                                      n) white)))))
+      (match
+       in
+       (() n)
+       ((first . rest)
+        (let ((white (xchar-blank? first)))
+          (loop rest (1+ x) (if (and prev-white (not white))
+                                (1+ n)
+                                n) white))))))
 
   (let* ((underflow (- len (length str)))
 	 (word-count (count-words str))
