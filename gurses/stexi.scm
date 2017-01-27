@@ -102,8 +102,13 @@ described by the stexi STXI"
 		       (parse-fragment (car in) acc normal))))))))
 
 
+
 (define (xchar->char ch)
   (car (xchar-chars ch)))
+
+(define (xchar-blank? ch)
+  "Return #f if ch is not a blank character"
+  (char-set-contains? char-set:blank (xchar->char ch)))
 
 (define (offset-to-end-of-word ccs)
   "Return the number of xchars until the end of the current word."
@@ -113,14 +118,14 @@ described by the stexi STXI"
      cs
      ('() dist)
      (((? xchar? first) . rest)
-      (if (char-set-contains? char-set:blank (xchar->char first))
+      (if (xchar-blank? first)
           dist
           (offset-to-end-of-word' rest (1+ dist))))))
 
   (offset-to-end-of-word' ccs 0))
 
 (define (remove-leading-whitespace cs)
-  (if (char-set-contains? char-set:blank (xchar->char (car cs)))
+  (if (xchar-blank? (car cs))
       (cdr cs)
       cs))
 
@@ -163,11 +168,10 @@ string of length LEN"
 	       (prev-white #t))
       (if (null? in)
 	  n
-	  (let ((white (char-set-contains? char-set:blank
-					   (xchar->char (car in)))))
-	    (loop (cdr in) (1+ x) (if (and prev-white (not white))
-				      (1+ n)
-				      n) white)))))
+	  (let ((white (xchar-blank? (car in))))
+            (loop (cdr in) (1+ x) (if (and prev-white (not white))
+                                      (1+ n)
+                                      n) white)))))
 
   (let* ((underflow (- len (length str)))
 	 (word-count (count-words str))
@@ -192,16 +196,15 @@ string of length LEN"
                          (prev-white #t))
                 (if (null? in)
                     (reverse out)
-                    (let* ((white (char-set-contains? char-set:blank
-                                                      (xchar->char (car in))))
+                    (let* ((white (xchar-blank? (car in)))
                            (end-of-word (and white (not prev-white)))
                            (words-processed (if end-of-word (1+ words) words))
                            (spaces-inserted (if end-of-word
-                                                (truncate (- (*
-                                                              (/ underflow inter-word-space-count)
-                                                              words-processed)
-                                                             spaces))
-                                                0)))
+                                           (truncate (- (*
+                                                         (/ underflow inter-word-space-count)
+                                                         words-processed)
+                                                        spaces))
+                                           0)))
                       (loop (cdr in)
                             ;; FIXME: Use a more intelligent algorithm.
                             ;; (prefer spaces at sentence endings for example)
