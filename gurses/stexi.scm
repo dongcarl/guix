@@ -196,23 +196,25 @@ string of length LEN"
                          (words 0)
                          (spaces 0)
                          (prev-white #t))
-                (if (null? in)
-                    (reverse out)
-                    (let* ((white (xchar-blank? (car in)))
-                           (end-of-word (and white (not prev-white)))
-                           (words-processed (if end-of-word (1+ words) words))
-                           (spaces-inserted (if end-of-word
-                                           (truncate (- (*
-                                                         (/ underflow inter-word-space-count)
-                                                         words-processed)
-                                                        spaces))
-                                           0)))
-                      (loop (cdr in)
-                            ;; FIXME: Use a more intelligent algorithm.
-                            ;; (prefer spaces at sentence endings for example)
-                            (append
-                             (make-list spaces-inserted (normal #\space))
-                             (cons (car in) out))
-                            words-processed
-                            (+ spaces spaces-inserted)
-                            white)))))))))
+                (match
+                 in
+                 (()  (reverse out))
+                 ((first . rest)
+                  (let* ((white (xchar-blank? first))
+                         (end-of-word (and white (not prev-white)))
+                         (words-processed (if end-of-word (1+ words) words))
+                         (spaces-inserted (if end-of-word
+                                              (truncate (- (*
+                                                            (/ underflow inter-word-space-count)
+                                                            words-processed)
+                                                           spaces))
+                                              0)))
+                    (loop rest
+                          ;; FIXME: Use a more intelligent algorithm.
+                          ;; (prefer spaces at sentence endings for example)
+                          (append
+                           (make-list spaces-inserted (normal #\space))
+                           (cons first out))
+                          words-processed
+                          (+ spaces spaces-inserted)
+                          white))))))))))
