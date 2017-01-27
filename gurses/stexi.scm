@@ -158,6 +158,33 @@ cdr is the remainder"
   (reverse (paragraph-format text line-length )))
 
 
+(define-public (word-endings str)
+  "Return a list of all the indicies of all the word endings in STR.  The list is sorted in order of prefered padding location."
+  (let loop ((in str)
+             (x 0)
+             (n '())
+             (prev-white #t)
+             (prev-char #f)
+             )
+    (match
+     in
+     (() (map-in-order
+          (lambda (x) (car x))
+          (sort n (lambda (x y)
+                    (if (eqv? (cadr x) (cadr y))
+                        (> (caddr x) (caddr y))
+                        (> (cadr x) (cadr y)))))))
+     ((first . rest)
+      (let ((white (xchar-blank? first)))
+        (loop rest (1+ x) (if (and (not prev-white)  white)
+                              (cons (list x
+                                          (case (xchar->char prev-char)
+                                            ((#\.) 3)
+                                            ((#\,) 2)
+                                            (else 1))
+                                          (random 1.0)) n)
+                              n) white first))))))
+
 (define (pad-complex-string str len)
   "Return a complex string based on STR but with interword padding to make the
 string of length LEN"
