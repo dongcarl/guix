@@ -247,21 +247,33 @@
 
 
 
-(define (wireless-connect ifce essid passphrase)
-  "Connect the wireless interface IFCE to the network advertising ESSID using
-the key PASSPHRASE."
+(define (wireless-connect ifce access-point passphrase)
+  "Connect the wireless interface IFCE to ACCESS-POINT using the key PASSPHRASE."
+
+  (let ((essid (assq-ref access-point 'essid))
+        (encr (assq-ref access-point 'encryption)))
+
   (call-with-temporary-output-file
    (lambda (filename port)
-     (format port "
+
+     (format port
+             (if (eq? encr 'wep) "
+network={
+\tssid=\"~a\"
+\tkey_mgmt=NONE
+\twep_key0=\"~a\"
+}
+"
+"
 network={
 \tssid=\"~a\"
 \tkey_mgmt=WPA-PSK
 \tpsk=\"~a\"
 }
-"
+")
              essid
              passphrase)
      (force-output port)
 
      (and (zero? (system* "wpa_supplicant" "-c" filename "-i" ifce "-B"))
-          (zero? (system* "dhclient" ifce))))))
+          (zero? (system* "dhclient" ifce)))))))
