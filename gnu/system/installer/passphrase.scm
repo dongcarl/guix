@@ -93,7 +93,7 @@
      ((select-key? ch)
       (wireless-connect
        (page-datum page 'ifce)
-       (assq-ref access-point 'essid)
+       access-point
        (form-get-value form 'passphrase))
       (page-leave (cdr (cdr page-stack))))
 
