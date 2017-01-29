@@ -146,6 +146,11 @@ cdr is the remainder"
           (loop rest (1+ count) (cons  first line0) remainder)
           (loop rest (1+ count) line0 (cons first remainder)))))))
 
+
+(define-public (insert-space line index)
+  (call-with-values  (lambda () (split-at line index))
+    (lambda (x y) (append x (normal " ") y))))
+
 (define (paragraph-format cs line-length)
   (let loop ((pr (line-split cs line-length))
 	     (acc '()))
@@ -188,61 +193,25 @@ cdr is the remainder"
 (define (pad-complex-string str len)
   "Return a complex string based on STR but with interword padding to make the
 string of length LEN"
-
-  (define (count-words str)
-    (let loop ((in str)
-	       (x 0)
-	       (n 0)
-	       (prev-white #t))
-      (match
-       in
-       (() n)
-       ((first . rest)
-        (let ((white (xchar-blank? first)))
-          (loop rest (1+ x) (if (and prev-white (not white))
-                                (1+ n)
-                                n) white))))))
-
-  (let* ((underflow (- len (length str)))
-	 (word-count (count-words str))
-	 (inter-word-space-count (1- word-count)))
-
-    (if (zero? inter-word-space-count)
+  (let ((how-many (- len (length str)))
+	(endings (word-endings str)))
+    (if (null? endings)
         str
-        (begin
-          (when (negative? underflow)
-                (error
-                 (format
-                  #f
-                  "You asked to pad to ~a but the string is already ~a characters long."
-                  len (length str))))
-
+        (let ((rem  (remainder how-many (length endings)))
+              (quot (quotient  how-many (length endings))))
           (if (eqv? (xchar->char (last str)) #\newline)
               str ; Don't justify the last line of a paragraph
-              (let loop ((in str)
-                         (out '())
-                         (words 0)
-                         (spaces 0)
-                         (prev-white #t))
-                (match
-                 in
-                 (()  (reverse out))
-                 ((first . rest)
-                  (let* ((white (xchar-blank? first))
-                         (end-of-word (and white (not prev-white)))
-                         (words-processed (if end-of-word (1+ words) words))
-                         (spaces-inserted (if end-of-word
-                                              (truncate (- (*
-                                                            (/ underflow inter-word-space-count)
-                                                            words-processed)
-                                                           spaces))
-                                              0)))
-                    (loop rest
-                          ;; FIXME: Use a more intelligent algorithm.
-                          ;; (prefer spaces at sentence endings for example)
-                          (append
-                           (make-list spaces-inserted (normal #\space))
-                           (cons first out))
-                          words-processed
-                          (+ spaces spaces-inserted)
-                          white))))))))))
+              (begin
+                ;; FIXME: If quot is non zero, then we must pad EVERY space with
+                ;; quot additional spaces.
+                (when (positive? quot)
+                      (error "Quotient is positive"))
+
+                (let loop ((in str)
+                           (ips
+                            (sort (take endings rem) (lambda (x y) (> x y)))))
+                  (if (null? ips)
+                      in
+                      (loop
+                       (insert-space in (car ips))
+                       (cdr ips))))))))))
