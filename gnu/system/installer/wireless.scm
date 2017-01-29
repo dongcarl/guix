@@ -253,27 +253,28 @@
   (let ((essid (assq-ref access-point 'essid))
         (encr (assq-ref access-point 'encryption)))
 
-  (call-with-temporary-output-file
-   (lambda (filename port)
-
-     (format port
-             (if (eq? encr 'wep) "
+    (call-with-temporary-output-file
+     (lambda (filename port)
+       (format port
+               (if (eq? encr 'wep) "
 network={
 \tssid=\"~a\"
 \tkey_mgmt=NONE
 \twep_key0=\"~a\"
 }
 "
-"
+                   "
 network={
 \tssid=\"~a\"
 \tkey_mgmt=WPA-PSK
 \tpsk=\"~a\"
 }
 ")
-             essid
-             passphrase)
-     (force-output port)
+               essid
+               passphrase)
+       (force-output port)
 
-     (and (zero? (system* "wpa_supplicant" "-c" filename "-i" ifce "-B"))
-          (zero? (system* "dhclient" ifce)))))))
+       (with-output-to-file "/dev/null"
+         (lambda ()
+           (and (zero? (system* "wpa_supplicant" "-c" filename "-i" ifce "-B"))
+                (zero? (system* "dhclient" ifce)))))))))
