@@ -229,18 +229,38 @@ tail of the list."
 
          (main-menu (make-menu main-options
                                #:disp-proc (lambda (datum row)
-                                             (format #f "~a"
-                                                     (task-title (cdr datum)))))))
+                                             (gettext (task-title (cdr datum)))))))
 
-    (addstr* text-window (format  #f
-      (gettext
-       "To start the complete installation process, choose ~s.  Alternatively, you may run each step individually for a slower, more controlled experience.")  installation-menu-title))
 
     (page-set-wwin! page frame)
     (page-set-datum! page 'menu main-menu)
+    (page-set-datum! page 'text-window text-window)
+    (page-set-datum! page 'background background)
     (menu-post main-menu win)
 
-    (push-cursor (page-cursor-visibility page))
+    (push-cursor (page-cursor-visibility page))))
+
+
+(define (main-page-refresh page)
+  (when (not (page-initialised? page))
+    (main-page-init page)
+    (page-set-initialised! page #t))
+
+  (let ((text-window (page-datum page 'text-window))
+        (menu (page-datum page 'menu))
+        (background (page-datum page 'background)))
+
+    (clear background)
+
+    (addstr*
+     text-window
+     (format
+      #f
+      (gettext
+       "To start the complete installation process, choose ~s.  Alternatively, you may run each step individually for a slower, more controlled experience.")
+      (gettext installation-menu-title)))
+
+
     ;; Do the key action labels
     (let ((ypos (1- (getmaxy background)))
           (str0 (gettext "Get a Shell <F1>"))
@@ -252,19 +272,13 @@ tail of the list."
               (truncate (/ (- (getmaxx background)
                               (string-length str1)) 2)))
       (addstr background str2 #:y ypos #:x
-              (- (getmaxx background) (string-length str2))))))
+              (- (getmaxx background) (string-length str2))))
 
-
-(define (main-page-refresh page)
-  (when (not (page-initialised? page))
-    (main-page-init page)
-    (page-set-initialised! page #t))
-
-  (touchwin (outer (page-wwin page)))
-  (refresh* (outer (page-wwin page)))
-  (refresh* (inner (page-wwin page)))
-  (menu-redraw (page-datum page 'menu))
-  (menu-refresh (page-datum page 'menu)))
+    (touchwin (outer (page-wwin page)))
+    (refresh* (outer (page-wwin page)))
+    (refresh* (inner (page-wwin page)))
+    (menu-redraw menu)
+    (menu-refresh menu)))
 
 
 (define-public (guixsd-installer)
