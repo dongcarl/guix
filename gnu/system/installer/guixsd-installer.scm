@@ -28,6 +28,7 @@
 	     (gnu system installer configure)
              (gnu system installer filesystems)
 	     (gnu system installer hostname)
+             (gnu system installer locale)
 	     (gnu system installer key-map)
 	     (gnu system installer time-zone)
              (gnu system installer role)
@@ -164,8 +165,8 @@
        (system* "bash" "--rcfile" file-name))))
 
    ((eqv? ch (key-f 9))
-    (setlocale LC_ALL "de_DE.UTF-8")
-    )
+    (let ((p (make-locale-page page (gettext "Change locale"))))
+      (page-enter p)))
 
    ((eqv? ch (key-f 10))
     (match (which "loadkeys")
