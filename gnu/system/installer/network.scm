@@ -33,11 +33,7 @@
 
   #:export (make-network-page))
 
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
-
+(include "i18n.scm")
 
 (define (make-network-page parent  title)
   (make-page (page-surface parent)

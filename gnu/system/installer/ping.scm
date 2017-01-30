@@ -31,10 +31,7 @@
   #:export (ping-page-refresh)
   #:export (ping-page-key-handler))
 
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
+(include "i18n.scm")
 
 (define (substitute-is-reachable?)
   "Return #t if at least one substitute URL responds to pings"

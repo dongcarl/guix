@@ -33,11 +33,7 @@
 
   #:export (make-install-page))
 
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
-
+(include "i18n.scm")
 
 (define (make-install-page parent title)
   (let ((page (make-page (page-surface parent)

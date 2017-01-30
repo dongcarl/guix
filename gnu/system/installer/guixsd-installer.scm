@@ -47,10 +47,7 @@
              (srfi srfi-1)
 	     (srfi srfi-9))
 
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
+(include "i18n.scm")
 
 (define-record-type <task>
   (make-task title dependencies complete init)

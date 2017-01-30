@@ -26,11 +26,7 @@
 
   #:export (make-tz-browser))
 
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
-
+(include "i18n.scm")
 
 (define (make-tz-browser parent directory)
   (let ((page (make-page (page-surface parent)

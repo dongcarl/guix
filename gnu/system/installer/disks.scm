@@ -27,10 +27,7 @@
   #:use-module (ice-9 format)
   #:export (make-disk-page))
 
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
+(include "i18n.scm")
 
 (define my-buttons `((continue ,(M_ "_Continue") #t)))
 

@@ -37,10 +37,7 @@
 
   #:export (make-configure-page))
 
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
+(include "i18n.scm")
 
 (define (make-configure-page parent title)
   (let ((page (make-page (page-surface parent)

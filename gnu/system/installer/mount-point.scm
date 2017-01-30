@@ -29,11 +29,7 @@
   #:export (mount-point-refresh)
   #:export (mount-point-page-key-handler))
 
-
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
+(include "i18n.scm")
 
 (define (my-fields) `((mount-point ,(M_ "Mount Point") 40)
                       (fs-type     ,(M_ "File System Type")

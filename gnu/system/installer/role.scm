@@ -34,10 +34,7 @@
   #:export (role?)
   #:export (make-role-page))
 
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
+(include "i18n.scm")
 
 (define-record-type <role>
   (make-role description packages package-modules services service-modules)
