@@ -134,9 +134,9 @@ This version assumes some external entity puts in the carriage returns."
   (justify' (string-split text char-set:blank) 0  ""))
 
 
-(define (addstr* win str)
+(define* (addstr* win str #:key (y 0) (x 0))
   "Call the curses addstr procedure passing STR to justify to the width of WIN"
-  (addstr win (justify* str (getmaxx win))))
+  (addstr win (justify* str (getmaxx win)) #:y y #:x x))
 
 (define (open-input-pipe-with-fallback cmd)
   "Kludge for testing"
