@@ -20,6 +20,7 @@
   #:use-module (gnu system installer page)
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer utils)
+  #:use-module (guix ui)
   #:use-module (gurses form)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
@@ -59,8 +60,10 @@
     (clear text-window)
     (addstr*
      text-window
-     (gettext
-      (format #f "Enter the host name for the new system.  Only letters, digits and hyphens are allowed. The first character may not be a hyphen.  A maximum of ~a characters are allowed." max-length)))
+      (format
+       #f
+       (_ "Enter the host name for the new system.  Only letters, digits and hyphens are allowed. The first character may not be a hyphen.  A maximum of ~a characters are allowed.")
+       max-length))
     (refresh* text-window)
     (refresh* (outer (page-wwin page)))
     (refresh* (form-window form))))
