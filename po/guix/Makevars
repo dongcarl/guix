@@ -11,6 +11,7 @@ top_builddir = ../..
 XGETTEXT_OPTIONS =				\
   --from-code=UTF-8				\
   --keyword=_ --keyword=N_:1,2			\
+  --keyword=M_                                  \
   --keyword=message				\
   --keyword=description				\
   --keyword=n_
