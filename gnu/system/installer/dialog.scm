@@ -24,10 +24,7 @@
 
   #:export (make-dialog))
 
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
+(include "i18n.scm")
 
 ;; This module creates a single dialog with a simple message and an OK
 ;; button.

@@ -33,11 +33,7 @@
   #:export (wireless-connect)
   #:export (make-wireless-page))
 
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
-
+(include "i18n.scm")
 
 (define (make-wireless-page parent title interface)
   (let ((page (make-page (page-surface parent)

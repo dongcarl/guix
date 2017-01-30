@@ -28,13 +28,9 @@
   #:export (valid-hostname?)
   #:export (make-host-name-page))
 
+(include "i18n.scm")
+
 (define max-length ((const 63)))
-
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
-
 
 (define my-fields `((name   ,(M_ "Host Name") ,max-length)))
 

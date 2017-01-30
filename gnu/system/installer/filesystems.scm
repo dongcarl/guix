@@ -47,10 +47,7 @@
   #:export (make-filesystem-page))
 
 
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
+(include "i18n.scm")
 
 ;; File system spec declaration.
 (define-record-type <file-system-spec>

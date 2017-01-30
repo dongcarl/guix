@@ -32,10 +32,7 @@
    #:export (filesystems-are-current?)
    #:export (make-format-page))
 
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
+(include "i18n.scm")
 
 (define (device-fs-uuid dev)
   "Retrieve the UUID of the filesystem on DEV, where DEV is the name of the

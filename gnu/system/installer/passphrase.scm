@@ -28,12 +28,9 @@
 
   #:export (make-passphrase-page))
 
-(define max-length ((const 60)))
+(include "i18n.scm")
 
-(define-syntax M_
-  (syntax-rules ()
-    ((M_ str)
-     str)))
+(define max-length ((const 60)))
 
 (define my-fields `((passphrase   ,(M_ "Passphrase") ,max-length)))
 
