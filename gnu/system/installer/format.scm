@@ -35,17 +35,28 @@
 
 (include "i18n.scm")
 
+(define (device-attributes dev)
+  (slurp (string-append "blkid -o export " dev)
+         (lambda (x)
+           (let ((idx (string-index x #\=)))
+             (cons (string->symbol (string-fold
+                                    (lambda (c acc)
+                                      (string-append
+                                       acc
+                                       (make-string 1 (char-downcase c))))
+                                    ""
+                                    (substring x 0 idx)))
+                   (substring x (1+ idx) (string-length x)))))))
+
 (define (device-fs-uuid dev)
   "Retrieve the UUID of the filesystem on DEV, where DEV is the name of the
 device such as /dev/sda1"
-  (match (assoc-ref
-          (slurp (string-append "blkid -o export " dev)
-                 (lambda (x)
-                   (string-split x #\=))) "UUID")
-         (() #f)
-         ((? list? l)
-          (car l))
-         (_ #f)))
+  (assq-ref (device-attributes dev) 'uuid))
+
+(define (device-fs-label dev)
+  "Retrieve the LABEL of the filesystem on DEV, where DEV is the name of the
+device such as /dev/sda1"
+  (assq-ref (device-attributes dev) 'label))
 
 (define (filesystems-are-current?)
   "Returns #t iff there is at least one mount point AND all mount-points' uuids
