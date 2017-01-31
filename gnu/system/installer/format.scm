@@ -21,6 +21,7 @@
    #:use-module (gnu system installer misc)
    #:use-module (gnu system installer filesystems)
    #:use-module (gnu system installer utils)
+   #:use-module (guix ui)
    #:use-module (ice-9 rdelim)
    #:use-module (ice-9 match)
    #:use-module (gurses buttons)
@@ -186,11 +187,10 @@ match those uuids read from the respective partitions"
     (render-stexi
      text-window
      (texi-fragment->stexi
-      (gettext
        (format #f
-               "The partitions ~s will be formatted.  @strong{Any existing data on these partitions will be destroyed if you continue!!}"
+               (_ "The partitions ~s will be formatted.  @strong{Any existing data on these partitions will be destroyed if you continue!!}")
                (map (lambda (x) (car x))
-                    mount-points))))
+                    mount-points)))
      #:markup-table installer-texinfo-markup)
 
 
