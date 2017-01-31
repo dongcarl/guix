@@ -154,7 +154,7 @@
 
 	 (menu (make-menu roles
                           #:disp-proc (lambda (datum row)
-                                        (role-description datum)))))
+                                        (gettext (role-description datum))))))
 
     (addstr*   text-window  (format #f
 	      (gettext
