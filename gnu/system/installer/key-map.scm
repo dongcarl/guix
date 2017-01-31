@@ -24,23 +24,23 @@
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
 
-  #:export (make-file-browser))
+  #:export (make-key-map))
 
 (include "i18n.scm")
 
-(define* (make-file-browser parent directory)
+(define* (make-key-map parent directory)
   (let ((page (make-page (page-surface parent)
-			(gettext "File Browser")
-			file-browser-page-refresh
+			(gettext "Keyboard Mapping")
+			key-map-page-refresh
                         0
-			file-browser-page-key-handler)))
+			key-map-page-key-handler)))
     (page-set-datum! page 'directory directory)
     page))
 
 
 (define my-buttons `((cancel  ,(M_ "Canc_el") #t)))
 
-(define (file-browser-page-key-handler page ch)
+(define (key-map-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))
 	(menu (page-datum page 'menu))
 	(directory (page-datum page 'directory)))
@@ -63,7 +63,7 @@
       (let* ((i (menu-get-current-item menu))
              (new-dir (string-append directory "/" i)))
 	(if (eq? 'directory (stat:type (stat new-dir)))
-	    (let ((p (make-file-browser
+	    (let ((p (make-key-map
 		      page new-dir)))
               ;; Don't go back to the current page!
               (set! page-stack (cdr page-stack))
@@ -77,16 +77,16 @@
     #f))
 
 
-(define (file-browser-page-refresh page)
+(define (key-map-page-refresh page)
   (when (not (page-initialised? page))
-    (file-browser-page-init page)
+    (key-map-page-init page)
     (page-set-initialised! page #t))
   (touchwin (outer (page-wwin page)))
   (refresh* (outer (page-wwin page)))
   (refresh* (inner (page-wwin page)))
   (menu-refresh (page-datum page 'menu)))
 
-(define (file-browser-page-init p)
+(define (key-map-page-init p)
   (let* ((s (page-surface p))
 	 (frame (make-boxed-window  #f
 	      (- (getmaxy s) 5) (- (getmaxx s) 2)
