@@ -174,7 +174,7 @@
       (loadkeys-directory
        (let* ((keymap-directory
                (string-append (dirname loadkeys-directory) "/../share/keymaps"))
-              (p (make-file-browser
+              (p (make-key-map
                   page keymap-directory)))
          (page-enter p)))))))
 
