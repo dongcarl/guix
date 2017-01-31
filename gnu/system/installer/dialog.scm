@@ -87,10 +87,8 @@
     (let ((m (page-datum p 'message))
 	  (justify (page-datum p 'justify)))
       (if justify
-	  (addstr* text-window
-		   (if (promise? m) (force m) m))
-	  (addstr text-window
-		  (if (promise? m) (force m) m))))
+	  (addstr* text-window (gettext m))
+	  (addstr text-window (gettext m))))
 
   (push-cursor (page-cursor-visibility p))
   (page-set-wwin! p frame)
