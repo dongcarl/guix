@@ -31,6 +31,7 @@
   #:export (buttons-key-matches-symbol?)
 
   #:use-module (ncurses curses)
+  #:use-module (ice-9 match)
   #:use-module (srfi srfi-9))
 
 (define-record-type <buttons>
@@ -114,43 +115,41 @@
     (let loop ((bl (buttons-items buttons))
 	       (i 0)
 	       (alist '()))
-      (if (null? bl)
-	  (reverse alist)
-	  (let* ((but (car bl))
-		 (key (car but))
-		 (raw-label (gettext (cadr but)))
-		 (use-underscore (caddr but))
-		 ;; Convert the raw-label into a "complex rendered string" which
-		 ;; has the mnemonic character highlighted
-		 (label.mark
-		  (let mk-label ((us #f)
-				 (mark #f)
-				 (output '())
-				 (input (string->list raw-label)))
-		    (if (null? input)
-			(cons (reverse output) mark)
-			(let ((c (car input)))
-			  (mk-label (eq? c #\_)
-				    (if mark mark (if us c #f))
-				    (if (and (eq? c #\_) use-underscore)
-					output
-					(cons
-					 (if us
-                                             ;; On some terminals bold isn't visible
-                                             ;; Inverse is much clearer.
-                                             (inverse c)
-                                             (normal c))
-					 output))
-				    (cdr input))))))
-		 (label (car label.mark))
-		 (mark  (cdr label.mark))
-		 (width (+ (length label) 2))
-		 (w (derwin win 3 width 0
-			    (round (- (* (1+ i) (/ (getmaxx win) (1+ n)))
-				      (/ width 2))) #:panel #f)))
-	    (box w   0 0)
-	    (addchstr w label #:y 1 #:x 1)
-	    (loop (cdr bl) (1+ i) (acons mark (list w key) alist))))))))
+      (match bl
+             (()	  (reverse alist))
+             (((key raw-label use-underscore) . _)
+              (let* (
+                     ;; Convert the raw-label into a "complex rendered string" which
+                     ;; has the mnemonic character highlighted
+                     (label.mark
+                      (let mk-label ((us #f)
+                                     (mark #f)
+                                     (output '())
+                                     (input (string->list raw-label)))
+                        (if (null? input)
+                            (cons (reverse output) mark)
+                            (let ((c (car input)))
+                              (mk-label (eq? c #\_)
+                                        (if mark mark (if us c #f))
+                                        (if (and (eq? c #\_) use-underscore)
+                                            output
+                                            (cons
+                                             (if us
+                                                 ;; On some terminals bold isn't visible
+                                                 ;; Inverse is much clearer.
+                                                 (inverse c)
+                                                 (normal c))
+                                             output))
+                                        (cdr input))))))
+                     (label (car label.mark))
+                     (mark  (cdr label.mark))
+                     (width (+ (length label) 2))
+                     (w (derwin win 3 width 0
+                                (round (- (* (1+ i) (/ (getmaxx win) (1+ n)))
+                                          (/ width 2))) #:panel #f)))
+                (box w   0 0)
+                (addchstr w label #:y 1 #:x 1)
+                (loop (cdr bl) (1+ i) (acons mark (list w key) alist)))))))))
 
 
 
