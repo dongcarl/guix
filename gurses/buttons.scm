@@ -27,7 +27,6 @@
   #:export (buttons-selected)
   #:export (buttons-fetch-by-key)
   #:export (buttons-n-buttons)
-  #:export (buttons-get-current-selection)
   #:export (buttons-key-matches-symbol?)
 
   #:use-module (ncurses curses)
@@ -75,10 +74,10 @@
 	     (key #f))
     (if (or key (not (array-in-bounds? (buttons-array buttons) idx)))
 	key
-	(let* ((k (array-ref (buttons-array buttons) idx))
-	       (kk (list-ref k 2)))
-	  (loop (1+ idx) (if (eq? (car k) c) kk #f))))))
-
+        (loop (1+ idx)
+              (match (array-ref (buttons-array buttons) idx)
+                     ((ch win sym)
+                      (if (eq? ch c) sym #f)))))))
 
 (define (buttons-select buttons which)
   (let ((arry (buttons-array buttons))
