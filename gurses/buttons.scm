@@ -35,15 +35,16 @@
   #:use-module (srfi srfi-9))
 
 (define-record-type <buttons>
-  (make-buttons' items selected active-color)
+  (make-buttons' items bwindows selected active-color)
   buttons?
   (items         buttons-items  buttons-set-items!) ;; FIXME this need not be here
+  (bwindows      buttons-bwindows buttons-set-bwindows!)
   (selected      buttons-selected buttons-set-selected!)
   (array         buttons-array  buttons-set-array!)
   (active-color  buttons-active-color))
 
 (define (make-buttons items color)
-  (make-buttons' items  -1 color))
+  (make-buttons' items '()  -1 color))
 
 (define (buttons-n-buttons buttons)
   (array-length (buttons-array buttons)))
@@ -147,6 +148,7 @@
                      (w (derwin win 3 width 0
                                 (round (- (* (1+ i) (/ (getmaxx win) (1+ n)))
                                           (/ width 2))) #:panel #f)))
+                (buttons-set-bwindows! buttons (cons w (buttons-bwindows buttons)))
                 (box w   0 0)
                 (addchstr w label #:y 1 #:x 1)
                 (loop (cdr bl) (1+ i) (acons mark (list w key) alist)))))))))
