@@ -22,6 +22,7 @@
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer utils)
   #:use-module (guix store)
+  #:use-module (guix ui)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
   #:use-module (web uri)
@@ -90,9 +91,9 @@
                             (car %default-substitute-urls)))))
 
 	    (addstr test-window
-		    (gettext "Test successful.  Network is working."))
+		    (_ "Test successful.  Network is working."))
 	    (addstr test-window
-		    (gettext "Test failed. No servers reached.")))
+		    (_ "Test failed. No servers reached.")))
 
 	(refresh* test-window)))) #f))
 
@@ -100,7 +101,13 @@
   (when (not (page-initialised? page))
     (ping-page-init page)
     (page-set-initialised! page #t))
-  (refresh* (page-datum page 'test-window)))
+
+  (let ((text-window (page-datum page 'text-window)))
+        (addstr* text-window
+                 (_ "Choose \"Test\" to check network connectivity."))
+
+        (refresh* text-window)
+        (refresh* (page-datum page 'test-window))))
 
 (define (ping-page-init p)
   (let* ((s (page-surface p))
@@ -126,10 +133,9 @@
 	 )
 
     (box test-window 0 0)
-    (addstr* text-window
-	    (gettext "Choose \"Test\" to check network connectivity."))
     (page-set-wwin! p frame)
     (page-set-datum! p 'test-window test-window)
+    (page-set-datum! p 'text-window text-window)
     (page-set-datum! p 'navigation buttons)
     (buttons-post buttons button-window)
     (refresh* text-window)
