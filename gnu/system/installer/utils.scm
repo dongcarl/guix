@@ -21,6 +21,7 @@
 	    justify*
 	    addstr*
 	    slurp
+            key-value-slurp
 	    quit-key?
 
 	    push-cursor
@@ -161,6 +162,22 @@ This version assumes some external entity puts in the carriage returns."
     (if (zero? (status:exit-val status))
 	result
 	#f)))
+
+(define (key-value-slurp cmd)
+  "Slurp CMD, which is expected to give an output of key-value pairs -
+each pair terminated with a newline and the key/value delimited with ="
+  (slurp cmd
+         (lambda (x)
+           (let ((idx (string-index x #\=)))
+             (cons (string->symbol (string-fold
+                                    (lambda (c acc)
+                                      (string-append
+                                       acc
+                                       (make-string 1 (char-downcase c))))
+                                    ""
+                                    (substring x 0 idx)))
+                   (substring x (1+ idx) (string-length x)))))))
+
 
 (define (slurp-real port proc)
   "Execute CMD in a shell and return a list of strings from its standard output,
