@@ -100,6 +100,26 @@
   #f
   )
 
+(define (locale-description locale)
+  "Return a string describing LOCALE"
+  (define loc #f)
+  (define lc-all "LC_ALL")
+  (dynamic-wind
+      (lambda () (set! loc (getenv lc-all))
+              (setenv lc-all locale))
+      (lambda () (let ((str (assq-ref (key-value-slurp
+                            (string-append "locale -k LC_IDENTIFICATION"))
+                                      'title)))
+                   ;; String enclosing "" if they exist
+                   (if (and (eqv? (string-ref str 0) #\")
+                            (eqv? (string-ref str (1- (string-length str))) #\"))
+                       (substring str 1 (1- (string-length str)))
+                       str)))
+      (lambda ()
+        (if loc
+            (setenv lc-all loc)
+            (unsetenv lc-all)))))
+
 (define (locale-page-init p)
   (let* ((s (page-surface p))
 	 (frame (make-boxed-window  #f
@@ -124,7 +144,10 @@
 
 	 (menu (make-menu %default-locale-definitions
                           #:disp-proc (lambda (d row)
-                                        (locale-definition-name d)))))
+                                        (format #f "~60a ~10a"
+                                        (locale-description
+                                         (locale-definition-name d))
+                                         (locale-definition-name d))))))
 
     (push-cursor (page-cursor-visibility p))
     (page-set-datum! p 'text-window text-window)
