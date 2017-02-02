@@ -286,7 +286,18 @@ tail of the list."
   (catch #t
     (lambda ()
 
-      (define stdscr (initscr))		; Start curses
+      (define stdscr
+        ((lambda ()
+           ;; initscr must be called whilst the UTF-8 encoding is in the locale.
+           ;; Otherwise, on certain terminal types, bad things will happen when
+           ;; one later changes to UTF-8.
+           (define old-locale #f)
+           (dynamic-wind
+               (lambda ()
+                 (set! old-locale (setlocale LC_ALL))
+                 (setlocale LC_ALL "en_US.UTF-8"))
+               (lambda () (initscr))  ;; Initialise ncurses
+               (lambda () (setlocale LC_ALL old-locale))))))
 
       ;; We don't want any nasty kernel messages damaging our beautifully
       ;; crafted display.
