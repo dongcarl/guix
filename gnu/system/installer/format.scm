@@ -36,17 +36,7 @@
 (include "i18n.scm")
 
 (define (device-attributes dev)
-  (slurp (string-append "blkid -o export " dev)
-         (lambda (x)
-           (let ((idx (string-index x #\=)))
-             (cons (string->symbol (string-fold
-                                    (lambda (c acc)
-                                      (string-append
-                                       acc
-                                       (make-string 1 (char-downcase c))))
-                                    ""
-                                    (substring x 0 idx)))
-                   (substring x (1+ idx) (string-length x)))))))
+  (key-value-slurp (string-append "blkid -o export " dev)))
 
 (define (device-fs-uuid dev)
   "Retrieve the UUID of the filesystem on DEV, where DEV is the name of the
