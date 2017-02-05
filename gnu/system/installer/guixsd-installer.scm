@@ -44,7 +44,7 @@
 
 	     (ice-9 format)
              (ice-9 match)
-	     (ice-9 pretty-print)
+             (ice-9 i18n)
              (srfi srfi-1)
 	     (srfi srfi-9))
 
@@ -287,17 +287,13 @@ tail of the list."
     (lambda ()
 
       (define stdscr
-        ((lambda ()
-           ;; initscr must be called whilst the UTF-8 encoding is in the locale.
-           ;; Otherwise, on certain terminal types, bad things will happen when
-           ;; one later changes to UTF-8.
-           (define old-locale #f)
-           (dynamic-wind
-               (lambda ()
-                 (set! old-locale (setlocale LC_ALL))
-                 (setlocale LC_ALL "en_US.UTF-8"))
-               (lambda () (initscr))  ;; Initialise ncurses
-               (lambda () (setlocale LC_ALL old-locale))))))
+        ;; initscr must be called whilst the UTF-8 encoding is in the locale.
+        ;; Otherwise, on certain terminal types, bad things will happen when
+        ;; one later changes to UTF-8.
+        (let ((enc (locale-encoding)))
+          (when (not (equal? enc "UTF-8"))
+                (setlocale LC_ALL "en_US.utf8"))
+          (initscr)))
 
       ;; We don't want any nasty kernel messages damaging our beautifully
       ;; crafted display.
@@ -317,7 +313,6 @@ tail of the list."
       (let ((page (make-page
                    stdscr (gettext "GuixSD Installer")
                    main-page-refresh 0 main-page-key-handler)))
-
         (page-enter page)
         (let loop ((ch (getch stdscr)))
           (let ((current-page (car page-stack)))
