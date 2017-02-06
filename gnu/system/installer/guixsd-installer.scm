@@ -36,6 +36,7 @@
              (gnu system installer install)
              (gnu system installer format)
 	     (gnu system installer page)
+             (gnu system installer users)
              (gnu system installer ping)
 	     (gnu system installer dialog)
 
@@ -64,6 +65,7 @@
 (define network-menu-title      (M_ "Set up the network"))
 (define timezone-menu-title     (M_ "Set the time zone"))
 (define hostname-menu-title     (M_ "Set the host name"))
+(define users-menu-title        (M_ "Add users"))
 (define installation-menu-title (M_ "Install the system"))
 (define role-menu-title         (M_ "Select a role for the system"))
 (define generate-menu-title     (M_ "Generate the configuration"))
@@ -123,6 +125,14 @@
                               (make-host-name-page
                                page
                                hostname-menu-title))))
+
+    (users . ,(make-task users-menu-title
+                            '()
+                            (lambda () #t)
+                            (lambda (page)
+                              (make-users-page
+                               page
+                               users-menu-title))))
 
     (role . ,(make-task role-menu-title
                             '()
