@@ -33,7 +33,7 @@
 	    make-boxed-window
             inner
             outer
-	
+
 	    open-input-pipe-with-fallback
 
 	    find-mount-device
@@ -120,7 +120,7 @@ This version assumes some external entity puts in the carriage returns."
 
 				((> (- width o) len)
 				 (string-append " " word))
-				
+
 				(else
 				 (string-append (make-string (- width o) #\space) word)))))
 

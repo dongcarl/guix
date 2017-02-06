@@ -31,11 +31,11 @@
 	    partition-name
 
 	    partition-volume-pairs
-	
+
 	    number->size
 
 	    find-partition
-	
+
             volumes)
 
   #:use-module (ice-9 rdelim)
