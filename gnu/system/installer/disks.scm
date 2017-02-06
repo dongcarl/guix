@@ -125,7 +125,7 @@
 			      4
 			      (getmaxx (inner frame))
 			      0 0 #:panel #f))
-			
+
 	 (menu-window (derwin (inner frame)
 		       (- (getmaxy (inner frame)) 3 (getmaxy text-window))
 		        (getmaxx (inner frame))

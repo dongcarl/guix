@@ -123,17 +123,17 @@
 	      (- (getmaxy s) 4) (- (getmaxx s) 2)
 	      2 1
 	      #:title (page-title p)))
-	
+
 	 (text-window (derwin (inner pr) 5 (getmaxx (inner pr))
 			      0 0 #:panel #f))
-	
+
 	 (bwin (derwin (inner pr)
 		       3 (getmaxx (inner pr))
 		       (- (getmaxy (inner pr)) 3) 0
 		       #:panel #f))
-	
+
 	 (nav (make-buttons my-buttons 1))
-	
+
 	 (fw (derwin (inner pr)
 		     2
 		     (getmaxx (inner pr))

@@ -107,7 +107,7 @@
 			      (- (getmaxy (inner frame)) 3 (getmaxy text-window))
 			      (getmaxx (inner frame))
 			      (getmaxy text-window) 0 #:panel #f))
-	
+
 	 (menu (make-menu
 		(let ((dir (page-datum p 'directory)))
 		      (slurp (string-append "ls -1 "
@@ -128,5 +128,5 @@
     (refresh* text-window)
     (refresh* button-window)))
 
-			
+
 

@@ -114,7 +114,7 @@
 			      (- (getmaxy (inner frame)) 3 (getmaxy text-window))
 			      (getmaxx (inner frame))
 			      (getmaxy text-window) 0 #:panel #f))
-	
+
 	 (menu (make-menu
 		(let nn ((ds (opendir (page-datum p 'directory)))
 			 (ll '()))
