@@ -26,6 +26,7 @@
   #:use-module (gnu system installer partition-reader)
   #:use-module (gnu system installer filesystems)
   #:use-module (gnu system installer disks)
+  #:use-module (gnu system shadow)
   #:use-module (ice-9 format)
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 match)
@@ -190,7 +191,17 @@
                          (let ((fss (cdr x)))
                            (eq? 'swap (file-system-spec-type fss))))
                        mount-points)))
-        (users (cons* %base-user-accounts))
+        (users (cons*
+                ,@(map (lambda (account)
+                        (list 'user-account
+                              (list 'name (user-account-name account))
+                              (list 'group (user-account-group account))
+                              (list 'supplementary-groups
+                                    `(quote ,(user-account-supplementary-groups account)))
+                              (list 'comment (user-account-comment account))
+                              (list 'home (user-account-home-directory account))))
+                      users)
+                %base-user-accounts))
         (packages (cons*
                    ,@(if system-role
                          (role-packages system-role)

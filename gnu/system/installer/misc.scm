@@ -18,6 +18,7 @@
 
 (define-module (gnu system installer misc)
   #:use-module (ncurses curses)
+  #:use-module (gnu system shadow)
 
   #:export (livery-title)
   #:export (strong-colour)
@@ -26,6 +27,7 @@
   #:export (config-file)
   #:export (key-map)
   #:export (system-role)
+  #:export (users)
   #:export (installer-texinfo-markup)
   #:export (mount-points))
 
@@ -71,3 +73,21 @@
     (sansserif    . ,normal)
     (slanted      . ,normal)
     (t            . ,normal)))
+
+
+(define users
+  (list
+   (user-account
+    (name "fred")
+    (supplementary-groups '("video" "audio" "desktop"))
+    (group "users")
+    (comment "Fred Bloggs")
+    (home-directory "/home/empty")
+    )
+
+   (user-account
+    (name "john")
+    (group "users")
+    (comment "John Darrington")
+    (home-directory "/home/john")
+    )))

@@ -476,6 +476,7 @@ GNU_SYSTEM_MODULES =				\
   %D%/system/installer/ping.scm                 \
   %D%/system/installer/key-map.scm              \
   %D%/system/installer/role.scm                 \
+  %D%/system/installer/users.scm                \
   %D%/system/installer/utils.scm                \
   %D%/system/installer/page.scm                 \
   %D%/system/installer/passphrase.scm           \
