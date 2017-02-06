@@ -311,7 +311,9 @@ label eq? to N"
       (if (array-in-bounds? fields pos)
 	  (let ((f (array-ref fields pos)))
             (draw-field-space win f pos xpos)
-	    (loop fields (1+ pos)))))))
+	    (loop fields (1+ pos))))))
+
+    (form-update-cursor form))
 
 (define (get-current-field form)
   (array-ref (form-items form) (form-current-item form)))
