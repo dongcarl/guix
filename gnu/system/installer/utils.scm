@@ -28,7 +28,6 @@
 	    pop-cursor
 
 	    make-window-port
-	    new-nav-form
 	    standard-menu-keystrokes
 
 	    make-boxed-window
@@ -232,26 +231,6 @@ which will process each string before returning it."
 	 ))
 
     (refresh* win)))
-
-
-
-(define (new-nav-form button-fields)
-  (new-form (let usr ((ef button-fields)
-		      (xpos 0)
-		      (acc '()))
-	      (if (null? ef)
-		  (reverse acc)
-		  (let* ((ff (cdr (car ef)))
-			 (label (car ff))
-			 (nf (new-field 1 (string-length label) 1 xpos 0 0)))
-		    (list-set! ff 1 nf)
-		    (set-field-buffer! nf 0 label)
-		    (field-opts-off! nf O_EDIT)
-		    (usr (cdr ef)
-			 (+ xpos (string-length label) 1)
-			 (cons nf acc)))))))
-
-
 
 
 
