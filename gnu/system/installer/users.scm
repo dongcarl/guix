@@ -20,6 +20,7 @@
   #:use-module (gnu system installer page)
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer utils)
+  #:use-module (gnu system installer user-edit)
   #:use-module (gnu system shadow)
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
@@ -42,9 +43,9 @@
 	     users-page-key-handler))
 
 
-(define my-buttons `((delete ,(M_ "_Delete") #t)
-                     (add ,(M_ "_Add") #t)
-                     (cancel ,(M_ "Canc_el") #t)))
+(define my-buttons `((add ,(M_ "_Add") #t)
+                     (delete ,(M_ "_Delete") #t)
+                     (continue ,(M_ "_Continue") #t)))
 
 (define (users-page-key-handler page ch)
   (let ((menu (page-datum page 'menu))
@@ -76,11 +77,14 @@
       (buttons-unselect-all nav)
       (menu-set-active! menu #t))
 
-
      ((select-key? ch)
-      (page-leave))
+      (let* ((account  (menu-get-current-item menu))
+	     (next  (make-user-edit-page page  "Edit User")))
 
-     ((buttons-key-matches-symbol? nav ch 'cancel)
+	(page-set-datum! next 'account account)
+        (page-enter next)))
+
+     ((buttons-key-matches-symbol? nav ch 'continue)
       (page-leave))
 
      ((buttons-key-matches-symbol? nav ch 'delete)
