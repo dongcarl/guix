@@ -64,7 +64,9 @@
 
 (define (menu-get-current-item menu)
   (let ((idx (menu-current-item menu)))
-    (list-ref (menu-items menu) idx)))
+    (if (>= idx (length (menu-items menu)))
+        #f
+        (list-ref (menu-items menu) idx))))
 
 (define (menu-scroll-down menu step)
   (let ((limit (- (length (menu-items menu))
