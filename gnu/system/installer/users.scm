@@ -78,10 +78,13 @@
       (menu-set-active! menu #t))
 
      ((select-key? ch)
-      (let* ((account  (menu-get-current-item menu))
-	     (next  (make-user-edit-page page  "Edit User")))
+      (let* ((account  (menu-get-current-item menu)))
+             (if account
+                 (page-enter  (make-user-edit-page page  "Edit User" account)))))
 
-	(page-set-datum! next 'account account)
+     ((buttons-key-matches-symbol? nav ch 'add)
+      (let* (
+	     (next  (make-user-edit-page page  "Add New User" #f)))
         (page-enter next)))
 
      ((buttons-key-matches-symbol? nav ch 'continue)

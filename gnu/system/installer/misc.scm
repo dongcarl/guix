@@ -75,19 +75,4 @@
     (t            . ,normal)))
 
 
-(define users
-  (list
-   (user-account
-    (name "fred")
-    (supplementary-groups '("video" "audio" "desktop"))
-    (group "users")
-    (comment "Fred Bloggs")
-    (home-directory "/home/empty")
-    )
-
-   (user-account
-    (name "john")
-    (group "users")
-    (comment "John Darrington")
-    (home-directory "/home/john")
-    )))
+(define users '())

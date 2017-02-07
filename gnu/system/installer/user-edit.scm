@@ -35,13 +35,14 @@
                       (name        ,(M_ "User Name") 40)
                       (home        ,(M_ "Home Directory") 16)))
 
-(define (make-user-edit-page parent title)
+(define (make-user-edit-page parent title account)
   (let ((page (make-page (page-surface parent)
                        title
                        user-edit-refresh
                        1
                        user-edit-page-key-handler)))
 
+    (page-set-datum! page 'account account)
     (page-set-datum! page 'parent parent)
     page))
 
@@ -132,18 +133,19 @@
 
     (page-set-datum! p 'navigation nav)
 
-    (addstr*
-     text-window
-     (format #f
-             (gettext
-              "The user is currently with properties as follows.  You may change any of the details here as required.")))
-
-    (form-post form fw)
-
     (let ((acc (page-datum p 'account)))
-      (form-set-value! form 'name (user-account-name acc))
-      (form-set-value! form 'comment (user-account-comment acc))
-      (form-set-value! form 'home (user-account-home-directory acc)))
+      (addstr*
+       text-window
+       (if acc
+       (format #f (M_ "This user account currently has the following details.  You may change any details here as required."))
+       (format #f (M_ "Enter the details of the new user below."))))
+
+      (form-post form fw)
+
+      (when acc
+            (form-set-value! form 'name (user-account-name acc))
+            (form-set-value! form 'comment (user-account-comment acc))
+            (form-set-value! form 'home (user-account-home-directory acc))))
 
     (push-cursor (page-cursor-visibility p))
     (buttons-post nav bwin)
