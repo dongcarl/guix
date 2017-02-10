@@ -199,7 +199,7 @@
                               (list 'supplementary-groups
                                     `(quote ,(user-account-supplementary-groups account)))
                               (list 'comment (user-account-comment account))
-                              (list 'home (user-account-home-directory account))))
+                              (list 'home-directory (user-account-home-directory account))))
                       users)
                 %base-user-accounts))
         (packages (cons*
