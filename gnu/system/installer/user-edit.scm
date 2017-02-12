@@ -67,7 +67,7 @@
             (cons
              (user-account
               (name    (form-get-value form 'name))
-              (supplementary-groups '("video" "audio" "desktop"))
+              (supplementary-groups '("video" "audio" "floppy" "dialout"))
               (group   "users")
               (comment (form-get-value form 'comment))
               (home-directory (form-get-value form 'home)))
