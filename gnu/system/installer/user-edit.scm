@@ -129,8 +129,29 @@
 		     (getmaxx (inner pr))
 		     (getmaxy text-window) 0 #:panel #f))
 
-	 (form (make-form (my-fields))))
-
+	 (form (make-form (my-fields)
+                          (lambda (frm)
+                            ;; Infer the most likely desired values of the
+                            ;; name and home fields from the other field values
+                            (let* ((f (get-current-field frm))
+                                   (fv (form-get-value frm (field-symbol f)))
+                                   (brk (string-index fv #\space))
+                                   (first
+                                    (and brk
+                                         (string-map char-downcase
+                                                     (string-take fv brk)))))
+                              (cond ((eq? (field-symbol f) 'comment)
+                                     (when first
+                                           (form-set-value! frm 'name first)
+                                           (form-set-value! frm 'home
+                                                            (string-append "/home/"
+                                                                           first))))
+                                    ((eq? (field-symbol f) 'name)
+                                     (form-set-value! frm 'home
+                                                      (string-append
+                                                       "/home/"
+                                                       (form-get-value
+                                                        frm 'name))))))))))
     (page-set-datum! p 'navigation nav)
 
     (let ((acc (page-datum p 'account)))
