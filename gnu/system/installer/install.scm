@@ -24,6 +24,7 @@
   #:use-module (gnu system installer filesystems)
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
+  #:use-module (srfi srfi-1)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
   #:use-module (guix store)
@@ -102,47 +103,58 @@
 
      ((buttons-key-matches-symbol? nav ch 'continue)
       (let ((target "/target")
-            (window-port (make-window-port config-window))
-            (root-device (find-mount-device "/" mount-points)))
-
+            (window-port (make-window-port config-window)))
         (catch #t
-          (lambda ()
-            (and
-             (mkdir-p target)
+               (lambda ()
+                 (and
 
-             (mount root-device target
-                    (symbol->string
-                     (file-system-spec-type (assoc-ref mount-points root-device)))
-                    #:update-mtab? #f)
+                  (fold
+                   (lambda (x prev)
+                     (and prev
+                          (let* ((device (car x))
+                                 (fss (cdr x))
+                                 (mp (file-system-spec-mount-point fss))
+                                 (mpt (string-append target mp)))
+                            (mkdir-p mpt)
+                            (mount device mpt
+                                   (symbol->string
+                                    (file-system-spec-type fss))
+                                   #:update-mtab? #f))))
+                   #t
+                   (sort
+                    mount-points
+                    (lambda (x y)
+                      (< (string-length (file-system-spec-mount-point (cdr x)))
+                         (string-length (file-system-spec-mount-point (cdr y)))))))
 
-             (zero? (pipe-cmd window-port  "herd"
-                              "herd" "start" "cow-store" target))
+                 (zero? (pipe-cmd window-port  "herd"
+                                  "herd" "start" "cow-store" target))
 
-             (mkdir-p (string-append target "/etc"))
-             (or (copy-file config-file
-                            (string-append target "/etc/config.scm"))
-                 #t)
+                 (mkdir-p (string-append target "/etc"))
+                 (or (copy-file config-file
+                                (string-append target "/etc/config.scm"))
+                     #t)
 
-             (file-exists? (string-append target "/etc/config.scm"))
+                 (file-exists? (string-append target "/etc/config.scm"))
 
-             (display (gettext "Installing the system ...") window-port)
-             (force-output window-port)
+                 (display (gettext "Installing the system ...") window-port)
+                 (force-output window-port)
 
-             (zero? (pipe-cmd window-port "guix" "guix" "system" "init" "--fallback"
-                                 (string-append target "/etc/config.scm")
-                                 target))
+                 (zero? (pipe-cmd window-port "guix" "guix" "system" "init" "--fallback"
+                                  (string-append target "/etc/config.scm")
+                                  target))
 
-             (display (gettext
-                       "Installation is complete.  You should remove the device containing the installer image and reboot now.")
-                      window-port)))
-          (lambda (key . args)
-            #f)
-          (lambda (key subr message args . rest)
-            (display-error (stack-ref (make-stack #t) 3)
-                           window-port subr message args rest)))
+                 (display (gettext
+                           "Installation is complete.  You should remove the device containing the installer image and reboot now.")
+                          window-port)))
+        (lambda (key . args)
+          #f)
+        (lambda (key subr message args . rest)
+          (display-error (stack-ref (make-stack #t) 3)
+                         window-port subr message args rest)))
 
-        (close-port window-port))))
-    #f))
+      (close-port window-port))))
+  #f))
 
 (define (install-page-refresh page)
   (when (not (page-initialised? page))
