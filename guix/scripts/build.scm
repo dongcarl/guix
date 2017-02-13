@@ -24,7 +24,6 @@
   #:use-module (guix derivations)
   #:use-module (guix packages)
   #:use-module (guix grafts)
-  #:use-module (guix combinators)
 
   ;; Use the procedure that destructures "NAME-VERSION" forms.
   #:use-module ((guix utils) #:hide (package-name->name+version))
@@ -99,8 +98,10 @@ found.  Return #f if no build log was found."
 
 (define (register-root store paths root)
   "Register ROOT as an indirect GC root for all of PATHS."
-  (let* ((root (string-append (canonicalize-path (dirname root))
-                              "/" root)))
+  (let* ((root (if (string-prefix? "/" root)
+                   root
+                   (string-append (canonicalize-path (dirname root))
+                                  "/" root))))
     (catch 'system-error
       (lambda ()
         (match paths
@@ -486,6 +487,8 @@ Build the given PACKAGE-OR-DERIVATION and return their output paths.\n"))
   (display (_ "
       --check            rebuild items to check for non-determinism issues"))
   (display (_ "
+      --repair           repair the specified items"))
+  (display (_ "
   -r, --root=FILE        make FILE a symlink to the result, and register it
                          as a garbage collector root"))
   (display (_ "
@@ -533,6 +536,12 @@ must be one of 'package', 'all', or 'transitive'~%")
                  (lambda (opt name arg result . rest)
                    (apply values
                           (alist-cons 'build-mode (build-mode check)
+                                      result)
+                          rest)))
+         (option '("repair") #f #f
+                 (lambda (opt name arg result . rest)
+                   (apply values
+                          (alist-cons 'build-mode (build-mode repair)
                                       result)
                           rest)))
          (option '(#\s "system") #t #f

@@ -1930,7 +1930,7 @@ server.")
 (define-public xauth
   (package
     (name "xauth")
-    (version "1.0.9")
+    (version "1.0.10")
     (source
       (origin
         (method url-fetch)
@@ -1940,7 +1940,7 @@ server.")
                ".tar.bz2"))
         (sha256
           (base32
-            "13y2invb0894b1in03jbglximbz6v31y2kr4yjjgica8xciibkjn"))))
+            "0kgwz9rmxjfdvi2syf8g0ms5rr5cgyqx4n0n1m960kyz7k745zjs"))))
     (build-system gnu-build-system)
     (inputs
       `(("libxmu" ,libxmu)
@@ -2012,6 +2012,41 @@ the same way.")
     (description
      "xbitmaps provides basic bitmaps (little pictures) used by some
 legacy X clients.")
+    (license license:x11)))
+
+(define-public xcalc
+  (package
+    (name "xcalc")
+    (version "1.0.6")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://xorg/individual/app/" name "-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "1lg8xwj0nr8anbd77n3cs87s57sr4gmb3pxs3k22a28n6ndcvmbz"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:phases (modify-phases %standard-phases
+                  (add-after
+                   'configure 'mutate-makefile
+                   (lambda _
+                     (substitute* "Makefile"
+                       (("^appdefaultdir = .*$")
+                        (string-append "appdefaultdir = " %output
+                                       ,%app-defaults-dir "\n")))
+                     #t)))))
+    (inputs
+     `(("libxaw" ,libxaw)))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (home-page "https://www.x.org/wiki/")
+    (synopsis "Hand calculator for the X Window system")
+    (description "Xcalc is a scientific calculator desktop accessory that can
+emulate a TI-30 or an HP-10C.")
     (license license:x11)))
 
 
@@ -2317,7 +2352,7 @@ devices, thus making direct access unnecessary.")
 (define-public xf86-input-evdev
   (package
     (name "xf86-input-evdev")
-    (version "2.10.4")
+    (version "2.10.5")
     (source
       (origin
         (method url-fetch)
@@ -2327,7 +2362,7 @@ devices, thus making direct access unnecessary.")
                ".tar.bz2"))
         (sha256
           (base32
-            "1hhc97k1qmgs85fp8p2i3gq4p18azlczbvklv33w19p1phzs1xmv"))))
+           "03dphgwjaxxyys8axc1kyysp6xvy9bjxicsdrhi2jvdgbchadnly"))))
     (build-system gnu-build-system)
     (inputs
       `(("udev" ,eudev)
@@ -2351,7 +2386,7 @@ including most mice, keyboards, tablets and touchscreens.")
 (define-public xf86-input-libinput
   (package
     (name "xf86-input-libinput")
-    (version "0.23.0")
+    (version "0.24.0")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -2359,7 +2394,7 @@ including most mice, keyboards, tablets and touchscreens.")
                     name "-" version ".tar.bz2"))
               (sha256
                (base32
-                "1p596v3kbmjpdz3kz8z19bnd79l860f1pbwjvma7bz7qx3gynlqb"))))
+                "0a1nn65qq71bbfhxq39zdb4b1h6ickzv98cjdacv4ngd18shgjyx"))))
     (build-system gnu-build-system)
     (arguments
      '(#:configure-flags
@@ -2720,7 +2755,7 @@ compositing.  Both support Xv overlay and dynamic rotation with XRandR.")
 (define-public xf86-video-glint
   (package
     (name "xf86-video-glint")
-    (version "1.2.8")
+    (version "1.2.9")
     (source
       (origin
         (method url-fetch)
@@ -2730,8 +2765,7 @@ compositing.  Both support Xv overlay and dynamic rotation with XRandR.")
                ".tar.bz2"))
         (sha256
           (base32
-           "08a2aark2yn9irws9c78d9q44dichr03i9zbk61jgr54ncxqhzv5"))
-        (patches (search-patches "xf86-video-glint-remove-mibstore.patch"))))
+           "1lkpspvrvrp9s539bhfdjfh4andaqyk63l6zjn8m3km95smk6a45"))))
     (build-system gnu-build-system)
     (inputs `(("xf86dgaproto" ,xf86dgaproto)
               ("xorg-server" ,xorg-server)))
@@ -2771,10 +2805,10 @@ X server.")
 
 
 (define-public xf86-video-intel
-  (let ((commit "d1672806a5222f00dcc2eb24ccddd03f727f71bc"))
+  (let ((commit "e4fe79cf0d9a05ee3f3a027148ef0aeb2b1b34e1"))
     (package
       (name "xf86-video-intel")
-      (version (string-append "2.99.917-1-" (string-take commit 7)))
+      (version (string-append "2.99.917-3-" (string-take commit 7)))
       (source
        (origin
          ;; there's no current tarball
@@ -2784,7 +2818,7 @@ X server.")
                (commit commit)))
          (sha256
           (base32
-           "16hfcj11lbn6lp0hgrixidbfb7mghm1yn4lynmymm985w1gg0n72"))
+           "0hf3fxv5jchyh820h449c1ld9x19gc8081w1yk98mab6zr89zswp"))
          (file-name (string-append name "-" version))))
       (build-system gnu-build-system)
       (inputs `(("mesa" ,mesa)
@@ -2850,7 +2884,7 @@ the same level of support for generic VGA or 8514/A adapters.")
 (define-public xf86-video-mga
   (package
     (name "xf86-video-mga")
-    (version "1.6.4")
+    (version "1.6.5")
     (source
       (origin
         (method url-fetch)
@@ -2860,7 +2894,7 @@ the same level of support for generic VGA or 8514/A adapters.")
                ".tar.bz2"))
         (sha256
           (base32
-           "0kyl8w99arviv27pc349zsy2vinnm7mdpy34vr9nzisicw5nkij8"))))
+           "08ll52hlar9z446v0wwca5qkj3hxhswwm7vvcgic9xv4cf7csqxn"))))
     (build-system gnu-build-system)
     (inputs `(("mesa" ,mesa)
               ("xf86driproto" ,xf86driproto)
@@ -2953,7 +2987,7 @@ kernel mode setting (KMS).")
 (define-public xf86-video-nv
   (package
     (name "xf86-video-nv")
-    (version "2.1.20")
+    (version "2.1.21")
     (source
       (origin
         (method url-fetch)
@@ -2963,8 +2997,7 @@ kernel mode setting (KMS).")
                ".tar.bz2"))
         (sha256
           (base32
-           "1gqh1khc4zalip5hh2nksgs7i3piqq18nncgmsx9qvzi05azd5c3"))
-        (patches (search-patches "xf86-video-nv-remove-mibstore.patch"))))
+           "0bdk3pc5y0n7p53q4gc2ff7bw16hy5hwdjjxkm5j3s7hdyg6960z"))))
     (build-system gnu-build-system)
     (inputs `(("xorg-server" ,xorg-server)))
     (native-inputs `(("pkg-config" ,pkg-config)))
@@ -3066,7 +3099,7 @@ This driver is intended for the spice qxl virtio device.")
 (define-public xf86-video-r128
   (package
     (name "xf86-video-r128")
-    (version "6.10.1")
+    (version "6.10.2")
     (source
       (origin
         (method url-fetch)
@@ -3076,7 +3109,7 @@ This driver is intended for the spice qxl virtio device.")
                ".tar.bz2"))
         (sha256
           (base32
-           "1sp4glyyj23rs77vgffmn0mar5h504a86701nzvi56qwhd4yzgsy"))))
+           "1pkpka5m4cd6iy0f8iqnmg6xci14nb6887ilvxzn3xrsgx8j3nl4"))))
     (build-system gnu-build-system)
     (inputs `(("mesa" ,mesa)
               ("xf86driproto" ,xf86driproto)
@@ -3093,7 +3126,7 @@ This driver is intended for ATI Rage 128 based cards.")
 (define-public xf86-video-savage
   (package
     (name "xf86-video-savage")
-    (version "2.3.8")
+    (version "2.3.9")
     (source
       (origin
         (method url-fetch)
@@ -3103,7 +3136,7 @@ This driver is intended for ATI Rage 128 based cards.")
                ".tar.bz2"))
         (sha256
           (base32
-            "0qzshncynjdmyhavhqw4x5ha3gwbygi0zbsy158fpg1jcnla9kpx"))))
+           "11pcrsdpdrwk0mrgv83s5nsx8a9i4lhmivnal3fjbrvi3zdw94rc"))))
     (build-system gnu-build-system)
     (inputs `(("mesa" ,mesa)
               ("xf86driproto" ,xf86driproto)
@@ -3119,7 +3152,7 @@ This driver is intended for ATI Rage 128 based cards.")
 (define-public xf86-video-siliconmotion
   (package
     (name "xf86-video-siliconmotion")
-    (version "1.7.8")
+    (version "1.7.9")
     (source
       (origin
         (method url-fetch)
@@ -3129,7 +3162,7 @@ This driver is intended for ATI Rage 128 based cards.")
                ".tar.bz2"))
         (sha256
           (base32
-           "1sqv0y31mi4zmh9yaxqpzg7p8y2z01j6qys433hb8n4yznllkm79"))))
+           "1g2r6gxqrmjdff95d42msxdw6vmkg2zn5sqv0rxd420iwy8wdwyh"))))
     (build-system gnu-build-system)
     (inputs `(("xorg-server" ,xorg-server)))
     (native-inputs `(("pkg-config" ,pkg-config)))
@@ -3144,7 +3177,7 @@ Xorg X server.")
 (define-public xf86-video-sis
   (package
     (name "xf86-video-sis")
-    (version "0.10.8")
+    (version "0.10.9")
     (source
       (origin
         (method url-fetch)
@@ -3154,7 +3187,7 @@ Xorg X server.")
                ".tar.bz2"))
         (sha256
           (base32
-           "1znkqwdyd6am23xbsfjzamq125j5rrylg5mzqky4scv9gxbz5wy8"))))
+           "03f1abjjf68y8y1iz768rn95va9d33wmbwfbsqrgl6k0gi0bf9jj"))))
     (build-system gnu-build-system)
     (inputs `(("mesa" ,mesa)
               ("xf86dgaproto" ,xf86dgaproto)
@@ -3221,7 +3254,7 @@ This driver supports SiS chipsets of 300/315/330/340 series.")
 (define-public xf86-video-tdfx
   (package
     (name "xf86-video-tdfx")
-    (version "1.4.6")
+    (version "1.4.7")
     (source
       (origin
         (method url-fetch)
@@ -3231,7 +3264,7 @@ This driver supports SiS chipsets of 300/315/330/340 series.")
                ".tar.bz2"))
         (sha256
           (base32
-           "0dvdrhyn1iv6rr85v1c52s1gl0j1qrxgv7x0r7qn3ba0gj38i2is"))))
+           "0hia45z4jc472fxp00803nznizcn4h1ybp63jcsb4lmd9vhqxx2c"))))
     (build-system gnu-build-system)
     (inputs `(("mesa" ,mesa)
               ("xf86driproto" ,xf86driproto)
@@ -3274,7 +3307,7 @@ X server.")
 (define-public xf86-video-trident
   (package
     (name "xf86-video-trident")
-    (version "1.3.7")
+    (version "1.3.8")
     (source
       (origin
         (method url-fetch)
@@ -3284,7 +3317,7 @@ X server.")
                ".tar.bz2"))
         (sha256
           (base32
-           "1bhkwic2acq9za4yz4bwj338cwv5mdrgr2qmgkhlj3bscbg1imgc"))))
+           "0gxcar434kx813fxdpb93126lhmkl3ikabaljhcj5qn3fkcijlcy"))))
     (build-system gnu-build-system)
     (inputs `(("xf86dgaproto" ,xf86dgaproto)
               ("xorg-server" ,xorg-server)))
