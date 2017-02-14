@@ -31,9 +31,16 @@
   #:use-module (ncurses curses)
   #:use-module (guix store)
 
+  #:export (dhclient)
   #:export (make-network-page))
 
 (include "i18n.scm")
+
+
+(define (dhclient interface)
+  (system* "dhclient" "-r" interface)
+  (zero? (system* "dhclient" interface)))
+
 
 (define (make-network-page parent  title)
   (make-page (page-surface parent)
@@ -125,7 +132,7 @@
       (let ((item (menu-get-current-item menu)))
         (when (eq? (assq-ref item 'class) 'ethernet)
           (and (zero? (system* "ip" "link" "set" (assq-ref item 'name) "up"))
-               (zero? (system* "dhclient" (assq-ref item 'name)))))))
+               (dhclient (assq-ref item 'name))))))
 
      ((buttons-key-matches-symbol? nav ch 'test)
       (let ((next  (make-page (page-surface page)
