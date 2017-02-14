@@ -20,6 +20,7 @@
   #:use-module (gnu system installer page)
   #:use-module (gnu system installer ping)
   #:use-module (gnu system installer passphrase)
+  #:use-module (gnu system installer network)
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer utils)
   #:use-module (ice-9 format)
@@ -47,6 +48,7 @@
 
 
 (define my-buttons `((cancel ,(M_ "Canc_el") #t)))
+
 
 (define (wireless-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))
@@ -87,7 +89,7 @@
             (begin
               (and (zero? (system* "ip" "link" "set" ifce "up"))
                    (zero? (system* "iw" "dev" ifce "connect" (assq-ref ap 'essid)))
-                   (zero? (system* "dhclient" ifce)))
+                   (dhclient ifce))
               (page-leave))))))
 
     (std-menu-key-handler menu ch)
@@ -273,4 +275,4 @@ network={
        (with-output-to-file "/dev/null"
          (lambda ()
            (and (zero? (system* "wpa_supplicant" "-c" filename "-i" ifce "-B"))
-                (zero? (system* "dhclient" ifce)))))))))
+                (dhclient ifce))))))))
