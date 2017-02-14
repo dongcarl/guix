@@ -102,12 +102,11 @@
       (force-reboot))
 
      ((buttons-key-matches-symbol? nav ch 'continue)
-      (let* ((attempt (page-datum page 'attempt))
-             (target (format #f "/target-~a" attempt))
-             (window-port (make-window-port config-window)))
+      (let ((target (format #f "/target-~a" install-attempts))
+            (window-port (make-window-port config-window)))
         (catch #t
                (lambda ()
-                 (page-set-datum! page 'attempt (1+ attempt))
+                 (set! install-attempts (1+ install-attempts))
                  (and
                   (fold
                    (lambda (x prev)
@@ -202,7 +201,6 @@
     (page-set-wwin! p pr)
     (page-set-datum! p 'navigation buttons)
     (page-set-datum! p 'config-window (inner config-window))
-    (page-set-datum! p 'attempt 0)
     (buttons-post buttons bwin)
     (refresh* (outer pr))
     (refresh* text-window)

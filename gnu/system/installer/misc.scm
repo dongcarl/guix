@@ -29,6 +29,7 @@
   #:export (system-role)
   #:export (users)
   #:export (installer-texinfo-markup)
+  #:export (install-attempts)
   #:export (mount-points))
 
 (define livery-title 1)
@@ -76,3 +77,5 @@
 
 
 (define users '())
+
+(define install-attempts 0)
