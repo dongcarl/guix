@@ -274,5 +274,9 @@ network={
 
        (with-output-to-file "/dev/null"
          (lambda ()
-           (and (zero? (system* "wpa_supplicant" "-c" filename "-i" ifce "-B"))
+           (and (zero? (system* "wpa_supplicant"
+                                "-c" filename
+                                "-P" (format #f "/wpspid-~a" ifce)
+                                "-i" ifce
+                                "-B"))
                 (dhclient ifce))))))))
