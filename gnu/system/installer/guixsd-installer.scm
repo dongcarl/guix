@@ -29,6 +29,7 @@
              (gnu system installer filesystems)
 	     (gnu system installer hostname)
              (gnu system installer locale)
+             (gnu system installer levelled-stack)
 	     (gnu system installer key-map)
 	     (gnu system installer time-zone)
              (gnu system installer role)
@@ -44,6 +45,7 @@
              (guix utils)
 
 	     (ice-9 format)
+             (ice-9 pretty-print)
              (ice-9 match)
              (ice-9 i18n)
              (srfi srfi-1)
@@ -191,7 +193,7 @@
 (define (do-task task-name page)
   "Queue the task whose name is TASK-NAME and any dependencies"
   (let ((task (assoc-ref main-options task-name)))
-    (set! page-stack (cons ((task-init task) page) page-stack))
+    (page-push ((task-init task) page))
     (do-task-list (task-dependencies task) page)))
 
 (define (do-task-list task-name-list page)
@@ -204,18 +206,6 @@
    task-name-list))
 
 
-(define (uniquify in)
-  "Remove duplicates from the list IN. Keep the items which are closest to the
-tail of the list."
-  (let loop ((l (reverse in))
-             (acc '()))
-    (if (null? l)
-        acc
-        (loop (cdr l)
-              (if (member (car l) (cdr l))
-                  acc
-                  (cons (car l) acc))))))
-
 (define (main-page-key-handler page ch)
   (let ((main-menu (page-datum page 'menu)))
     (std-menu-key-handler main-menu ch)
@@ -223,8 +213,8 @@ tail of the list."
      ((eq? ch #\newline)
       (let ((item (menu-get-current-item main-menu)))
         (do-task (car item) page)
-        (set! page-stack (uniquify page-stack))
-        ((page-refresh (car page-stack)) (car page-stack)))))))
+        (page-uniquify)
+        ((page-refresh (car stack)) (car stack)))))))
 
 (define (main-page-init page)
   (let* ((frame (make-boxed-window (page-surface page) (lines) (cols) 0 0
@@ -324,11 +314,12 @@ tail of the list."
                    stdscr (gettext "GuixSD Installer")
                    main-page-refresh 0 main-page-key-handler)))
         (page-enter page)
+        (page-push #f)
         (let loop ((ch (getch stdscr)))
-          (let ((current-page (car page-stack)))
+          (let ((current-page (page-top)))
             ((page-key-handler current-page) current-page ch)
             (base-page-key-handler current-page ch))
-          ((page-refresh (car page-stack)) (car page-stack))
+          ((page-refresh (page-top)) (page-top))
           (loop (getch stdscr)))
 
         (endwin)))
