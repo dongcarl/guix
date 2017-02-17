@@ -473,6 +473,7 @@ GNU_SYSTEM_MODULES =				\
   %D%/system/installer/disks.scm                \
   %D%/system/installer/format.scm               \
   %D%/system/installer/locale.scm               \
+  %D%/system/installer/levelled-stack.scm       \
   %D%/system/installer/ping.scm                 \
   %D%/system/installer/key-map.scm              \
   %D%/system/installer/role.scm                 \

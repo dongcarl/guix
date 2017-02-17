@@ -20,6 +20,7 @@
   #:use-module (gnu system installer page)
   #:use-module (gnu system installer utils)
   #:use-module (gnu system installer misc)
+  #:use-module (gnu system installer levelled-stack)
   #:use-module (gurses menu)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
@@ -65,8 +66,7 @@
 	(if (eq? 'directory (stat:type (stat new-dir)))
 	    (let ((p (make-key-map
 		      page new-dir)))
-              ;; Don't go back to the current page!
-              (set! page-stack (cdr page-stack))
+              (page-pop) ; Don't go back to the current page!
               (page-enter p))
 	    (begin
               (system* "loadkeys" i)

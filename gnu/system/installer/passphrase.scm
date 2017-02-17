@@ -92,7 +92,7 @@
        (page-datum page 'ifce)
        access-point
        (form-get-value form 'passphrase))
-      (page-leave (cdr (cdr page-stack))))
+      (page-leave))
 
      (else
       (form-enter form ch)))

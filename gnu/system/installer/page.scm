@@ -18,7 +18,6 @@
 
 (define-module (gnu system installer page)
   #:export (make-page)
-  #:export (page-stack)
   #:export (page-surface)
   #:export (page-refresh)
   #:export (page-initialised?)
@@ -34,9 +33,8 @@
   #:export (page-key-handler)
 
   #:use-module (gnu system installer utils)
+  #:use-module (gnu system installer levelled-stack)
   #:use-module (srfi srfi-9))
-
-(define page-stack '())
 
 (define-record-type <page>
   (make-page' surface title inited refresh cursor-visibility key-handler data)
@@ -59,12 +57,11 @@
 (define (page-datum page key)
   (assq-ref (page-data page) key))
 
-(define* (page-leave #:optional (return-point #f))
+(define (page-leave)
   (pop-cursor)
-  (set! page-stack
-    (or return-point (cdr page-stack))))
+  (page-pop))
 
 (define (page-enter p)
-  (set! page-stack (cons p page-stack))
+  (page-push p)
   ((page-refresh p) p))
 
