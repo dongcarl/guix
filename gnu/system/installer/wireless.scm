@@ -24,6 +24,7 @@
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer utils)
   #:use-module (ice-9 format)
+  #:use-module (ice-9 rdelim)
   #:use-module (ice-9 match)
   #:use-module (gurses menu)
   #:use-module (gurses buttons)
@@ -245,6 +246,18 @@
 
 
 
+(define (start-interface config-file ifce)
+  (let ((pid-file (format #f "/wpspid-~a" ifce)))
+    (catch #t
+           (lambda () (kill (string->number
+                             (read-line (open pid-file O_RDONLY))) SIGINT))
+           (lambda (key . args) #t))
+    (zero? (system* "wpa_supplicant"
+                    "-c" config-file
+                    "-P" pid-file
+                    "-i" ifce
+                    "-B"))))
+
 (define (wireless-connect ifce access-point passphrase)
   "Connect the wireless interface IFCE to ACCESS-POINT using the key PASSPHRASE."
 
@@ -274,9 +287,5 @@ network={
 
        (with-output-to-file "/dev/null"
          (lambda ()
-           (and (zero? (system* "wpa_supplicant"
-                                "-c" filename
-                                "-P" (format #f "/wpspid-~a" ifce)
-                                "-i" ifce
-                                "-B"))
+           (and (start-interface filename ifce)
                 (dhclient ifce))))))))
