@@ -162,8 +162,13 @@
   (refresh* (inner (page-wwin page)))
   (menu-refresh (page-datum page 'menu)))
 
+(define (if-flags ifce)
+  (network-interface-flags
+   (socket SOCK_STREAM AF_INET 0)
+   (assq-ref ifce 'name)))
 
 (define (network-page-init p)
+  (define prev-flags (map-in-order if-flags (interfaces)))
   (let* ((s (page-surface p))
 	 (pr (make-boxed-window  #f
                                  (- (getmaxy s) 4) (- (getmaxx s) 2)
@@ -196,9 +201,7 @@
                      (format #f "~55a ~a"
                              (name->description (assq-ref datum 'name))
                              (if (zero? (logand IFF_RUNNING
-                                         (network-interface-flags
-                                          (socket SOCK_STREAM AF_INET 0)
-                                          (assq-ref datum 'name))))
+                                                (if-flags datum)))
                                  (gettext "Down")
                                  (gettext "Running")))))))
 
@@ -208,7 +211,15 @@
 
 
     ;; Raise sigalarm every second to refresh the menu
-    (sigaction SIGALRM (lambda (_) (menu-redraw menu)))
+    (sigaction SIGALRM (lambda (_)
+                         (let ((flags
+                                (map-in-order
+                                 if-flags
+                                 (interfaces))))
+
+                           (when (not (equal? prev-flags flags))
+                                 (set! prev-flags flags)
+                                 (menu-redraw menu)))))
     (setitimer ITIMER_REAL 1 0 1 0)
 
     (push-cursor (page-cursor-visibility p))
