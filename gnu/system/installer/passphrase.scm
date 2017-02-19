@@ -21,6 +21,7 @@
   #:use-module (gnu system installer misc)
   #:use-module (gnu system installer utils)
   #:use-module (gnu system installer wireless)
+  #:use-module (gnu system installer levelled-stack)
   #:use-module (gurses form)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
@@ -92,6 +93,7 @@
        (page-datum page 'ifce)
        access-point
        (form-get-value form 'passphrase))
+      (page-pop)
       (page-leave))
 
      (else
