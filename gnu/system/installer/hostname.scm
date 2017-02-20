@@ -75,7 +75,8 @@
 
     (cond
      ((buttons-key-matches-symbol? nav ch 'cancel)
-      (page-leave))
+      (page-leave)
+      'cancelled)
 
      ((select-key? ch)
       (set! host-name (form-get-value form 0))
@@ -111,8 +112,7 @@
            (positive? (field-cursor-position (get-current-field form)))))
 
      (else
-      (form-enter form ch)))
-    #f))
+      (form-enter form ch)))))
 
 (define my-buttons `((cancel ,(M_ "Cancel") #f)))
 

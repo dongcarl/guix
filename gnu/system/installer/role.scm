@@ -57,11 +57,9 @@
 (define my-buttons `((cancel ,(M_ "Canc_el") #t)))
 
 (define (role-page-key-handler page ch)
-  (let ((menu (page-datum page 'menu))
-	(nav  (page-datum page 'navigation)))
-
-    (cond
-     ((eq? ch KEY_RIGHT)
+  (let* ((menu (page-datum page 'menu))
+         (nav  (page-datum page 'navigation))
+         (result (cond ((eq? ch KEY_RIGHT)
       (menu-set-active! menu #f)
       (buttons-select-next nav))
 
@@ -93,10 +91,11 @@
       (page-leave))
 
      ((buttons-key-matches-symbol? nav ch 'cancel)
-      (page-leave)))
+      (page-leave)
+      'cancelled))))
 
-    (std-menu-key-handler menu ch))
-  #f)
+    (std-menu-key-handler menu ch)
+    result))
 
 
 (define (role-page-refresh page)
