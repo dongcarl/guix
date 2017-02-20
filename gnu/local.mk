@@ -462,31 +462,6 @@ GNU_SYSTEM_MODULES =				\
   %D%/system/shadow.scm				\
   %D%/system/vm.scm				\
 						\
-  %D%/system/installer/filesystems.scm          \
-  %D%/system/installer/network.scm              \
-  %D%/system/installer/wireless.scm             \
-  %D%/system/installer/install.scm              \
-  %D%/system/installer/dialog.scm               \
-  %D%/system/installer/hostname.scm             \
-  %D%/system/installer/mount-point.scm          \
-  %D%/system/installer/guixsd-installer.scm     \
-  %D%/system/installer/disks.scm                \
-  %D%/system/installer/format.scm               \
-  %D%/system/installer/locale.scm               \
-  %D%/system/installer/levelled-stack.scm       \
-  %D%/system/installer/ping.scm                 \
-  %D%/system/installer/key-map.scm              \
-  %D%/system/installer/role.scm                 \
-  %D%/system/installer/user-edit.scm            \
-  %D%/system/installer/users.scm                \
-  %D%/system/installer/utils.scm                \
-  %D%/system/installer/page.scm                 \
-  %D%/system/installer/passphrase.scm           \
-  %D%/system/installer/configure.scm            \
-  %D%/system/installer/time-zone.scm            \
-  %D%/system/installer/misc.scm                 \
-  %D%/system/installer/partition-reader.scm     \
-               \
   %D%/build/activation.scm			\
   %D%/build/cross-toolchain.scm			\
   %D%/build/file-systems.scm			\
@@ -513,6 +488,36 @@ GNU_SYSTEM_MODULES =				\
 # Modules that do not need to be compiled.
 MODULES_NOT_COMPILED +=				\
   %D%/build/svg.scm
+
+if HAVE_GUILE_NCURSES
+
+GNU_SYSTEM_MODULES +=				\
+  %D%/system/installer/filesystems.scm		\
+  %D%/system/installer/network.scm		\
+  %D%/system/installer/wireless.scm		\
+  %D%/system/installer/install.scm		\
+  %D%/system/installer/dialog.scm		\
+  %D%/system/installer/hostname.scm		\
+  %D%/system/installer/mount-point.scm		\
+  %D%/system/installer/guixsd-installer.scm	\
+  %D%/system/installer/disks.scm		\
+  %D%/system/installer/format.scm		\
+  %D%/system/installer/locale.scm		\
+  %D%/system/installer/levelled-stack.scm	\
+  %D%/system/installer/ping.scm			\
+  %D%/system/installer/key-map.scm		\
+  %D%/system/installer/role.scm			\
+  %D%/system/installer/user-edit.scm            \
+  %D%/system/installer/users.scm                \
+  %D%/system/installer/utils.scm		\
+  %D%/system/installer/page.scm			\
+  %D%/system/installer/passphrase.scm		\
+  %D%/system/installer/configure.scm		\
+  %D%/system/installer/time-zone.scm		\
+  %D%/system/installer/misc.scm			\
+  %D%/system/installer/partition-reader.scm
+
+endif
 
 patchdir = $(guilemoduledir)/%D%/packages/patches
 dist_patch_DATA =						\

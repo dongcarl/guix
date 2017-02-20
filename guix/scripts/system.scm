@@ -42,7 +42,6 @@
   #:use-module (gnu system file-systems)
   #:use-module (gnu system linux-container)
   #:use-module (gnu system vm)
-  #:use-module (gnu system installer guixsd-installer)
   #:use-module (gnu system grub)
   #:use-module (gnu services)
   #:use-module (gnu services shepherd)
@@ -58,6 +57,12 @@
   #:use-module (rnrs bytevectors)
   #:export (guix-system
             read-operating-system))
+
+;; XXX: Use this hack instead of #:autoload to avoid compilation errors.
+;; See <http://bugs.gnu.org/12202>.
+(module-autoload! (current-module)
+                  '(gnu system installer guixsd-installer)
+                  '(guixsd-installer))
 
 
 ;;;

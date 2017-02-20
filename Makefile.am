@@ -38,10 +38,6 @@ include gnu/local.mk
 
 MODULES =					\
   guix/base16.scm				\
-  gurses/buttons.scm                            \
-  gurses/form.scm                               \
-  gurses/menu.scm                               \
-  gurses/stexi.scm                              \
   guix/base32.scm				\
   guix/base64.scm				\
   guix/cpio.scm					\
@@ -182,6 +178,16 @@ MODULES =					\
   guix/scripts/container/exec.scm		\
   guix.scm					\
   $(GNU_SYSTEM_MODULES)
+
+if HAVE_GUILE_NCURSES
+
+MODULES +=					\
+  gurses/buttons.scm                            \
+  gurses/form.scm                               \
+  gurses/menu.scm				\
+  gurses/stexi.scm
+
+endif
 
 if HAVE_GUILE_JSON
 
