@@ -95,6 +95,10 @@ dnl guile-json is used for the PyPI package importer
 GUILE_MODULE_AVAILABLE([have_guile_json], [(json)])
 AM_CONDITIONAL([HAVE_GUILE_JSON], [test "x$have_guile_json" = "xyes"])
 
+dnl guile-ncurses is used for the system installer
+GUILE_MODULE_AVAILABLE([have_guile_ncurses], [(ncurses curses)])
+AM_CONDITIONAL([HAVE_GUILE_NCURSES], [test "x$have_guile_ncurses" = "xyes"])
+
 dnl Make sure we have a full-fledged Guile.
 GUIX_ASSERT_GUILE_FEATURES([regex posix socket net-db threads])
 
