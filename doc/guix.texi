@@ -25,7 +25,7 @@ Copyright @copyright{} 2015, 2016 Ricardo Wurmus@*
 Copyright @copyright{} 2016 Ben Woodcroft@*
 Copyright @copyright{} 2016 Chris Marusich@*
 Copyright @copyright{} 2016 Efraim Flashner@*
-Copyright @copyright{} 2016 John Darrington@*
+Copyright @copyright{} 2016, 2017 John Darrington@*
 Copyright @copyright{} 2016 ng0@*
 Copyright @copyright{} 2016 Jan Nieuwenhuizen@*
 Copyright @copyright{} 2016 Julien Lepiller@*
@@ -173,7 +173,11 @@ System Installation
 * Limitations::                 What you can expect.
 * Hardware Considerations::     Supported hardware.
 * USB Stick Installation::      Preparing the installation medium.
-* Preparing for Installation::  Networking, partitioning, etc.
+* Using the Graphical User Interface:: Installing the easy way.
+* Installation using the Shell:: Installing the flexible way.
+* Keyboard Layout::             Choosing the keyboard layout.
+* Networking::                  Setting up the network.
+* Disk Partitioning::           Making space to install the system.
 * Proceeding with the Installation::  The real thing.
 * Installing GuixSD in a VM::   GuixSD playground.
 * Building the Installation Image::  How this comes to be.
@@ -6746,6 +6750,11 @@ on a machine.  The Guix package manager can
 also be installed on top of a running GNU/Linux system,
 @pxref{Installation}.
 
+@quotation Note
+Installation requires access to the Internet so that any missing
+dependencies of your system configuration can be downloaded.
+@end quotation
+
 @ifinfo
 @quotation Note
 @c This paragraph is for people reading this from tty2 of the
@@ -6764,8 +6773,8 @@ available.
 * Limitations::                 What you can expect.
 * Hardware Considerations::     Supported hardware.
 * USB Stick Installation::      Preparing the installation medium.
-* Preparing for Installation::  Networking, partitioning, etc.
-* Proceeding with the Installation::  The real thing.
+* Using the Graphical User Interface:: Installing the easy way.
+* Installation using the Shell:: Installing the flexible way.
 * Installing GuixSD in a VM::   GuixSD playground.
 * Building the Installation Image::  How this comes to be.
 @end menu
@@ -6912,28 +6921,77 @@ menu, where you can choose to boot from the USB stick.
 @xref{Installing GuixSD in a VM}, if, instead, you would like to install
 GuixSD in a virtual machine (VM).
 
-@node Preparing for Installation
-@subsection Preparing for Installation
+@node Using the Graphical User Interface
+@subsection Using the Graphical User Interface
 
 Once you have successfully booted the image on the USB stick, you should
-end up with a root prompt.  Several console TTYs are configured and can
-be used to run commands as root.  TTY2 shows this documentation,
+end up with a screen similar to that depicted in @ref{fig:installer}.
+
+@float Figure,fig:installer
+@smallformat
+@example
++-----------------------------------------------------------------------------+
+|                               GuixSD Installer                              |
+|-----------------------------------------------------------------------------|
+|To start the complete installation process, choose "Install the system".     |
+|Alternatively, you may run each step individually for a slower, more         |
+|controlled experience.                                                       |
+|                                                                             |
+| Partition the disk(s)                                                       |
+| Allocate disk partitions                                                    |
+| Format the partitions                                                       |
+| Set up the network                                                          |
+| Set the time zone                                                           |
+| Set the host name                                                           |
+| Add users                                                                   |
+| Select a role for the system                                                |
+| Generate the configuration                                                  |
+| Install the system                                                          |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|                                                                             |
+|Get a Shell <F1>                Language <F9>                  Keyboard <F10>|
++-----------------------------------------------------------------------------+
+@end example
+@end smallformat
+@end float
+
+This interface will guide you through all necessary steps required to install
+the operating system.
+Since the graphical user interface is supposed to be self explanatory, details
+of its use will not be discussed here.
+If you would prefer to install the system manually, then please move on to the
+next section.
+
+@node Installation using the Shell
+@subsection Installation using the Shell
+
+If you don't wish to use the graphical installer, you can use any of
+TTY3, TTY4 @dots{} TTY6
+to get a  shell which you can use to perform each step manually.
+TTY2 shows the documentation you are currently reading which is
 browsable using the Info reader commands (@pxref{Top,,, info-stnd,
 Stand-alone GNU Info}).  The installation system runs the GPM mouse
 daemon, which allows you to select text with the left mouse button and
 to paste it with the middle button.
 
-@quotation Note
-Installation requires access to the Internet so that any missing
-dependencies of your system configuration can be downloaded.  See the
-``Networking'' section below.
-@end quotation
-
 The installation system includes many common tools needed for this task.
-But it is also a full-blown GuixSD system, which means that you can
+But it is also a live GuixSD system, which means that you can
 install additional packages, should you need it, using @command{guix
 package} (@pxref{Invoking guix package}).
 
+@menu
+* Keyboard Layout::             Choosing the keyboard layout.
+* Networking::                  Setting up the network.
+* Disk Partitioning::           Making space to install the system.
+* Proceeding with the Installation::  The real thing.
+@end menu
+
+
+@node Keyboard Layout
 @subsubsection Keyboard Layout
 
 @cindex keyboard layout
@@ -6949,6 +7007,7 @@ See the files under @file{/run/current-system/profile/share/keymaps} for
 a list of available keyboard layouts.  Run @command{man loadkeys} for
 more information.
 
+@node Networking
 @subsubsection Networking
 
 Run the following command see what your network interfaces are called:
@@ -7031,6 +7090,7 @@ ping -c 3 gnu.org
 Setting up network access is almost always a requirement because the
 image does not contain all the software and tools that may be needed.
 
+@node Disk Partitioning
 @subsubsection Disk Partitioning
 
 Unless this has already been done, the next step is to partition, and
@@ -7120,7 +7180,7 @@ file in its file system as described above, then the encryption also
 protects the swap file, just like any other file in that file system.
 
 @node Proceeding with the Installation
-@subsection Proceeding with the Installation
+@subsubsection Proceeding with the Installation
 
 With the target partitions ready and the target root mounted on
 @file{/mnt}, we're ready to go.  First, run:
@@ -7250,7 +7310,7 @@ selection.
 
 @item
 You're now root in the VM, proceed with the installation process.
-@xref{Preparing for Installation}, and follow the instructions.
+@xref{Installation using the Shell}, and follow the instructions.
 @end enumerate
 
 Once installation is complete, you can boot the system that's on your
@@ -7925,7 +7985,7 @@ It is also desirable to encrypt swap space, since swap space may contain
 sensitive data.  One way to accomplish that is to use a swap file in a
 file system on a device mapped via LUKS encryption.  In this way, the
 swap file is encrypted because the entire device is encrypted.
-@xref{Preparing for Installation,,Disk Partitioning}, for an example.
+@xref{Installation using the Shell,,Disk Partitioning}, for an example.
 
 A RAID device formed of the partitions @file{/dev/sda1} and @file{/dev/sdb1}
 may be declared as follows:
