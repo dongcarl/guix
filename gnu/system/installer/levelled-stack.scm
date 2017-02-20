@@ -59,11 +59,7 @@ tail of the list."
 
 
 (define (page-pop)
-  (set! stack (cdr stack))
-  (when (and (not (null? stack))
-	     (not (car stack)))
-	;; If the top item is #f then page-pop again
-	(page-pop)))
+  (set! stack (cdr stack)))
 
 (define (page-top)
   (if (car stack)
@@ -74,6 +70,5 @@ tail of the list."
   (set! stack (cdr stack))
   (when (not (null? stack))
 	(let ((head (car stack)))
-	  (if head
-	      (page-ppop)
-	      (page-pop)))))
+	  (when head
+                (page-ppop)))))

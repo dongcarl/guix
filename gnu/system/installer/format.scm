@@ -74,7 +74,6 @@ match those uuids read from the respective partitions"
 
 
 (define (format-page-key-handler page ch)
-
   (let ((nav  (page-datum page 'navigation))
 	(config-window  (page-datum page 'config-window)))
 
@@ -99,7 +98,8 @@ match those uuids read from the respective partitions"
 
      ((buttons-key-matches-symbol? nav ch 'cancel)
       ;; Close the menu and return
-      (page-leave))
+      (page-leave)
+      'cancelled)
 
 
      ((buttons-key-matches-symbol? nav ch 'format)
@@ -143,9 +143,7 @@ match those uuids read from the respective partitions"
 
       (when (filesystems-are-current?)
             (page-leave))
-      ))
-
-    #f))
+      ))))
 
 (define (format-page-refresh page)
   (when (not (page-initialised? page))

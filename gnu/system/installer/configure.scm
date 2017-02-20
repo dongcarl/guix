@@ -101,9 +101,8 @@
 
      ((buttons-key-matches-symbol? nav ch 'cancel)
       ;; Close the menu and return
-      (page-leave))
-
-
+      (page-leave)
+      'cancelled)
 
      ((buttons-key-matches-symbol? nav ch 'save)
 
@@ -116,9 +115,7 @@
 
       ;; Close the menu and return
       (page-leave))
-     )
-
-    #f))
+     )))
 
 (define (configure-page-refresh page)
   (when (not (page-initialised? page))

@@ -42,11 +42,10 @@
 (define my-buttons `((cancel  ,(M_ "Canc_el") #t)))
 
 (define (time-zone-page-key-handler page ch)
-  (let ((nav  (page-datum page 'navigation))
+  (let* ((nav  (page-datum page 'navigation))
 	(menu (page-datum page 'menu))
-	(directory (page-datum page 'directory)))
-
-    (cond
+	(directory (page-datum page 'directory))
+        (result (cond
      ((eq? ch #\tab)
       (cond
        ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
@@ -56,7 +55,8 @@
 	(buttons-select-next nav))))
 
      ((buttons-key-matches-symbol? nav ch 'cancel)
-      (page-leave))
+      (page-leave)
+      'cancelled)
 
      ((and (eqv? ch #\newline)
 	   (menu-active menu))
@@ -79,9 +79,9 @@
 		    i))
 	      (page-leave)
 	      #f)))
-      ))
+      ))))
   (std-menu-key-handler menu ch)
-  #f))
+  result))
 
 
 (define (time-zone-page-refresh page)

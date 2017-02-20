@@ -174,64 +174,61 @@
 
 
 (define (filesystem-page-key-handler page ch)
-  (let ((menu (page-datum page 'menu))
-	(nav  (page-datum page 'navigation)))
+  (let* ((menu (page-datum page 'menu))
+         (nav  (page-datum page 'navigation))
+         (result   (cond
+                ((eq? ch KEY_RIGHT)
+                 (menu-set-active! menu #f)
+                 (buttons-select-next nav))
 
-    (cond
-     ((eq? ch KEY_RIGHT)
-      (menu-set-active! menu #f)
-      (buttons-select-next nav))
+                ((eq? ch #\tab)
+                 (cond
+                  ((menu-active menu)
+                   (menu-set-active! menu #f)
+                   (buttons-select nav 0))
 
-     ((eq? ch #\tab)
-      (cond
-       ((menu-active menu)
-        (menu-set-active! menu #f)
-        (buttons-select nav 0))
+                  ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
+                   (menu-set-active! menu #t)
+                   (buttons-unselect-all nav))
 
-       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-	(menu-set-active! menu #t)
-	(buttons-unselect-all nav))
+                  (else
+                   (buttons-select-next nav))))
 
-       (else
-	(buttons-select-next nav))))
+                ((eq? ch KEY_LEFT)
+                 (menu-set-active! menu #f)
+                 (buttons-select-prev nav))
 
-     ((eq? ch KEY_LEFT)
-      (menu-set-active! menu #f)
-      (buttons-select-prev nav))
+                ((eq? ch KEY_UP)
+                 (buttons-unselect-all nav)
+                 (menu-set-active! menu #t))
 
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav)
-      (menu-set-active! menu #t))
+                ((eq? ch #\newline)
+                 (let* ((dev (list-ref (menu-items menu) (menu-current-item menu)))
+                        (name (partition-name (car dev)))
+                        (next  (make-page (page-surface page)
+                                          (format #f
+                                                  (gettext "Choose the mount point for device ~s") name)
+                                          mount-point-refresh
+                                          1
+                                          mount-point-page-key-handler)))
 
-     ((eq? ch #\newline)
-      (let* ((dev (list-ref (menu-items menu) (menu-current-item menu)))
-	     (name (partition-name (car dev)))
-	     (next  (make-page (page-surface page)
-			       (format #f
-				       (gettext "Choose the mount point for device ~s") name)
-			       mount-point-refresh
-                               1
-			       mount-point-page-key-handler)))
+                   (page-set-datum! next 'device name)
+                   (page-enter next)))
 
-	(page-set-datum! next 'device name)
-        (page-enter next)))
+                ((buttons-key-matches-symbol? nav ch 'cancel)
+                 (page-leave)
+                 'cancelled)
 
-     ((buttons-key-matches-symbol? nav ch 'cancel)
-      (page-leave))
+                ((buttons-key-matches-symbol? nav ch 'continue)
+                 (let ((errstr (filesystem-task-incomplete-reason)))
+                   (if errstr
+                       (let ((next (make-dialog page errstr)))
+                         (page-enter next))
+                       (page-leave)
+                       ))))))
 
-
-     ((buttons-key-matches-symbol? nav ch 'continue)
-      (let ((errstr (filesystem-task-incomplete-reason)))
-        (if errstr
-            (let ((next (make-dialog page errstr)))
-              (page-enter next))
-            (begin
-              (page-leave))
-            ))))
-
-    (std-menu-key-handler menu ch))
-  #f
-  )
+    (std-menu-key-handler menu ch)
+    result))
 
 (define (filesystem-page-init p)
   (let* ((s (page-surface p))
