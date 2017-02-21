@@ -77,7 +77,7 @@
       (buttons-unselect-all nav)
       (menu-set-active! menu #t))
 
-     ((select-key? ch)
+     ((and (menu-active menu) (select-key? ch))
       (let* ((account  (menu-get-current-item menu)))
              (if account
                  (page-enter  (make-user-edit-page page  "Edit User" account)))))
