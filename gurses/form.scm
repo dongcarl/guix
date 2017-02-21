@@ -162,7 +162,7 @@ label eq? to N"
              (value  (field-value f))
              (len    (string-length value))
              (pos    (field-cursor-position f))
-	     (left   (substring value 0 pos))
+	     (left   (substring value 0   (min pos len)))
 	     (centre (substring value pos (min (1+ pos) len)))
 	     (right  (substring value (min (1+ pos) len) len)))
 
@@ -173,7 +173,7 @@ label eq? to N"
 				    (list left right)
 				    (make-string 1 ch)))
 	
-	       (field-set-cursor-position! f (1+ (field-cursor-position f)))
+	       (field-set-cursor-position! f (1+ pos))
 	       (addch (form-window form) (inverse ch)))
 
 	      ((eq? ch KEY_DC)
@@ -181,20 +181,30 @@ label eq? to N"
 	       (redraw-current-field form f)
 	       (form-update-cursor form))
 
+	      ((eq? ch #\ack) ; Ctrl-F
+               (when (< pos len)
+                     (field-set-cursor-position! f (1+ pos))
+                     (redraw-current-field form f)
+                     (form-update-cursor form)))
+
+	      ((eq? ch #\stx) ; Ctrl-B
+               (when (positive? pos)
+                     (field-set-cursor-position! f (1- pos))
+                     (redraw-current-field form f)
+                     (form-update-cursor form)))
+
 	      ((eq? ch KEY_BACKSPACE)
-	       (if (positive? (field-cursor-position f))
-		   (begin
+	       (when (positive? pos)
 		     (field-set-value! f (string-append
-					  (string-drop-right left 1) centre
-					  right))
-		     (field-set-cursor-position! f (1- (field-cursor-position f)))
+                                          (string-drop-right left 1) centre right))
+		     (field-set-cursor-position! f (1- pos))
 		     (redraw-current-field form f)
-		     (form-update-cursor form))))
+		     (form-update-cursor form)))
 
 	      ((eq? ch #\vtab)
 	       ;; Delete to end of line
-	       (field-set-value! f (substring (field-value f)
-					      0 (field-cursor-position f)))
+	       (field-set-value! f (substring value
+					      0 pos))
 	       (redraw-current-field form f))
 	
 	      ((or (eq? ch KEY_DOWN)
@@ -209,20 +219,20 @@ label eq? to N"
 	       (cursor-move form f 0))
 	
 	      ((eq? ch KEY_RIGHT)
-	       (if (< (field-cursor-position f) (string-length (field-value f)))
-		   (cursor-move form f (1+ (field-cursor-position f)))))
+	       (if (< pos len)
+		   (cursor-move form f (1+ pos))))
 	
 	      ((eq? ch KEY_LEFT)
-	       (if (positive? (field-cursor-position f))
-		   (cursor-move form f (1- (field-cursor-position f)))))
+	       (if (positive? pos)
+		   (cursor-move form f (1- pos))))
 	
-	      ((eq? ch #\soh)
+	      ((eq? ch #\soh) ; Ctrl-A
 	       ;; Move to start of field
 	       (cursor-move form f 0))
 	
-	      ((eq? ch #\enq)
+	      ((eq? ch #\enq) ; Ctrl-E
 	       ;; Move to end of field
-	       (cursor-move form f (string-length (field-value f))))
+	       (cursor-move form f len))
 	      )
         (when (form-callback form)
               ((form-callback form) form))
