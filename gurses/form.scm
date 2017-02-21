@@ -158,15 +158,14 @@ label eq? to N"
     (form-update-cursor form))
 
   (if (form-enabled? form)
-      (let* ((f (array-ref (form-items form) (form-current-item form)))
-	     (left (substring (field-value f) 0 (field-cursor-position f)))
-	     (centre (substring (field-value f) (field-cursor-position f)
-				(min (1+ (field-cursor-position f))
-				     (string-length (field-value f)))))
-	     (right (substring (field-value f)
-			       (min (1+ (field-cursor-position f))
-				    (string-length (field-value f)))
-			       (string-length (field-value f)))))
+      (let* ((f      (array-ref (form-items form) (form-current-item form)))
+             (value  (field-value f))
+             (len    (string-length value))
+             (pos    (field-cursor-position f))
+	     (left   (substring value 0 pos))
+	     (centre (substring value pos (min (1+ pos) len)))
+	     (right  (substring value (min (1+ pos) len) len)))
+
 	(cond ((and (char? ch)
 		    (not (char-set-contains? char-set:iso-control ch)))
 
@@ -181,7 +180,7 @@ label eq? to N"
 	       (field-set-value! f (string-append left right))
 	       (redraw-current-field form f)
 	       (form-update-cursor form))
-	
+
 	      ((eq? ch KEY_BACKSPACE)
 	       (if (positive? (field-cursor-position f))
 		   (begin
