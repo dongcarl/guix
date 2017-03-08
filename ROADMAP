@@ -51,7 +51,6 @@ Freenode!
       settings
   - GUIs
     + integrate guix-web?
-    + guile-ncurses installer?
   - 'guix publish'?
 
 * Features for later
