@@ -129,6 +129,7 @@ MODULES =					\
   guix/git.scm					\
   guix/potluck/build-systems.scm		\
   guix/potluck/environment.scm			\
+  guix/potluck/host.scm				\
   guix/potluck/licenses.scm			\
   guix/potluck/packages.scm			\
   guix/import/utils.scm				\

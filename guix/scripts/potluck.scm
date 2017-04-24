@@ -25,6 +25,7 @@
   #:use-module (guix ui)
   #:use-module (guix utils)
   #:use-module (guix potluck build-systems)
+  #:use-module (guix potluck host)
   #:use-module (guix potluck licenses)
   #:use-module (guix potluck packages)
   #:use-module (guix scripts)
@@ -47,12 +48,12 @@
 ;;; guix potluck init
 ;;;
 
-(define* (init-potluck remote-git-url #:key
+(define* (init-potluck host remote-git-url #:key
                        (build-system 'gnu) (autoreconf? #f)
                        (license 'gplv3+))
   (let* ((cwd (getcwd))
          (dot-git (in-vicinity cwd ".git"))
-         (potluck-dir (in-vicinity cwd "potluck"))
+         (potluck-dir (in-vicinity cwd "guix-potluck"))
          (package-name (basename cwd)))
     (unless (and (file-exists? dot-git)
                  (file-is-directory? dot-git))
@@ -74,17 +75,17 @@
            ;; FIXME: Race condition if HEAD changes between git-rev-parse and
            ;; here.
            (pkg-sha256 (guix-hash-git-checkout cwd)))
-      (format #t (_ "Creating potluck/~%"))
+      (format #t (_ "Creating guix-potluck/~%"))
       (mkdir potluck-dir)
-      (format #t (_ "Creating potluck/README.md~%"))
+      (format #t (_ "Creating guix-potluck/README.md~%"))
       (call-with-output-file (in-vicinity potluck-dir "README.md")
         (lambda (port)
           (format port
                   "\
 This directory defines potluck packages.  Each file in this directory should
-define one package.  See https://potluck.guixsd.org/ for more information.
+define one package.  See https://guix-potluck.org/ for more information.
 ")))
-      (format #t (_ "Creating potluck/~a.scm~%") package-name)
+      (format #t (_ "Creating guix-potluck/~a.scm~%") package-name)
       (call-with-output-file (in-vicinity potluck-dir
                                           (string-append package-name ".scm"))
         (lambda (port)
@@ -133,16 +134,39 @@ define one package.  See https://potluck.guixsd.org/ for more information.
                             " is a ..."))
             (license license)))))
       (format #t (_ "
-Done.  Now open potluck/~a.scm in your editor, fill out its \"synopsis\" and
-\"description\" fields, add dependencies to the 'inputs' field, and try to
+Done.  Now open guix-potluck/~a.scm in your editor, fill out its \"synopsis\"
+and \"description\" fields, add dependencies to the 'inputs' field, and try to
 build with
 
-  guix build --file=potluck/~a.scm
+  guix build --file=guix-potluck/~a.scm
 
 When you get that working, commit your results to git via:
 
   git add guix-potluck && git commit -m 'Add initial Guix potluck files.'
-") pkg-name pkg-name))))
+
+Once you push them out, add your dish to the communal potluck by running:
+
+  guix potluck update ~a
+") pkg-name pkg-name remote-git-url))))
+
+;;;
+;;; guix potluck update
+;;;
+
+(define (request-potluck-update host git-url branch)
+  (call-with-values (lambda ()
+                      (http-post (build-uri 'https
+                                            #:host host
+                                            #:path "/api/enqueue-update")
+                                 #:body (scm->json-string
+                                         `((git-url . ,git-url)
+                                           (branch . ,branch)))))
+    (lambda (response body)
+      (unless (eqv? (response-code response) 200)
+        (error "request failed"
+               (response-code response)
+               (response-reason-phrase response)
+               body)))))
 
 
 ;;;
@@ -159,9 +183,32 @@ ARGS.\n"))
   (newline)
   (display (_ "\
    init             create potluck recipe for current working directory\n"))
+  (display (_ "\
+   update           ask potluck host to add or update a potluck package\n"))
+  (display (_ "\
+   host-channel     run web service providing potluck packages as Guix channel\n"))
 
   (newline)
   (display (_ "The available OPTION flags are:\n"))
+  (display (_ "
+      --host=HOST        for 'update' and 'host-channel', the name of the
+                         channel host
+                         (default: guix-potluck.org)"))
+  (display (_ "
+      --port=PORT        for 'host-channel', the local TCP port on which to
+                         listen for HTTP connections
+                         (default: 8080)"))
+  (display (_ "
+      --scratch=DIR      for 'host-channel', the path to a local directory
+                         that will be used as a scratch space to check out
+                         remote git repositories"))
+  (display (_ "
+      --source=DIR       for 'host-channel', the path to a local checkout
+                         of guix potluck source packages to be managed by
+                         host-channel"))
+  (display (_ "
+      --target=DIR       for 'host-channel', the path to a local checkout
+                         of a guix channel to be managed by host-channel"))
   (display (_ "
       --build-system=SYS for 'init', specify the build system.  Use
                          --build-system=help for all available options."))
@@ -201,18 +248,55 @@ ARGS.\n"))
         (option '("license") #t #f
                 (lambda (opt name arg result)
                   (alist-cons 'license arg result)))
+        (option '("host") #t #f
+                (lambda (opt name arg result)
+                  (alist-cons 'host arg result)))
+        (option '("port") #t #f
+                (lambda (opt name arg result)
+                  (alist-cons 'port arg result)))
+        (option '("scratch") #t #f
+                (lambda (opt name arg result)
+                  (alist-cons 'scratch arg result)))
+        (option '("source") #t #f
+                (lambda (opt name arg result)
+                  (alist-cons 'source arg result)))
+        (option '("target") #t #f
+                (lambda (opt name arg result)
+                  (alist-cons 'target arg result)))
         (option '("verbosity") #t #f
                 (lambda (opt name arg result)
                   (alist-cons 'verbosity (string->number arg) result)))))
 
 (define %default-options
   ;; Alist of default option values.
-  `((verbosity . 0)))
+  `((host . "guix-potluck.org")
+    (port . "8080")
+    (verbosity . 0)))
+
+(define (parse-host host-str)
+  ;; Will throw if the host is invalid somehow.
+  (build-uri 'https #:host host-str)
+  host-str)
 
 (define (parse-url url-str)
   (unless (string->uri url-str)
     (leave (_ "invalid url: ~a~%") url-str))
   url-str)
+
+(define (parse-port port-str)
+  (let ((port (string->number port-str)))
+    (cond
+     ((and port (exact-integer? port) (<= 0 port #xffff))
+      port)
+     (else
+      (leave (_ "invalid port: ~a~%") port-str)))))
+
+(define (parse-absolute-directory-name str)
+  (unless (and (absolute-file-name? str)
+               (file-exists? str)
+               (file-is-directory? str))
+    (leave (_ "invalid absolute directory name: ~a~%") str))
+  str)
 
 (define (parse-build-system sys-str)
   (unless sys-str
@@ -297,7 +381,8 @@ If your package's license is not in this list, add it to Guix first.~%")
         ('init
          (match args
            ((remote-git-url)
-            (init-potluck (parse-url remote-git-url)
+            (init-potluck (parse-host (assoc-ref opts 'host))
+                          (parse-url remote-git-url)
                           #:build-system (parse-build-system
                                           (assoc-ref opts 'build-system))
                           #:autoreconf? (assoc-ref opts 'autoreconf?)
@@ -306,5 +391,33 @@ If your package's license is not in this list, add it to Guix first.~%")
            (args
             (wrong-number-of-args
              (_ "usage: guix potluck init [OPT...] REMOTE-GIT-URL")))))
+        ('update
+         (match args
+           ((remote-git-url branch)
+            (request-potluck-update (parse-host (assoc-ref opts 'host))
+                                    (parse-url remote-git-url)
+                                    branch))
+           (args
+            (wrong-number-of-args
+             (_ "usage: guix potluck update REMOTE-GIT-URL BRANCH-NAME")))))
+        ('host-channel
+         (match args
+           (()
+            (host-potluck (parse-host (assoc-ref opts 'host))
+                          (parse-port (assoc-ref opts 'port))
+                          (parse-absolute-directory-name
+                           (or (assoc-ref opts 'scratch)
+                               (leave (_ "missing --scratch argument~%"))))
+                          (parse-absolute-directory-name
+                           (or (assoc-ref opts 'source)
+                               (leave (_ "missing --source argument~%"))))
+                          (parse-absolute-directory-name
+                           (or (assoc-ref opts 'target)
+                               (leave (_ "missing --target argument~%"))))))
+           (args
+            (wrong-number-of-args
+             (_ "usage: guix potluck host-channel --scratch=DIR \
+--source=DIR --target=DIR"))
+            (exit 1))))
         (action
          (leave (_ "~a: unknown action~%") action))))))
