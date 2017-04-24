@@ -126,6 +126,7 @@ MODULES =					\
   guix/build/make-bootstrap.scm			\
   guix/search-paths.scm				\
   guix/packages.scm				\
+  guix/git.scm					\
   guix/potluck/build-systems.scm		\
   guix/potluck/licenses.scm			\
   guix/potluck/packages.scm			\
