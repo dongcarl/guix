@@ -58,6 +58,7 @@ Documentation License''.
 * guix environment: (guix)Invoking guix environment. Building development environments with Guix.
 * guix build: (guix)Invoking guix build.      Building packages.
 * guix pack: (guix)Invoking guix pack.        Creating binary bundles.
+* guix potluck: (guix)Invoking guix potluck.  Publishing package definitions.
 @end direntry
 
 @titlepage
@@ -137,6 +138,7 @@ Defining Packages
 
 * package Reference::           The package data type.
 * origin Reference::            The origin data type.
+* potluck-package Reference::   The potluck-package data type.
 
 Utilities
 
@@ -154,6 +156,7 @@ Utilities
 * Invoking guix challenge::     Challenging substitute servers.
 * Invoking guix copy::          Copying to and from a remote store.
 * Invoking guix container::     Process isolation.
+* Invoking guix potluck::       Simple, decoupled package development.
 
 Invoking @command{guix build}
 
@@ -2978,6 +2981,7 @@ when @var{cut?} returns true for a given package.
 @menu
 * package Reference ::          The package data type.
 * origin Reference::            The origin data type.
+* potluck-package Reference::   The potluck-package data type.
 @end menu
 
 
@@ -3193,6 +3197,115 @@ The Guile package that should be used in the patching process.  When
 this is @code{#f}, a sensible default is used.
 @end table
 @end deftp
+
+@node potluck-package Reference
+@subsection @code{potluck-package} Reference
+
+This section defines all the options available in @code{potluck-package}
+declarations.  @xref{Invoking guix potluck}, for more background and for
+information on how to work with potluck packages from the command-line
+interface.
+
+@deftp {Data Type} potluck-package
+This is the data type representing a potluck package recipe.
+
+@table @asis
+@item @code{name}
+The name of the package, as a string.
+
+@item @code{version}
+The version of the package, as a string.
+
+@item @code{source}
+An object telling how the source code for the package should be
+acquired.  This is a @code{potluck-source} object, which itself is its
+own data type:
+
+@deftp {Data Type} potluck-source
+This is the data type representing a potluck package's source code.
+
+@table @asis
+@item @code{git-uri}
+An object containing the URI of the source git repository.  Currently
+potluck packages all come from Git.  Use the ``normal'' Guix packages if
+you need to build from some other source.
+
+@item @code{git-commit}
+The given git commit for the source, for example as a sha1 string.
+
+@item @code{sha256}
+A bytevector containing the SHA-256 hash of the source, as a base32
+string.  Note that the explicit @code{base32} wrapper that is needed for
+normal Guix packages is not present in a potluck package source.
+
+You can obtain this information using @code{guix hash -g}
+(@pxref{Invoking guix hash}).
+
+@item @code{snippet} (default: @code{#f})
+An S-expression that will be run in the source directory.  This is a
+convenient way to modify the source, sometimes more convenient than a
+patch.
+@end table
+@end deftp
+
+@item @code{build-system}
+The build system that should be used to build the package, as a symbol.
+For example, @code{gnu}.  To list available build systems, use
+@code{guix potluck init --build-system=help} (@pxref{Invoking guix
+potluck}).
+
+@item @code{arguments} (default: @code{'()})
+The arguments that should be passed to the build system.  This is a
+list, typically containing sequential keyword-value pairs, and is the
+same as for the @code{arguments} argument of a normal @code{package}
+object.
+
+@item @code{inputs} (default: @code{'()})
+@itemx @code{native-inputs} (default: @code{'()})
+@itemx @code{propagated-inputs} (default: @code{'()})
+@cindex inputs, of packages
+These fields list dependencies of the package.  Each item of an input
+list is a package specification string, for example @code{guile} or
+@code{guile@@2.0} or, in the most specific form, @code{guile@@2.0:out}.
+@xref{Packages with Multiple Outputs}, for more on package outputs.  For
+example, the list below specifies three inputs:
+
+@example
+'("libffi" "libunistring" "glib:bin")
+@end example
+
+@cindex cross compilation, package dependencies
+The distinction between @code{native-inputs} and @code{inputs} is
+necessary when considering cross-compilation.
+
+@xref{package Reference}, for full details on the differences between
+these input types.
+
+@item @code{synopsis}
+A one-line description of the package.
+
+@item @code{description}
+A more elaborate description of the package.
+
+@item @code{license}
+The license of the package, as a symbol.  For example, @code{gpl3+}.  To
+list available build systems, use @code{guix potluck init
+--license=help} (@pxref{Invoking guix potluck}).
+
+@item @code{home-page}
+The URL to the home-page of the package, as a string.
+
+@item @code{location} (default: source location of the @code{package} form)
+The source location of the package.  It is useful to override this when
+inheriting from another package, in which case this field is not
+automatically corrected.
+@end table
+@end deftp
+
+As you can see, a potluck package is less elaborate than a normal Guix
+package.  If you find yourself needing more advanced features, probably
+your package should be a part of Guix proper.  But if not, a potluck
+package can often do the job.
 
 
 @node Build Systems
@@ -4781,6 +4894,7 @@ the Scheme programming interface of Guix in a convenient way.
 * Invoking guix challenge::     Challenging substitute servers.
 * Invoking guix copy::          Copying to and from a remote store.
 * Invoking guix container::     Process isolation.
+* Invoking guix potluck::       Decoupled package definition.
 @end menu
 
 @node Invoking guix build
@@ -6998,6 +7112,123 @@ Note that the @var{pid} cannot be the parent process of a container.  It
 must be PID 1 of the container or one of its child processes.
 
 @end table
+
+@node Invoking guix potluck
+@section Invoking @command{guix potluck}
+@cindex potluck
+@cindex @command{guix potluck}
+@quotation Note
+As of version @value{VERSION}, this tool is experimental.  The interface
+is subject to radical change in the future.
+@end quotation
+
+Guix is developed as a unified project composed of both the package
+manager and the set of packages.  This allows Guix to evolve while
+remaining healthy and coherent.  If there is a change that needs to be
+done across Guix's entire tree, Guix developers can make it happen.  One
+way in which this principle manifests itself is in the @code{package}
+data type, where input packages are directly specified by value in the
+@code{inputs}, @code{native-inputs}, and @code{propagated-inputs}
+fields, instead of being specified as some abstract package name and
+version constraint that Guix would have to solve for.  @xref{package
+Reference}, for more on the @code{package} data type.
+
+However it is sometimes desirable to develop a package or set of
+packages in a more decoupled way, for example when a package set is
+still incubating or when a package is inappropriate for sending upstream
+for some reason.  Such packages use Guix and extend Guix but are not a
+part of the Guix project, properly speaking.  As such, they need to be
+resilient to changes in upstream Guix.  It would be brittle if such a
+package definition had to reference a Guix package by value; the Scheme
+variable denoting the upstream Guix package might move to a different
+module, or be renamed, or changed in some unexpected way.
+
+Guix's @dfn{potluck} facility fills this gap.  A @dfn{potluck package}
+is like a normal Guix package, except it expresses its inputs in the
+form of package specifications instead of direct references.
+@xref{potluck-package Reference}.  Potluck packages also have a simpler
+package structure with fewer fields; compared to normal Guix packages,
+they are less expressive but more isolated from details of upstream
+Guix.
+
+The user interface to potluck packages is concentrated in the
+@command{guix potluck} command.  To begin, let's say you are a developer
+of the @code{foo} project, and you'd like to package @code{foo} for use
+in your Guix system and maybe also that of a friend.  You're not sure if
+you want to support it yet so you don't want to make a proper release,
+but there should be something in the middle between that and not
+packaging it at all.  You decide to give @code{guix potluck} a go.
+
+So in that git checkout, you run @code{guix potluck init @var{url}},
+where @var{url} is a publicly accessible git URL at which @code{foo} is
+hosted.  @code{guix potluck init} takes the following options:
+
+@table @code
+@item --build-system=@var{sys}
+@itemx --build-system=help
+@itemx --autotools
+Indicate that the package uses the build system named @var{sys}.  Pass
+@code{help} as the build system to see available options.
+@code{--autotools} is like the common @code{--build-system=gnu}, but
+additionally indicating that an @code{autoreconf} step is needed before
+building.
+@item --license=@var{license}
+@itemx --license=help
+Specify the license of the project.
+@end table
+
+Calling @code{guix potluck init} will result in the creation of a
+@code{guix-potluck} directory in your git checkout, containing a brief
+overview @code{README.md} file as well as a @code{foo.scm} potluck
+package definition.  @xref{potluck-package Reference}.  Just fill in the
+synopsis and description and add the inputs and you have the beginnings
+of a potluck package.
+
+You can try building your new package by running @code{guix build -f
+guix-potluck/foo.scm}.  Once that works, you can share the file with
+your friends and they can build your package too.
+
+Of course, it would be nice if you could share that package with the
+world.  And it would be nice if your potluck package definitions could
+augment the set of available packages and versions.  And it would be
+nice if your potluck package could serve as a first draft of a proper
+Guix package definition.  We agree completely!
+
+Guix's potluck facility also implements a kind of registry of potluck
+recipes, as if it were hosting an actual potluck.  This
+@code{host-channel} facility takes requests to add potluck packages and
+translates that into a git repository of all potluck packages, as well
+as a git repository of Guix packages compiled from those potluck
+packages.
+
+To inform a channel host of the presence of fresh tasty potluck dishes,
+run @code{guix potluck update @var{url} @var{branch}}.  @var{url} should
+be the URL of a git repository containing a @code{guix-potluck}
+directory, and @var{branch} is a ref in that repository.  By default,
+the request is made to add the package to the default
+@code{guix-potluck.org} host; pass @code{--host=@var{host}} to specify
+an alternate registry.
+
+Running @code{guix potluck update} will simply enqueue an update request
+on the server.  Visit @code{https://@var{host}/} in your browser to see
+the state of the work queue, and to see whether your package update
+actually succeeded.  If it does succeed, you should be able to check out
+the git repository conventionally hosted at
+@indicateurl{https://@var{host}/git/main.git}, add that checkout to your
+@code{GUIX_PACKAGE_PATH}, and thereby have access to that package.  In
+the future this will be made easier with a @code{guix channel} facility,
+but for now you have to use @code{GUIX_PACKAGE_PATH} or similar.
+@xref{Defining Packages}, for more information.
+
+Finally, there is the code that actually runs the potluck service:
+@code{guix potluck host-channel}.  This tool will host a web server on
+localhost, listening on port 8080 by default.  It expects to be behind
+some kind of HTTPS terminator, like @code{nginx}.  It does the work of
+translating update requests to git repositories.  Guix includes an
+example operating system definition for a server combining HTTPS access
+to git repositories, an @code{nginx} web front-end, and a @code{guix
+potluck host-channel} instance.
+
 
 @c *********************************************************************
 @node GNU Distribution
