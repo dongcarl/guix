@@ -222,6 +222,7 @@ Services
 * VPN Services::                VPN daemons.
 * Network File System::         NFS related services.
 * Continuous Integration::      The Cuirass service.
+* Potluck Services::            Guix's decoupled package registry.
 * Power management Services::   The TLP tool.
 * Version Control Services::    Providing remote access to Git repositories.
 * Miscellaneous Services::      Other services.
@@ -8859,6 +8860,7 @@ declaration.
 * VPN Services::                VPN daemons.
 * Network File System::         NFS related services.
 * Continuous Integration::      The Cuirass service.
+* Potluck Services::            Guix's decoupled package registry.
 * Power management Services::   The TLP tool.
 * Version Control Services::    Providing remote access to Git repositories.
 * Miscellaneous Services::      Other services.
@@ -14384,6 +14386,58 @@ cuirass as in @command{guix build} command.
 The Cuirass package to use.
 @end table
 @end deftp
+
+@node Potluck Services
+@subsubsection Potluck Services
+
+@cindex potluck service
+Guix includes a potluck....
+
+@defvr {Scheme Variable} potluck-service-type
+A service type for the @code{guix-potluck} FastCGI proxy.
+@end defvr
+
+@deftp {Data Type} potluck-configuration
+Data type representing the configuration of the @code{guix-potluck} serice.
+This type has the following parameters:
+@table @asis
+@item @code{package} (default: @code{guix-potluck})
+The guix-potluck package to use.
+
+@item @code{scratch} (default: @code{/var/cache/guix-potluck/scratch})
+The scratch directory that @code{guix potluck host-channel} will use.
+The potluck service will ensure that this directory exists and is owned
+by the potluck service user.
+
+@item @code{source} (default: @code{/srv/git/source.git})
+A local path to a git repository in which to save Guix potluck packages.
+The potluck service will create this repository if needed.
+
+@item @code{source-repo} (default: @code{/var/cache/guix-potluck/source})
+A directory that @code{guix potluck host-channel} will use to check out
+the potluck source git repository.  The potluck service will create this
+checkout if needed.
+
+@item @code{target} (default: @code{/srv/git/target.git})
+@itemx @code{target-repo} (default: @code{/var/cache/guix-potluck/target})
+Like @code{source} and @code{source-repo}, but for compiled Guix
+packages corresponding to the incoming potluck packages.  The idea is
+that the source repository contains the incoming potluck packages
+verbatim, as the users provided them and after the potluck host has
+validated them.  The target repository contains corresponding Guix
+packages, in a form that can just be added to the
+@code{GUIX_PACKAGE_PATH}.
+
+@item @code{user} (default: @code{guix-potluck})
+@itemx @code{group} (default: @code{guix-potluck})
+The user and group names, as strings, under which to run the @code{guix}
+process, and which should own the corresponding checkouts and scratch
+directories.  The potluck service will ensure that if the user asks for
+the specific user or group names @code{guix-potluck} that the
+corresponding user and/or group is present on the system.
+@end table
+@end deftp
+
 
 @node Power management Services
 @subsubsection Power management Services

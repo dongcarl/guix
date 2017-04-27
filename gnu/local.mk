@@ -429,6 +429,7 @@ GNU_SYSTEM_MODULES =				\
   %D%/services/messaging.scm			\
   %D%/services/networking.scm			\
   %D%/services/nfs.scm			\
+  %D%/services/potluck.scm			\
   %D%/services/shepherd.scm			\
   %D%/services/herd.scm				\
   %D%/services/pm.scm				\
