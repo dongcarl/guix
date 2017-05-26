@@ -4525,34 +4525,6 @@ It should enable you to implement low-level X11 applications.")
 built on top of XELB.")
     (license license:gpl3+)))
 
-(define-public emacs-exwm-x
-  (package
-    (name "emacs-exwm-x")
-    (version "0.8.1")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append
-             "https://github.com/tumashu/exwm-x/archive/v"
-             version ".tar.gz"))
-       (file-name (string-append name "-" version ".tar.gz"))
-       (sha256
-        (base32
-         "0k3kigkmb73mqqxhsj1jy6qbhvgya8qh2i7xa4qwrzqi1x877jy7"))))
-    (build-system emacs-build-system)
-    (propagated-inputs
-     `(("emacs-exwm" ,emacs-exwm)
-       ;; Optional, for dmenu
-       ;;("emacs-switch-window" ,emacs-switch-window)
-       ;;("emacs-swiper" ,emacs-swiper)
-       ))
-    (home-page "https://github.com/tumashu/exwm-x")
-    (synopsis
-     "Extensions for EXWM (Emacs X window manager)")
-    (description
-     "Exwm-X is a collection of extensions for EXWM (Emacs X window manager).")
-    (license license:gpl3+)))
-
 (define-public emacs-gnuplot
   (package
     (name "emacs-gnuplot")
