@@ -946,39 +946,27 @@ instance, it could be a gexp), return it."
                          (system (%current-system))
                          (guile (%guile-for-build)))
   "Return a derivation that imports FILES into STORE.  FILES must be a list
-of (FINAL-PATH . FILE) pairs.  Each FILE is mapped to FINAL-PATH in the
-resulting store path.  FILE can be either a file name, or a file-like object,
-as returned by 'local-file' for example."
-  (define file-pair
-    (match-lambda
-     ((final-path . (? string? file-name))
-      (mlet %store-monad ((file (interned-file file-name
-                                               (basename final-path))))
-        (return (list final-path file))))
-     ((final-path . file-like)
-      (mlet %store-monad ((file (lower-object file-like system)))
-        (return (list final-path file))))))
+of (FILE-NAME . OBJECT) pairs.  Each OBJECT, a file-like object, is mapped to
+FILE-NAME in the resulting store item."
+  (define build
+    (gexp
+     (begin
+       (primitive-load (ungexp %utils-module))    ;for 'mkdir-p'
 
-  (mlet %store-monad ((files (mapm %store-monad file-pair files)))
-    (define build
-      (gexp
-       (begin
-         (primitive-load (ungexp %utils-module))  ;for 'mkdir-p'
+       (mkdir (ungexp output)) (chdir (ungexp output))
+       (for-each (lambda (final-path store-path)
+                   (mkdir-p (dirname final-path))
+                   (symlink store-path final-path))
+                 '(ungexp (map car files))
+                 '((ungexp-native-splicing (map cdr files)))))))
 
-         (mkdir (ungexp output)) (chdir (ungexp output))
-         (for-each (lambda (final-path store-path)
-                     (mkdir-p (dirname final-path))
-                     (symlink store-path final-path))
-                   '(ungexp (map first files))
-                   '((ungexp-native-splicing (map second files)))))))
-
-    ;; TODO: Pass FILES as an environment variable so that BUILD remains
-    ;; exactly the same regardless of FILES: less disk space, and fewer
-    ;; 'add-to-store' RPCs.
-    (gexp->derivation name build
-                      #:system system
-                      #:guile-for-build guile
-                      #:local-build? #t)))
+  ;; TODO: Pass FILES as an environment variable so that BUILD remains
+  ;; exactly the same regardless of FILES: less disk space, and fewer
+  ;; 'add-to-store' RPCs.
+  (gexp->derivation name build
+                    #:system system
+                    #:guile-for-build guile
+                    #:local-build? #t))
 
 (define* (imported-modules modules
                            #:key (name "module-import")
@@ -996,18 +984,13 @@ by an arrow followed by a file-like object.  For example:
 
 In this example, the first two modules are taken from MODULE-PATH, and the
 last one is created from the given <scheme-file> object."
-  (mlet %store-monad ((files
-                       (mapm %store-monad
-                             (match-lambda
-                               (((module ...) '=> file)
-                                (return
-                                 (cons (module->source-file-name module)
-                                       file)))
-                               ((module ...)
-                                (let ((f (module->source-file-name module)))
-                                  (return
-                                   (cons f (search-path* module-path f))))))
-                             modules)))
+  (let ((files (map (match-lambda
+                      (((module ...) '=> file)
+                       (cons (module->source-file-name module) file))
+                      ((module ...)
+                       (let ((f (module->source-file-name module)))
+                         (cons f (local-file (search-path* module-path f))))))
+                    modules)))
     (imported-files files #:name name #:system system
                     #:guile guile)))
 
