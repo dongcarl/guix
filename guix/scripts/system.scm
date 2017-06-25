@@ -143,9 +143,9 @@ TARGET, and register them."
                        (to-copy (topologically-sorted*
                                  (delete-duplicates (cons item refs)
                                                     string=?))))
-    (sequence %store-monad
-              (map (cut copy-item <> target #:log-port log-port)
-                   to-copy))))
+    (mapm %store-monad
+          (cut copy-item <> target #:log-port log-port)
+          to-copy)))
 
 (define* (install-bootloader installer-drv
                              #:key

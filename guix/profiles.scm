@@ -1064,10 +1064,10 @@ are cross-built for TARGET."
                                   (current-system)))
                       (extras (if (null? (manifest-entries manifest))
                                   (return '())
-                                  (sequence %store-monad
-                                            (map (lambda (hook)
-                                                   (hook manifest))
-                                                 hooks)))))
+                                  (mapm %store-monad
+                                        (lambda (hook)
+                                          (hook manifest))
+                                        hooks))))
     (define inputs
       (append (filter-map (lambda (drv)
                             (and (derivation? drv)
