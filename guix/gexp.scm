@@ -269,12 +269,11 @@ The expander specifies how an object is converted to its sexp representation."
 (define (absolute-file-name file directory)
   "Return the canonical absolute file name for FILE, which lives in the
 vicinity of DIRECTORY."
-  (canonicalize-path
-   (cond ((string-prefix? "/" file) file)
-         ((not directory) file)
-         ((string-prefix? "/" directory)
-          (string-append directory "/" file))
-         (else file))))
+  (cond ((string-prefix? "/" file) file)
+        ((not directory) (canonicalize-path file))
+        ((string-prefix? "/" directory)
+         (string-append directory "/" file))
+        (else (canonicalize-path file))))
 
 (define-syntax-rule (local-file file rest ...)
   "Return an object representing local file FILE to add to the store; this
