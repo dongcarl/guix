@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2012, 2013, 2014, 2015, 2016 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2012, 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2013, 2014, 2015 Andreas Enge <andreas@enge.fr>
 ;;; Copyright © 2015 Federico Beffa <beffa@fbengineering.ch>
 ;;; Copyright © 2016 Alex Griffin <a@ajgrf.com>
@@ -314,17 +314,11 @@
     (module-ref module 'gnutls)))
 
 (define built-in-builders*
-  (let ((cache (make-weak-key-hash-table)))
+  (let ((proc (store-lift built-in-builders)))
     (lambda ()
       "Return, as a monadic value, the list of built-in builders supported by
-the daemon."
-      (lambda (store)
-        ;; Memoize the result to avoid repeated RPCs.
-        (values (or (hashq-ref cache store)
-                    (let ((result (built-in-builders store)))
-                      (hashq-set! cache store result)
-                      result))
-                store)))))
+the daemon; cache the return value."
+      (mcached (proc) built-in-builders))))
 
 (define* (built-in-download file-name url
                             #:key system hash-algo hash
