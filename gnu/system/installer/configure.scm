@@ -134,7 +134,7 @@
     (pretty-print `(use-modules
                     (gnu)
                     ,(when grub-mount-point
-                       `(gnu system grub))
+                       `(gnu bootloader grub))
 
                     (gnu system nss))
                   p #:width width)
