@@ -252,7 +252,8 @@ You have been warned.  Thanks for being so brave.
 
     (list (mingetty-service (mingetty-configuration
                              (tty "tty1")
-                             (auto-login "root")))
+                             (auto-login "root")
+                             (login-program (guix-installer))))
 
           (login-service (login-configuration
                           (motd motd)))
