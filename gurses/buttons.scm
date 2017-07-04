@@ -28,9 +28,11 @@
   #:export (buttons-fetch-by-key)
   #:export (buttons-n-buttons)
   #:export (buttons-key-matches-symbol?)
+  #:export (buttons-mouse-handler)
 
   #:use-module (ncurses curses)
   #:use-module (ice-9 match)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9))
 
 (define-record-type <buttons>
@@ -163,6 +165,21 @@
 	       (and=> (buttons-get-current-selection nav)
 		      (lambda (x) (eq? x symbol)))))
   #f))
-		
 
-
+(define (buttons-mouse-handler buttons device-id g-x g-y z button-state)
+  (if (logtest BUTTON1_CLICKED button-state)
+      (let* ((arry (buttons-array buttons))
+             (len (array-length arry)))
+        (let loop ((i 0))
+          (if (< i len)
+              (match (array-ref arry i)
+               ((ch win sym)
+                (match (mouse-trafo win g-y g-x #f)
+                 ((y x)
+                  (buttons-select buttons i)
+                  'activated)
+                  (_ (if (< i len)
+                         (loop (1+ i))
+                         'ignored)))))
+              'ignored)))
+      'ignored))

@@ -59,15 +59,30 @@
       (menu-refresh menu)))
 
 (define (disk-page-activate-focused-item page)
-  (let* ((menu (page-datum page 'menu))
-         (i (menu-current-item menu)))
-    (endwin)
-      (system* "cfdisk" (disk-name (list-ref (menu-items menu) i)))
-      (system* "partprobe")))
+  (let ((menu (page-datum page 'menu)))
+    (cond
+     ((menu-active menu)
+      (let* ((menu (page-datum page 'menu))
+             (i (menu-current-item menu)))
+        (endwin)
+        (system* "cfdisk" (disk-name (list-ref (menu-items menu) i)))
+        (system* "partprobe")))
+     (else ; "Continue" button activated
+      (page-leave)))))
 
 (define (disk-page-mouse-handler page device-id x y z button-state)
   (let* ((menu (page-datum page 'menu))
-         (status (std-menu-mouse-handler menu device-id x y z button-state)))
+         (status (std-menu-mouse-handler menu device-id x y z button-state))
+         (buttons (page-datum page 'navigation))
+         (status (if (eq? status 'ignored)
+                     (let ((button-status (buttons-mouse-handler buttons
+                                                                 device-id
+                                                                 x y z
+                                                                 button-state)))
+                       (if (eq? button-status 'activated)
+                         (menu-set-active! menu #f))
+                       button-status)
+                     status)))
     (if (eq? status 'activated)
       (disk-page-activate-focused-item page))
     status))
@@ -84,8 +99,8 @@
      ((eq? ch #\tab)
       (cond
        ((menu-active menu)
-	  (menu-set-active! menu #f)
-	  (buttons-select nav 0))
+        (menu-set-active! menu #f)
+        (buttons-select nav 0))
 
        ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
 	(menu-set-active! menu #t)
