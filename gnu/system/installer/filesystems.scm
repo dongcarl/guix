@@ -131,13 +131,10 @@
              title
              filesystem-page-refresh
              0
-             filesystem-page-key-handler
-             filesystem-page-mouse-handler))
+             #:activator filesystem-page-activate-focused-item))
 
 (define my-buttons `((continue ,(M_ "_Continue") #t)
-		     (cancel     ,(M_ "Canc_el") #t)))
-
-
+                     (cancel     ,(M_ "Canc_el") #t)))
 
 (define (filesystem-page-refresh page)
   (when (not (page-initialised? page))
@@ -173,73 +170,33 @@
      p)))
 
 (define (filesystem-page-activate-focused-item page)
-  (let* ((menu (page-datum page 'menu))
-         (dev (list-ref (menu-items menu) (menu-current-item menu)))
-         (name (partition-name (car dev)))
-         (next  (make-page (page-surface page)
-                           (format #f
-                            (gettext "Choose the mount point for device ~s") name)
-                           mount-point-refresh
-                           1
-                           mount-point-page-key-handler
-                           mount-point-page-mouse-handler)))
-
-    (page-set-datum! next 'device name)
-    (page-enter next)))
-
-(define (filesystem-page-mouse-handler page device-id x y z button-state)
-  (let* ((menu (page-datum page 'menu))
-         (status (std-menu-mouse-handler menu device-id x y z button-state)))
-    (if (eq? status 'activated)
-      (filesystem-page-activate-focused-item page))
-    status))
-
-(define (filesystem-page-key-handler page ch)
-  (let* ((menu (page-datum page 'menu))
-         (nav  (page-datum page 'navigation))
-         (result   (cond
-                ((eq? ch KEY_RIGHT)
-                 (menu-set-active! menu #f)
-                 (buttons-select-next nav))
-
-                ((eq? ch #\tab)
-                 (cond
-                  ((menu-active menu)
-                   (menu-set-active! menu #f)
-                   (buttons-select nav 0))
-
-                  ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-                   (menu-set-active! menu #t)
-                   (buttons-unselect-all nav))
-
-                  (else
-                   (buttons-select-next nav))))
-
-                ((eq? ch KEY_LEFT)
-                 (menu-set-active! menu #f)
-                 (buttons-select-prev nav))
-
-                ((eq? ch KEY_UP)
-                 (buttons-unselect-all nav)
-                 (menu-set-active! menu #t))
-
-                ((select-key? ch)
-                 (filesystem-page-activate-focused-item page))
-
-                ((buttons-key-matches-symbol? nav ch 'cancel)
-                 (page-leave)
-                 'cancelled)
-
-                ((buttons-key-matches-symbol? nav ch 'continue)
-                 (let ((errstr (filesystem-task-incomplete-reason)))
-                   (if errstr
-                       (let ((next (make-dialog page errstr)))
-                         (page-enter next))
-                       (page-leave)
-                       ))))))
-
-    (std-menu-key-handler menu ch)
-    result))
+  (let* ((menu (page-datum page 'menu)))
+    (cond
+      ((menu-active menu)
+       (let* ((dev (list-ref (menu-items menu) (menu-current-item menu)))
+              (name (partition-name (car dev)))
+              (next  (make-page (page-surface page)
+                                (format #f
+                                 (gettext "Choose the mount point for device ~s") name)
+                                mount-point-refresh
+                                1
+                                #:activator mount-point-page-activate-focused-item)))
+         (page-set-datum! next 'device name)
+         (page-enter next)
+         'handled))
+      (else ; buttons
+        (match (buttons-selected-symbol (page-datum page 'navigation))
+          ('cancel
+           (page-leave)
+           'cancelled)
+          ('continue
+           (let ((errstr (filesystem-task-incomplete-reason)))
+                 (if errstr
+                   (let ((next (make-dialog page errstr)))
+                     (page-enter next))
+                     (page-leave)))
+           'handled)
+          (_ 'ignored))))))
 
 (define (filesystem-page-init p)
   (let* ((s (page-surface p))
