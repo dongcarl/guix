@@ -155,14 +155,15 @@ If a form is used it's assumed that the menu is not used and vice versa."
           (form-set-enabled! form #t)))
       'handled)
 
+     ((and form (form-enabled? form))
+      (form-enter form ch))
+
      ((and nav (buttons-fetch-by-key nav ch))
       (buttons-select-by-symbol nav (buttons-fetch-by-key nav ch))
       (page-activate-focused-item page))
 
      (else
-      (if form
-          (form-enter form ch)
-          'ignored)))))
+       'ignored))))
 
 
 (define* (make-page surface title refresh cursor-visibility
