@@ -90,7 +90,8 @@ If a form is used it's assumed that the menu is not used and vice versa."
       (if form
         (form-set-enabled! form #f))
       (if nav
-        (buttons-select-next nav)))
+        (buttons-select-next nav))
+      'handled)
 
      ((eq? ch KEY_LEFT)
       (if menu
@@ -98,30 +99,35 @@ If a form is used it's assumed that the menu is not used and vice versa."
       (if form
         (form-set-enabled! form #f))
       (if nav
-        (buttons-select-prev nav)))
+        (buttons-select-prev nav))
+      'handled)
 
      ((eq? ch #\tab)
       (cond
        ((and menu (menu-active menu))
         (menu-set-active! menu #f)
         (if nav
-            (buttons-select nav 0)))
+            (buttons-select nav 0))
+        'handled)
 
        ((and form (form-enabled? form))
         (form-set-enabled! form #f)
         (if nav
-            (buttons-select nav 0)))
+            (buttons-select nav 0))
+        'handled)
 
        ((and nav (eqv? (buttons-selected nav) (1- (buttons-n-buttons nav))))
         (if menu
           (menu-set-active! menu #t)
           (if form
             (form-set-enabled! form #t)))
-        (buttons-unselect-all nav))
+        (buttons-unselect-all nav)
+        'handled)
 
        (else
         (if nav
-            (buttons-select-next nav)))))
+            (buttons-select-next nav))
+        'handled)))
 
      ((select-key? ch)
       (page-activate-focused-item page))
@@ -135,7 +141,8 @@ If a form is used it's assumed that the menu is not used and vice versa."
       (if menu
         (menu-set-active! menu #t)
         (if form
-          (form-set-enabled! form #t))))
+          (form-set-enabled! form #t)))
+      'handled)
 
      ((eq? ch KEY_DOWN)
       (if nav
@@ -143,7 +150,8 @@ If a form is used it's assumed that the menu is not used and vice versa."
       (if menu
         (menu-set-active! menu #t)
         (if form
-          (form-set-enabled! form #t))))
+          (form-set-enabled! form #t)))
+      'handled)
 
      ((and nav (buttons-fetch-by-key nav ch))
       (buttons-select-by-symbol nav (buttons-fetch-by-key nav ch))
