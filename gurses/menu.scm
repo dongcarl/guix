@@ -155,30 +155,39 @@
 
 
 (define (std-menu-key-handler menu ch)
-  (cond
-   ((eq? ch KEY_NPAGE)
-    (menu-active menu)
-    (menu-down menu #:step (getmaxy (menu-window menu))))
+  "Handle some often-used menu keys.
+Note that it's the caller's responsibility to check whether the menu is
+active."
+  (if (menu-active menu)
+      (cond
+       ((eq? ch KEY_NPAGE)
+        (menu-down menu #:step (getmaxy (menu-window menu)))
+        'handled)
 
-   ((eq? ch KEY_PPAGE)
-    (menu-active menu)
-    (menu-up menu #:step (getmaxy (menu-window menu))))
+       ((eq? ch KEY_PPAGE)
+        (menu-up menu #:step (getmaxy (menu-window menu)))
+        'handled)
 
-   ((eq? ch KEY_HOME)
-    (menu-goto-start menu))
+       ((eq? ch KEY_HOME)
+        (menu-goto-start menu)
+        'handled)
 
-   ((eq? ch KEY_END)
-    (menu-goto-end menu))
+       ((eq? ch KEY_END)
+        (menu-goto-end menu)
+        'handled)
 
-   ((or (eq? ch KEY_DOWN)
-	(eq? ch #\so))
-    (if (menu-active menu)
-	(menu-down menu)))
+       ((or (eq? ch KEY_DOWN)
+            (eq? ch #\so))
+        (menu-down menu)
+        'handled)
 
-   ((or (eq? ch KEY_UP)
-	(eq? ch #\dle))
-    (if (menu-active menu)
-	(menu-up menu)))))
+       ((or (eq? ch KEY_UP)
+            (eq? ch #\dle))
+        (menu-up menu)
+        'handled)
+       (else
+        'ignored))
+      'ignored))
 
 (define (std-menu-mouse-handler menu device-id g-x g-y z button-state)
   (if (logtest BUTTON1_CLICKED button-state)

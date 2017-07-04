@@ -32,7 +32,13 @@
   #:export (page-set-datum!)
   #:export (page-key-handler)
   #:export (page-mouse-handler)
+  #:export (page-default-key-handler)
+  #:export (page-default-mouse-handler)
 
+  #:use-module (gurses buttons)
+  #:use-module (gurses menu)
+  #:use-module (gurses form)
+  #:use-module (ncurses curses)
   #:use-module (gnu system installer utils)
   #:use-module (gnu system installer levelled-stack)
   #:use-module (srfi srfi-9))
@@ -50,8 +56,115 @@
   (wwin page-wwin page-set-wwin!)
   (data page-data page-set-data!))
 
-(define (make-page surface title refresh cursor-visibility key-handler mouse-handler)
-  (make-page' surface title #f refresh cursor-visibility key-handler mouse-handler '()))
+(define (page-activate-focused-item page)
+  ((page-datum page 'activator) page))
+
+(define (page-default-mouse-handler page device-id x y z button-state)
+  (let* ((menu (page-datum page 'menu))
+         (status (std-menu-mouse-handler menu device-id x y z button-state))
+         (buttons (page-datum page 'navigation))
+         (status (if (and (eq? status 'ignored) buttons)
+                     (let ((button-status (buttons-mouse-handler buttons
+                                                                 device-id
+                                                                 x y z
+                                                                 button-state)))
+                       (if (eq? button-status 'activated)
+                         (menu-set-active! menu #f))
+                       button-status)
+                     status)))
+    (if (eq? status 'activated)
+      (page-activate-focused-item page))
+    status))
+
+(define (page-default-key-handler page ch)
+  "Handle keypresses in a commonly-used page.
+The page is assumed to have only at most a menu, a form and a navigation.
+If a form is used it's assumed that the menu is not used and vice versa."
+  (let ((menu (page-datum page 'menu))
+        (nav  (page-datum page 'navigation))
+        (form (page-datum page 'form)))
+    (cond
+     ((eq? ch KEY_RIGHT)
+      (if menu
+        (menu-set-active! menu #f))
+      (if form
+        (form-set-enabled! form #f))
+      (if nav
+        (buttons-select-next nav)))
+
+     ((eq? ch KEY_LEFT)
+      (if menu
+        (menu-set-active! menu #f))
+      (if form
+        (form-set-enabled! form #f))
+      (if nav
+        (buttons-select-prev nav)))
+
+     ((eq? ch #\tab)
+      (cond
+       ((and menu (menu-active menu))
+        (menu-set-active! menu #f)
+        (if nav
+            (buttons-select nav 0)))
+
+       ((and form (form-enabled? form))
+        (form-set-enabled! form #f)
+        (if nav
+            (buttons-select nav 0)))
+
+       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
+        (if menu
+          (menu-set-active! menu #t)
+          (if form
+            (form-set-enabled! form #t)))
+        (if nav
+            (buttons-unselect-all nav)))
+
+       (else
+        (if nav
+            (buttons-select-next nav)))))
+
+     ((select-key? ch)
+      (page-activate-focused-item page))
+
+     ((and menu (menu-active menu))
+       (std-menu-key-handler menu ch))
+
+     ((eq? ch KEY_UP)
+      (if nav
+          (buttons-unselect-all nav))
+      (if menu
+        (menu-set-active! menu #t)
+        (if form
+          (form-set-enabled! form #t))))
+
+     ((eq? ch KEY_DOWN)
+      (if nav
+          (buttons-unselect-all nav))
+      (if menu
+        (menu-set-active! menu #t)
+        (if form
+          (form-set-enabled! form #t))))
+
+     ((and nav (buttons-fetch-by-key nav ch))
+      (buttons-select-by-symbol nav (buttons-fetch-by-key nav ch))
+      (page-activate-focused-item page))
+
+     (else
+      (if form
+          (form-enter form ch))))))
+
+
+(define* (make-page surface title refresh cursor-visibility
+                    #:optional
+                    (key-handler page-default-key-handler)
+                    (mouse-handler page-default-mouse-handler)
+                    #:key
+                    activator)
+  (let ((result (make-page' surface title #f refresh cursor-visibility key-handler mouse-handler '())))
+    (if activator
+      (page-set-datum! result 'activator activator))
+    result))
 
 (define (page-set-datum! page key value)
   (page-set-data! page (acons key value (page-data page))))
