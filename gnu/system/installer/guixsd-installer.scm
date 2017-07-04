@@ -337,7 +337,7 @@
                  ;  ((y x) ...)
                  ;  (#f ...))
                  ((page-mouse-handler current-page) current-page device-id x y z button-state))
-                (_ ((base-page-key-handler current-page) current-page KEY_DOWN)))
+                (_ #f))
               (let* ((current-page (page-top))
                         (ret ((page-key-handler current-page) current-page ch)))
                    (when (eq? ret 'cancelled)
