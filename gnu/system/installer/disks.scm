@@ -36,8 +36,7 @@
              title
              disk-page-refresh
              0
-             disk-page-key-handler
-             disk-page-mouse-handler))
+             #:activator disk-page-activate-focused-item))
 
 (define (disk-page-refresh page)
     (when (not (page-initialised? page))
@@ -69,65 +68,6 @@
         (system* "partprobe")))
      (else ; "Continue" button activated
       (page-leave)))))
-
-(define (disk-page-mouse-handler page device-id x y z button-state)
-  (let* ((menu (page-datum page 'menu))
-         (status (std-menu-mouse-handler menu device-id x y z button-state))
-         (buttons (page-datum page 'navigation))
-         (status (if (eq? status 'ignored)
-                     (let ((button-status (buttons-mouse-handler buttons
-                                                                 device-id
-                                                                 x y z
-                                                                 button-state)))
-                       (if (eq? button-status 'activated)
-                         (menu-set-active! menu #f))
-                       button-status)
-                     status)))
-    (if (eq? status 'activated)
-      (disk-page-activate-focused-item page))
-    status))
-
-(define (disk-page-key-handler page ch)
-  (let ((menu (page-datum page 'menu))
-	(nav  (page-datum page 'navigation)))
-
-    (cond
-     ((eq? ch KEY_RIGHT)
-      (menu-set-active! menu #f)
-      (buttons-select-next nav))
-
-     ((eq? ch #\tab)
-      (cond
-       ((menu-active menu)
-        (menu-set-active! menu #f)
-        (buttons-select nav 0))
-
-       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-	(menu-set-active! menu #t)
-	(buttons-unselect-all nav))
-
-       (else
-	(buttons-select-next nav))))
-
-     ((eq? ch KEY_LEFT)
-      (menu-set-active! menu #f)
-      (buttons-select-prev nav))
-
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav)
-      (menu-set-active! menu #t))
-
-     ((and (select-key? ch)
-           (menu-active menu))
-      (disk-page-activate-focused-item page))
-
-     ((buttons-key-matches-symbol? nav ch 'continue)
-      (page-leave)))
-
-    (std-menu-key-handler menu ch))
-
-  #f
-  )
 
 (define (truncate-string ss w)
  (if (> (string-length ss) w)
