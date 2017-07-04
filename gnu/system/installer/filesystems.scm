@@ -128,11 +128,11 @@
 
 (define (make-filesystem-page parent  title)
   (make-page (page-surface parent)
-	     title
-	     filesystem-page-refresh
+             title
+             filesystem-page-refresh
              0
-	     filesystem-page-key-handler))
-
+             filesystem-page-key-handler
+             filesystem-page-mouse-handler))
 
 (define my-buttons `((continue ,(M_ "_Continue") #t)
 		     (cancel     ,(M_ "Canc_el") #t)))
@@ -172,6 +172,8 @@
        (error (format #f "~s is not a partition" p)))
      p)))
 
+(define (filesystem-page-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (filesystem-page-key-handler page ch)
   (let* ((menu (page-datum page 'menu))
@@ -210,7 +212,8 @@
                                                   (gettext "Choose the mount point for device ~s") name)
                                           mount-point-refresh
                                           1
-                                          mount-point-page-key-handler)))
+                                          mount-point-page-key-handler
+                                          mount-point-page-mouse-handler)))
 
                    (page-set-datum! next 'device name)
                    (page-enter next)))

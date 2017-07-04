@@ -45,10 +45,11 @@
 
 (define (make-host-name-page parent  title)
   (make-page (page-surface parent)
-	     title
-	     host-name-refresh
+             title
+             host-name-refresh
              1
-	     host-name-key-handler))
+             host-name-key-handler
+             host-name-mouse-handler))
 
 (define (host-name-refresh page)
   (when (not (page-initialised? page))
@@ -67,6 +68,9 @@
     (refresh* text-window)
     (refresh* (outer (page-wwin page)))
     (refresh* (form-window form))))
+
+(define (host-name-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (host-name-key-handler page ch)
   (let ((form  (page-datum page 'form))

@@ -41,7 +41,8 @@
                          title
                          install-page-refresh
                          0
-                         install-page-key-handler)))
+                         install-page-key-handler
+                         install-page-mouse-handler)))
     page))
 
 
@@ -70,6 +71,9 @@
    (lambda (key subr message args . rest)
      #f)))
 
+
+(define (install-page-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (install-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))

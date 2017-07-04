@@ -42,7 +42,8 @@
                          title
                          wireless-page-refresh
                          0
-                         wireless-page-key-handler)))
+                         wireless-page-key-handler
+                         wireless-page-mouse-handler)))
 
     (page-set-datum! page 'ifce interface)
     page))
@@ -50,6 +51,8 @@
 
 (define my-buttons `((cancel ,(M_ "Canc_el") #t)))
 
+(define (wireless-page-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (wireless-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))

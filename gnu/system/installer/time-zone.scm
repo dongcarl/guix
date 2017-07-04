@@ -34,12 +34,16 @@
 			(gettext "Time Zone")
 			time-zone-page-refresh
                         0
-			time-zone-page-key-handler)))
+			time-zone-page-key-handler
+			time-zone-page-mouse-handler)))
     (page-set-datum! page 'directory directory)
     page))
 
 
 (define my-buttons `((cancel  ,(M_ "Canc_el") #t)))
+
+(define (time-zone-page-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (time-zone-page-key-handler page ch)
   (let* ((nav  (page-datum page 'navigation))

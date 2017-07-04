@@ -27,7 +27,8 @@
   #:use-module (ncurses curses)
 
   #:export (mount-point-refresh)
-  #:export (mount-point-page-key-handler))
+  #:export (mount-point-page-key-handler)
+  #:export (mount-point-page-mouse-handler))
 
 (include "i18n.scm")
 
@@ -43,6 +44,9 @@
   (let ((form  (page-datum page 'form)))
     (refresh* (outer (page-wwin page)))
     (refresh* (form-window form))))
+
+(define (mount-point-page-mouse-handler page)
+  'ignored)
 
 (define (mount-point-page-key-handler page ch)
   (let ((form  (page-datum page 'form))

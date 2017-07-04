@@ -30,7 +30,8 @@
 
   #:export (substitute-is-reachable?)
   #:export (ping-page-refresh)
-  #:export (ping-page-key-handler))
+  #:export (ping-page-key-handler)
+  #:export (ping-page-mouse-handler))
 
 (include "i18n.scm")
 
@@ -50,6 +51,9 @@
 (define my-buttons `((test ,(M_ "_Test") #t)
 		     (continue  ,(M_ "_Continue") #t)
 		     (cancel     ,(M_ "Canc_el") #t)))
+
+(define (ping-page-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (ping-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))

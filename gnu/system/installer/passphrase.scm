@@ -41,7 +41,8 @@
                     title
                     passphrase-refresh
                     1
-                    passphrase-key-handler)))
+                    passphrase-key-handler
+                    passphrase-mouse-handler)))
     (page-set-datum! page 'access-point access-point)
     (page-set-datum! page 'ifce ifce)
     page))
@@ -65,6 +66,9 @@
     (refresh* text-window)
     (refresh* (outer (page-wwin page)))
     (refresh* (form-window form))))
+
+(define (passphrase-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (passphrase-key-handler page ch)
   (let ((form  (page-datum page 'form))

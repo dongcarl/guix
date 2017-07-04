@@ -40,7 +40,8 @@
                        title
                        user-edit-refresh
                        1
-                       user-edit-page-key-handler)))
+                       user-edit-page-key-handler
+                       user-edit-page-mouse-handler)))
 
     (page-set-datum! page 'account account)
     (page-set-datum! page 'parent parent)
@@ -54,6 +55,9 @@
   (let ((form  (page-datum page 'form)))
     (refresh* (outer (page-wwin page)))
     (refresh* (form-window form))))
+
+(define (user-edit-page-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (user-edit-page-key-handler page ch)
   (let ((form  (page-datum page 'form))

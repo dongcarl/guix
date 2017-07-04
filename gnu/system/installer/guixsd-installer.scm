@@ -205,6 +205,13 @@
            (do-task task-name page))))
    task-name-list))
 
+(define (main-page-mouse-handler page device-id x y z button-state)
+  (let ((main-menu (page-datum page 'menu)))
+    (if (eq? 'activated (std-menu-mouse-handler main-menu device-id x y z button-state))
+      (let ((item (menu-get-current-item main-menu)))
+        (do-task (car item) page)
+        (page-uniquify)
+        ((page-refresh (car stack)) (car stack))))))
 
 (define (main-page-key-handler page ch)
   (let ((main-menu (page-datum page 'menu)))
@@ -285,7 +292,6 @@
 (define-public (guixsd-installer)
   (catch #t
     (lambda ()
-
       (define stdscr
         ;; initscr must be called whilst the UTF-8 encoding is in the locale.
         ;; Otherwise, on certain terminal types, bad things will happen when
@@ -298,6 +304,9 @@
       ;; We don't want any nasty kernel messages damaging our beautifully
       ;; crafted display.
       (system* "dmesg" "--console-off")
+
+      ;; Set up mouse
+      (mousemask (logior BUTTON1_CLICKED BUTTON1_PRESSED BUTTON1_RELEASED))
 
       (cbreak!)				; Line buffering disabled
       (keypad! stdscr #t)			; Check for function keys
@@ -312,16 +321,26 @@
 
       (let ((page (make-page
                    stdscr (gettext "GuixSD Installer")
-                   main-page-refresh 0 main-page-key-handler)))
+                   main-page-refresh 0 main-page-key-handler
+                   main-page-mouse-handler)))
         (page-enter page)
         (page-push #f)
         (let loop ((ch (getch stdscr)))
-          (let* ((current-page (page-top))
-                 (ret ((page-key-handler current-page) current-page ch)))
-            (when (eq? ret 'cancelled)
-                  (page-ppop))
-            (base-page-key-handler current-page ch))
-          ((page-refresh (page-top)) (page-top))
+          (let ((current-page (page-top)))
+            (if (eqv? ch KEY_MOUSE)
+              (match (or (getmouse) '())
+                ((device-id x y z button-state)
+                 ;(match (mouse-trafo win y x #t)
+                 ;  ((y x) ...)
+                 ;  (#f ...))
+                 ((page-mouse-handler current-page) current-page device-id x y z button-state))
+                (_ ((base-page-key-handler current-page) current-page KEY_DOWN)))
+              (let* ((current-page (page-top))
+                        (ret ((page-key-handler current-page) current-page ch)))
+                   (when (eq? ret 'cancelled)
+                     (page-ppop))
+                   (base-page-key-handler current-page ch)))
+            ((page-refresh current-page) current-page))
           (loop (getch stdscr)))
 
         (endwin)))

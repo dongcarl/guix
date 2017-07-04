@@ -45,7 +45,8 @@
                          title
                          configure-page-refresh
                          0
-                         configure-page-key-handler)))
+                         configure-page-key-handler
+                         configure-page-mouse-handler)))
     page))
 
 
@@ -74,6 +75,9 @@
    ;; does not play nicely with it.  Bug 25286 refers.
    ""
    "/tmp"))
+
+(define (configure-page-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (configure-page-key-handler page ch)
 

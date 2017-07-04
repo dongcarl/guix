@@ -44,10 +44,11 @@
 
 (define (make-network-page parent  title)
   (make-page (page-surface parent)
-	     title
-	     network-page-refresh
+             title
+             network-page-refresh
              0
-	     network-page-key-handler))
+             network-page-key-handler
+             network-page-mouse-handler))
 
 (define (interfaces)
   (map (lambda (ifce)
@@ -89,7 +90,10 @@
                "Device"))))))
 
 (define my-buttons `((continue ,(M_ "_Continue") #t)
-		     (test     ,(M_ "_Test") #t)))
+                     (test     ,(M_ "_Test") #t)))
+
+(define (network-page-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (network-page-key-handler page ch)
   (let ((menu (page-datum page 'menu))
@@ -139,7 +143,8 @@
                               "Ping"
                               ping-page-refresh
                               0
-                              ping-page-key-handler)))
+                              ping-page-key-handler
+                              ping-page-mouse-handler)))
         (page-enter next)))
 
      ((buttons-key-matches-symbol? nav ch 'continue)

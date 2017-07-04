@@ -31,13 +31,14 @@
   #:export (page-datum)
   #:export (page-set-datum!)
   #:export (page-key-handler)
+  #:export (page-mouse-handler)
 
   #:use-module (gnu system installer utils)
   #:use-module (gnu system installer levelled-stack)
   #:use-module (srfi srfi-9))
 
 (define-record-type <page>
-  (make-page' surface title inited refresh cursor-visibility key-handler data)
+  (make-page' surface title inited refresh cursor-visibility key-handler mouse-handler data)
   page?
   (title page-title)
   (surface page-surface)
@@ -45,11 +46,12 @@
   (refresh page-refresh)
   (cursor-visibility page-cursor-visibility)
   (key-handler page-key-handler)
+  (mouse-handler page-mouse-handler)
   (wwin page-wwin page-set-wwin!)
   (data page-data page-set-data!))
 
-(define (make-page surface title refresh cursor-visibility key-handler)
-  (make-page' surface title #f refresh cursor-visibility key-handler '()))
+(define (make-page surface title refresh cursor-visibility key-handler mouse-handler)
+  (make-page' surface title #f refresh cursor-visibility key-handler mouse-handler '()))
 
 (define (page-set-datum! page key value)
   (page-set-data! page (acons key value (page-data page))))

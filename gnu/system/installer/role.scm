@@ -48,13 +48,17 @@
 
 (define (make-role-page parent  title)
   (make-page (page-surface parent)
-	     title
-	     role-page-refresh
+             title
+             role-page-refresh
              0
-	     role-page-key-handler))
+             role-page-key-handler
+             role-page-mouse-handler))
 
 
 (define my-buttons `((cancel ,(M_ "Canc_el") #t)))
+
+(define (role-page-mouse-handler device-id x y z button-state)
+  'ignored)
 
 (define (role-page-key-handler page ch)
   (let* ((menu (page-datum page 'menu))

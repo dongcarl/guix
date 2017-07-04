@@ -65,13 +65,17 @@ match those uuids read from the respective partitions"
                          title
                          format-page-refresh
                          0
-                         format-page-key-handler)))
+                         format-page-key-handler
+                         format-page-mouse-handler)))
     page))
 
 
 (define my-buttons `((format ,(M_ "_Format") #t)
                      (cancel ,(M_ "Canc_el") #t)))
 
+
+(define (format-page-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (format-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))

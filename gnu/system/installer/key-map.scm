@@ -34,12 +34,16 @@
 			(gettext "Keyboard Mapping")
 			key-map-page-refresh
                         0
-			key-map-page-key-handler)))
+			key-map-page-key-handler
+			key-map-page-mouse-handler)))
     (page-set-datum! page 'directory directory)
     page))
 
 
 (define my-buttons `((cancel  ,(M_ "Canc_el") #t)))
+
+(define (key-map-page-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (key-map-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))

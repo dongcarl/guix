@@ -33,10 +33,11 @@
 
 (define (make-disk-page parent  title)
   (make-page (page-surface parent)
-	     title
-	     disk-page-refresh
+             title
+             disk-page-refresh
              0
-	     disk-page-key-handler))
+             disk-page-key-handler
+             disk-page-mouse-handler))
 
 (define (disk-page-refresh page)
     (when (not (page-initialised? page))
@@ -56,6 +57,9 @@
       (refresh* (inner (page-wwin page)))
       (menu-redraw menu)
       (menu-refresh menu)))
+
+(define (disk-page-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (disk-page-key-handler page ch)
   (let ((menu (page-datum page 'menu))

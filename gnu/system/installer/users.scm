@@ -37,15 +37,18 @@
 
 (define (make-users-page parent  title)
   (make-page (page-surface parent)
-	     title
-	     users-page-refresh
+             title
+             users-page-refresh
              0
-	     users-page-key-handler))
-
+             users-page-key-handler
+             users-page-mouse-handler))
 
 (define my-buttons `((add ,(M_ "_Add") #t)
                      (delete ,(M_ "_Delete") #t)
                      (continue ,(M_ "_Continue") #t)))
+
+(define (users-page-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (users-page-key-handler page ch)
   (let ((menu (page-datum page 'menu))

@@ -33,10 +33,11 @@
 
 (define (make-locale-page parent  title)
   (make-page (page-surface parent)
-	     title
-	     locale-page-refresh
+             title
+             locale-page-refresh
              0
-	     locale-page-key-handler))
+             locale-page-key-handler
+             locale-page-mouse-handler))
 
 (define (locale-page-refresh page)
     (when (not (page-initialised? page))
@@ -55,6 +56,9 @@
       (refresh* (inner (page-wwin page)))
       (menu-redraw menu)
       (menu-refresh menu)))
+
+(define (locale-page-mouse-handler page device-id x y z button-state)
+  'ignored)
 
 (define (locale-page-key-handler page ch)
   (let ((menu (page-datum page 'menu))
