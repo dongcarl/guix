@@ -196,7 +196,7 @@ active."
              (item-count (length (menu-items menu))))
         (match (mouse-trafo win g-y g-x #f)
          ((y x)
-          (menu-set-active! menu #f)
+          (menu-set-active! menu #t)
           (let ((selected-item-index (+ y top-item-index)))
             (if (and (>= selected-item-index 0) (< selected-item-index item-count))
                 (begin
