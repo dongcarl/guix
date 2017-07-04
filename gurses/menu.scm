@@ -37,10 +37,12 @@
   #:export (menu-get-current-item)
 
   #:export (std-menu-key-handler)
+  #:export (std-menu-mouse-handler)
 
   #:use-module (ncurses curses)
   #:use-module (ncurses panel)
-  #:use-module (srfi srfi-9))
+  #:use-module (srfi srfi-9)
+  #:use-module (ice-9 match))
 
 (define-record-type <menu>
   (make-menu' current-item items top-item active active-attr active-color disp)
@@ -177,3 +179,20 @@
 	(eq? ch #\dle))
     (if (menu-active menu)
 	(menu-up menu)))))
+
+(define (std-menu-mouse-handler menu device-id g-x g-y z button-state)
+  (if (logtest BUTTON1_CLICKED button-state)
+      (let* ((win (menu-window menu))
+             (top-item-index (menu-top-item menu))
+             (item-count (length (menu-items menu))))
+        (match (mouse-trafo win g-y g-x #f)
+         ((y x)
+          (menu-set-active! menu #f)
+          (let ((selected-item-index (+ y top-item-index)))
+            (if (and (>= selected-item-index 0) (< selected-item-index item-count))
+                (begin
+                  (menu-set-current-item! menu selected-item-index)
+                  (menu-redraw menu)
+                  'activated))))
+         (_ 'ignored)))
+      'ignored))
