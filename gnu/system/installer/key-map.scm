@@ -24,6 +24,7 @@
   #:use-module (gurses menu)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
+  #:use-module (ice-9 match)
 
   #:export (make-key-map))
 
@@ -34,8 +35,7 @@
 			(gettext "Keyboard Mapping")
 			key-map-page-refresh
                         0
-			key-map-page-key-handler
-			key-map-page-mouse-handler)))
+                        #:activator key-map-page-activate-focused-item)))
     (page-set-datum! page 'directory directory)
     page))
 
@@ -47,46 +47,22 @@
          (i (menu-get-current-item menu))
          (directory (page-datum page 'directory))
          (new-dir (string-append directory "/" i)))
-    (if (eq? 'directory (stat:type (stat new-dir)))
-      (let ((p (make-key-map page new-dir)))
-        (page-pop) ; Don't go back to the current page!
-        (page-enter p))
-      (begin
-        (system* "loadkeys" i)
-        (set! key-map i)
-        (page-leave)
-        #f))))
-
-(define (key-map-page-mouse-handler page device-id x y z button-state)
-  (let* ((menu (page-datum page 'menu))
-         (status (std-menu-mouse-handler menu device-id x y z button-state)))
-    (if (eq? status 'activated)
-      (key-map-page-activate-focused-item page))
-    status))
-
-(define (key-map-page-key-handler page ch)
-  (let ((nav  (page-datum page 'navigation))
-	(menu (page-datum page 'menu))
-	(directory (page-datum page 'directory)))
     (cond
-     ((eq? ch #\tab)
-      (cond
-       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-	(buttons-unselect-all nav))
-
-       (else
-	(buttons-select-next nav))))
-
-     ((buttons-key-matches-symbol? nav ch 'cancel)
-
-      (page-leave))
-
-     ((and (select-key? ch)
-           (menu-active menu))
-      (key-map-page-activate-focused-item page)))
-    (std-menu-key-handler menu ch)
-    #f))
-
+     ((menu-active menu)
+      (if (eq? 'directory (stat:type (stat new-dir)))
+        (let ((p (make-key-map page new-dir)))
+          (page-pop) ; Don't go back to the current page!
+          (page-enter p))
+        (begin
+          (system* "loadkeys" i)
+          (set! key-map i)
+          (page-leave)
+          #f)))
+     (else ;buttons
+       (match (buttons-selected-symbol (page-datum page 'navigation))
+        ('cancel
+         (page-leave))
+        (_ 'ignored))))))
 
 (define (key-map-page-refresh page)
   (when (not (page-initialised? page))
