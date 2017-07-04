@@ -100,7 +100,7 @@
       (buttons-unselect-all nav)
       (menu-set-active! menu #t))
 
-     ((and (eq? ch #\newline)
+     ((and (select-key? ch)
            (menu-active menu))
       (locale-page-activate-focused-item page))
 

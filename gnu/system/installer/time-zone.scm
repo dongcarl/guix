@@ -89,7 +89,7 @@
       (page-leave)
       'cancelled)
 
-     ((and (eqv? ch #\newline)
+     ((and (select-key? ch)
            (menu-active menu))
       (time-zone-page-activate-focused-item page)))))
   (std-menu-key-handler menu ch)

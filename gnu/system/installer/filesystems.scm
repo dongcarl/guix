@@ -223,7 +223,7 @@
                  (buttons-unselect-all nav)
                  (menu-set-active! menu #t))
 
-                ((eq? ch #\newline)
+                ((select-key? ch)
                  (filesystem-page-activate-focused-item page))
 
                 ((buttons-key-matches-symbol? nav ch 'cancel)

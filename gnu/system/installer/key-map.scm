@@ -81,7 +81,7 @@
 
       (page-leave))
 
-     ((and (eqv? ch #\newline)
+     ((and (select-key? ch)
            (menu-active menu))
       (key-map-page-activate-focused-item page)))
     (std-menu-key-handler menu ch)
