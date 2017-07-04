@@ -172,8 +172,27 @@
        (error (format #f "~s is not a partition" p)))
      p)))
 
+(define (filesystem-page-activate-focused-item page)
+  (let* ((menu (page-datum page 'menu))
+         (dev (list-ref (menu-items menu) (menu-current-item menu)))
+         (name (partition-name (car dev)))
+         (next  (make-page (page-surface page)
+                           (format #f
+                            (gettext "Choose the mount point for device ~s") name)
+                           mount-point-refresh
+                           1
+                           mount-point-page-key-handler
+                           mount-point-page-mouse-handler)))
+
+    (page-set-datum! next 'device name)
+    (page-enter next)))
+
 (define (filesystem-page-mouse-handler page device-id x y z button-state)
-  'ignored)
+  (let* ((menu (page-datum page 'menu))
+         (status (std-menu-mouse-handler menu device-id x y z button-state)))
+    (if (eq? status 'activated)
+      (filesystem-page-activate-focused-item page))
+    status))
 
 (define (filesystem-page-key-handler page ch)
   (let* ((menu (page-datum page 'menu))
@@ -205,18 +224,7 @@
                  (menu-set-active! menu #t))
 
                 ((eq? ch #\newline)
-                 (let* ((dev (list-ref (menu-items menu) (menu-current-item menu)))
-                        (name (partition-name (car dev)))
-                        (next  (make-page (page-surface page)
-                                          (format #f
-                                                  (gettext "Choose the mount point for device ~s") name)
-                                          mount-point-refresh
-                                          1
-                                          mount-point-page-key-handler
-                                          mount-point-page-mouse-handler)))
-
-                   (page-set-datum! next 'device name)
-                   (page-enter next)))
+                 (filesystem-page-activate-focused-item page))
 
                 ((buttons-key-matches-symbol? nav ch 'cancel)
                  (page-leave)

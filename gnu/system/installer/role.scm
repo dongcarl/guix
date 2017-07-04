@@ -57,8 +57,17 @@
 
 (define my-buttons `((cancel ,(M_ "Canc_el") #t)))
 
-(define (role-page-mouse-handler device-id x y z button-state)
-  'ignored)
+(define (role-page-activate-focused-item page)
+  (let ((menu (page-datum page 'menu)))
+    (set! system-role (menu-get-current-item menu))
+    (page-leave)))
+
+(define (role-page-mouse-handler page device-id x y z button-state)
+  (let* ((menu (page-datum page 'menu))
+         (status (std-menu-mouse-handler menu device-id x y z button-state)))
+    (if (eq? status 'activated)
+      (role-page-activate-focused-item page))
+    status))
 
 (define (role-page-key-handler page ch)
   (let* ((menu (page-datum page 'menu))
@@ -90,9 +99,8 @@
 
 
      ((select-key? ch)
-      (set! system-role (menu-get-current-item menu))
-
-      (page-leave))
+      (if (menu-active menu)
+        (role-page-activate-focused-item page)))
 
      ((buttons-key-matches-symbol? nav ch 'cancel)
       (page-leave)

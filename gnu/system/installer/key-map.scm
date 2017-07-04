@@ -42,14 +42,32 @@
 
 (define my-buttons `((cancel  ,(M_ "Canc_el") #t)))
 
+(define (key-map-page-activate-focused-item page)
+  (let* ((menu (page-datum page 'menu))
+         (i (menu-get-current-item menu))
+         (directory (page-datum page 'directory))
+         (new-dir (string-append directory "/" i)))
+    (if (eq? 'directory (stat:type (stat new-dir)))
+      (let ((p (make-key-map page new-dir)))
+        (page-pop) ; Don't go back to the current page!
+        (page-enter p))
+      (begin
+        (system* "loadkeys" i)
+        (set! key-map i)
+        (page-leave)
+        #f))))
+
 (define (key-map-page-mouse-handler page device-id x y z button-state)
-  'ignored)
+  (let* ((menu (page-datum page 'menu))
+         (status (std-menu-mouse-handler menu device-id x y z button-state)))
+    (if (eq? status 'activated)
+      (key-map-page-activate-focused-item page))
+    status))
 
 (define (key-map-page-key-handler page ch)
   (let ((nav  (page-datum page 'navigation))
 	(menu (page-datum page 'menu))
 	(directory (page-datum page 'directory)))
-
     (cond
      ((eq? ch #\tab)
       (cond
@@ -64,19 +82,8 @@
       (page-leave))
 
      ((and (eqv? ch #\newline)
-	   (menu-active menu))
-      (let* ((i (menu-get-current-item menu))
-             (new-dir (string-append directory "/" i)))
-	(if (eq? 'directory (stat:type (stat new-dir)))
-	    (let ((p (make-key-map
-		      page new-dir)))
-              (page-pop) ; Don't go back to the current page!
-              (page-enter p))
-	    (begin
-              (system* "loadkeys" i)
-              (set! key-map i)
-              (page-leave)
-              #f)))))
+           (menu-active menu))
+      (key-map-page-activate-focused-item page)))
     (std-menu-key-handler menu ch)
     #f))
 

@@ -57,8 +57,18 @@
       (menu-redraw menu)
       (menu-refresh menu)))
 
+(define (locale-page-activate-focused-item page)
+  (let* ((menu (page-datum page 'menu))
+         (locale (menu-get-current-item menu)))
+    (setlocale LC_ALL (locale-definition-name locale))
+    (page-leave)))
+
 (define (locale-page-mouse-handler page device-id x y z button-state)
-  'ignored)
+  (let* ((menu (page-datum page 'menu))
+         (status (std-menu-mouse-handler menu device-id x y z button-state)))
+    (if (eq? status 'activated)
+      (locale-page-activate-focused-item page))
+    status))
 
 (define (locale-page-key-handler page ch)
   (let ((menu (page-datum page 'menu))
@@ -91,10 +101,8 @@
       (menu-set-active! menu #t))
 
      ((and (eq? ch #\newline)
-	   (menu-active menu))
-      (let ((locale (menu-get-current-item menu)))
-        (setlocale LC_ALL (locale-definition-name locale))
-        (page-leave)))
+           (menu-active menu))
+      (locale-page-activate-focused-item page))
 
      ((buttons-key-matches-symbol? nav ch 'cancel)
       (page-leave)))

@@ -58,8 +58,19 @@
       (menu-redraw menu)
       (menu-refresh menu)))
 
+(define (disk-page-activate-focused-item page)
+  (let* ((menu (page-datum page 'menu))
+         (i (menu-current-item menu)))
+    (endwin)
+      (system* "cfdisk" (disk-name (list-ref (menu-items menu) i)))
+      (system* "partprobe")))
+
 (define (disk-page-mouse-handler page device-id x y z button-state)
-  'ignored)
+  (let* ((menu (page-datum page 'menu))
+         (status (std-menu-mouse-handler menu device-id x y z button-state)))
+    (if (eq? status 'activated)
+      (disk-page-activate-focused-item page))
+    status))
 
 (define (disk-page-key-handler page ch)
   (let ((menu (page-datum page 'menu))
@@ -92,12 +103,8 @@
       (menu-set-active! menu #t))
 
      ((and (eq? ch #\newline)
-	   (menu-active menu))
-      (let ((i (menu-current-item menu)))
-	(endwin)
-	(system* "cfdisk"
-		 (disk-name (list-ref (menu-items menu) i)))
-        (system* "partprobe")))
+           (menu-active menu))
+      (disk-page-activate-focused-item page))
 
      ((buttons-key-matches-symbol? nav ch 'continue)
       (page-leave)))

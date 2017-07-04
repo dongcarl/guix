@@ -205,23 +205,26 @@
            (do-task task-name page))))
    task-name-list))
 
+(define (main-page-activate-focused-item page)
+  (let* ((main-menu (page-datum page 'menu))
+         (item (menu-get-current-item main-menu)))
+    (do-task (car item) page)
+    (page-uniquify)
+    ((page-refresh (car stack)) (car stack))))
+
 (define (main-page-mouse-handler page device-id x y z button-state)
-  (let ((main-menu (page-datum page 'menu)))
-    (if (eq? 'activated (std-menu-mouse-handler main-menu device-id x y z button-state))
-      (let ((item (menu-get-current-item main-menu)))
-        (do-task (car item) page)
-        (page-uniquify)
-        ((page-refresh (car stack)) (car stack))))))
+  (let* ((main-menu (page-datum page 'menu))
+         (status (std-menu-mouse-handler main-menu device-id x y z button-state)))
+    (if (eq? 'activated status)
+      (main-page-activate-focused-item page))
+    status))
 
 (define (main-page-key-handler page ch)
   (let ((main-menu (page-datum page 'menu)))
     (std-menu-key-handler main-menu ch)
     (cond
      ((eq? ch #\newline)
-      (let ((item (menu-get-current-item main-menu)))
-        (do-task (car item) page)
-        (page-uniquify)
-        ((page-refresh (car stack)) (car stack)))))))
+      (main-page-activate-focused-item page)))))
 
 (define (main-page-init page)
   (let* ((frame (make-boxed-window (page-surface page) (lines) (cols) 0 0

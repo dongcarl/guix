@@ -42,8 +42,35 @@
 
 (define my-buttons `((cancel  ,(M_ "Canc_el") #t)))
 
+(define (time-zone-page-activate-focused-item page)
+  (let* ((menu (page-datum page 'menu))
+         (i (menu-get-current-item menu))
+         (directory (page-datum page 'directory))
+         (new-dir (string-append directory "/" i))
+         (st (lstat new-dir)))
+    (if (and (file-exists? new-dir)
+             (eq? 'directory (stat:type st)))
+      (let ((p (make-tz-browser page new-dir)))
+        (page-set-datum! p 'stem
+           (if (page-datum page 'stem)
+             (string-append (page-datum page 'stem) "/" i)
+             i))
+        (page-pop)  ; Don't go back to the current page!
+        (page-enter p))
+      (begin
+        (set! time-zone
+          (if (page-datum page 'stem)
+            (string-append (page-datum page 'stem) "/" i)
+            i))
+        (page-leave)
+        #f))))
+
 (define (time-zone-page-mouse-handler page device-id x y z button-state)
-  'ignored)
+  (let* ((menu (page-datum page 'menu))
+         (status (std-menu-mouse-handler menu device-id x y z button-state)))
+    (if (eq? status 'activated)
+      (time-zone-page-activate-focused-item page))
+    status))
 
 (define (time-zone-page-key-handler page ch)
   (let* ((nav  (page-datum page 'navigation))
@@ -63,27 +90,8 @@
       'cancelled)
 
      ((and (eqv? ch #\newline)
-	   (menu-active menu))
-      (let* ((i (menu-get-current-item menu))
-	     (new-dir (string-append directory "/" i))
-	     (st (lstat new-dir)))
-	(if (and (file-exists? new-dir)
-		 (eq? 'directory (stat:type st)))
-	    (let ((p (make-tz-browser page new-dir)))
-	      (page-set-datum! p 'stem
-			       (if (page-datum page 'stem)
-				   (string-append (page-datum page 'stem) "/" i)
-				   i))
-              (page-pop)  ; Don't go back to the current page!
-              (page-enter p))
-	    (begin
-	      (set! time-zone
-		(if (page-datum page 'stem)
-		    (string-append (page-datum page 'stem) "/" i)
-		    i))
-	      (page-leave)
-	      #f)))
-      ))))
+           (menu-active menu))
+      (time-zone-page-activate-focused-item page)))))
   (std-menu-key-handler menu ch)
   result))
 
