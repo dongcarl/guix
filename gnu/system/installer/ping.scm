@@ -91,9 +91,9 @@
                             (car %default-substitute-urls)))))
 
 	    (addstr test-window
-		    (_ "Test successful.  Network is working."))
+		    (G_ "Test successful.  Network is working."))
 	    (addstr test-window
-		    (_ "Test failed. No servers reached.")))
+		    (G_ "Test failed. No servers reached.")))
 
 	(refresh* test-window)))) #f))
 
@@ -104,7 +104,7 @@
 
   (let ((text-window (page-datum page 'text-window)))
         (addstr* text-window
-                 (_ "Choose \"Test\" to check network connectivity."))
+                 (G_ "Choose \"Test\" to check network connectivity."))
 
         (refresh* text-window)
         (refresh* (page-datum page 'test-window))))

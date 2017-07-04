@@ -187,7 +187,7 @@ match those uuids read from the respective partitions"
      text-window
      (texi-fragment->stexi
        (format #f
-               (_ "The partitions ~s will be formatted.  @strong{Any existing data on these partitions will be destroyed if you continue!!}")
+               (G_ "The partitions ~s will be formatted.  @strong{Any existing data on these partitions will be destroyed if you continue!!}")
                (map (lambda (x) (car x))
                     mount-points)))
      #:markup-table installer-texinfo-markup)

@@ -62,7 +62,7 @@
      text-window
       (format
        #f
-       (_ "Enter the host name for the new system.  Only letters, digits and hyphens are allowed. The first character may not be a hyphen.  A maximum of ~a characters are allowed.")
+       (G_ "Enter the host name for the new system.  Only letters, digits and hyphens are allowed. The first character may not be a hyphen.  A maximum of ~a characters are allowed.")
        max-length))
     (refresh* text-window)
     (refresh* (outer (page-wwin page)))
