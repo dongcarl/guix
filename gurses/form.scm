@@ -273,18 +273,22 @@ label eq? to N"
           (keypad! win #t)
           (menu-refresh menu)
           (let loop ((ch (getch win)))
-            (if (or (eq? ch #\newline))
-                (field-set-value! new-field (menu-get-current-item menu))
+            (if (or (eq? ch #\newline)
+                    (eq? ch #\tab))
+                (begin
+                  (field-set-value! new-field (menu-get-current-item menu))
+                  (hide-panel popup)
+                  (redraw-field form new-field (form-current-item form))
+                  (move win which (form-tabpos form))
+                  (if (eq? ch #\tab)
+                    (form-next-field form)))
                 (begin
                   (std-menu-key-handler menu ch)
                   (menu-redraw menu)
                   (menu-refresh menu)
                   (update-panels)
                   (doupdate)
-                  (loop (getch win)))))
-          (hide-panel popup)
-          (redraw-field form new-field (form-current-item form))
-          (move win which (form-tabpos form)))))
+                  (loop (getch win))))))))
 
 
 (define (form-next-field form)
