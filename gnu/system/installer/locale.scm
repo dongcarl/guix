@@ -36,8 +36,7 @@
              title
              locale-page-refresh
              0
-             locale-page-key-handler
-             locale-page-mouse-handler))
+             #:activator locale-page-activate-focused-item))
 
 (define (locale-page-refresh page)
     (when (not (page-initialised? page))
@@ -60,57 +59,12 @@
 (define (locale-page-activate-focused-item page)
   (let* ((menu (page-datum page 'menu))
          (locale (menu-get-current-item menu)))
-    (setlocale LC_ALL (locale-definition-name locale))
-    (page-leave)))
-
-(define (locale-page-mouse-handler page device-id x y z button-state)
-  (let* ((menu (page-datum page 'menu))
-         (status (std-menu-mouse-handler menu device-id x y z button-state)))
-    (if (eq? status 'activated)
-      (locale-page-activate-focused-item page))
-    status))
-
-(define (locale-page-key-handler page ch)
-  (let ((menu (page-datum page 'menu))
-	(nav  (page-datum page 'navigation)))
-
     (cond
-     ((eq? ch KEY_RIGHT)
-      (menu-set-active! menu #f)
-      (buttons-select-next nav))
-
-     ((eq? ch #\tab)
-      (cond
-       ((menu-active menu)
-	  (menu-set-active! menu #f)
-	  (buttons-select nav 0))
-
-       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-	(menu-set-active! menu #t)
-	(buttons-unselect-all nav))
-
-       (else
-	(buttons-select-next nav))))
-
-     ((eq? ch KEY_LEFT)
-      (menu-set-active! menu #f)
-      (buttons-select-prev nav))
-
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav)
-      (menu-set-active! menu #t))
-
-     ((and (select-key? ch)
-           (menu-active menu))
-      (locale-page-activate-focused-item page))
-
-     ((buttons-key-matches-symbol? nav ch 'cancel)
-      (page-leave)))
-
-    (std-menu-key-handler menu ch))
-
-  #f
-  )
+      ((menu-active menu)
+        (setlocale LC_ALL (locale-definition-name locale))
+        (page-leave))
+      (else ; "Cancel" button
+        (page-leave)))))
 
 (define (locale-description locale)
   "Return a string describing LOCALE"
