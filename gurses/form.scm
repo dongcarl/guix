@@ -237,7 +237,9 @@ label eq? to N"
         (when (form-callback form)
               ((form-callback form) form))
 
-	(refresh (form-window form)))))
+	(refresh (form-window form))
+        'handled)
+      'ignored))
 
 (define (ensure-panel! win)
   (if (not (panel? win))
