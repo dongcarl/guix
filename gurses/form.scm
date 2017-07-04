@@ -174,24 +174,28 @@ label eq? to N"
 				    (make-string 1 ch)))
 	
 	       (field-set-cursor-position! f (1+ pos))
-	       (addch (form-window form) (inverse ch)))
+	       (addch (form-window form) (inverse ch))
+	       'handled)
 
 	      ((eq? ch KEY_DC)
 	       (field-set-value! f (string-append left right))
 	       (redraw-current-field form f)
-	       (form-update-cursor form))
+	       (form-update-cursor form)
+	       'handled)
 
 	      ((eq? ch #\ack) ; Ctrl-F
                (when (< pos len)
                      (field-set-cursor-position! f (1+ pos))
                      (redraw-current-field form f)
-                     (form-update-cursor form)))
+                     (form-update-cursor form))
+               'handled)
 
 	      ((eq? ch #\stx) ; Ctrl-B
                (when (positive? pos)
                      (field-set-cursor-position! f (1- pos))
                      (redraw-current-field form f)
-                     (form-update-cursor form)))
+                     (form-update-cursor form))
+               'handled)
 
 	      ((eq? ch KEY_BACKSPACE)
 	       (when (positive? pos)
@@ -199,40 +203,48 @@ label eq? to N"
                                           (string-drop-right left 1) centre right))
 		     (field-set-cursor-position! f (1- pos))
 		     (redraw-current-field form f)
-		     (form-update-cursor form)))
+		     (form-update-cursor form))
+               'handled)
 
 	      ((eq? ch #\vtab)
 	       ;; Delete to end of line
 	       (field-set-value! f (substring value
 					      0 pos))
-	       (redraw-current-field form f))
-	
-	      ((or (eq? ch KEY_DOWN)
-		   (eq? ch #\so)
-		   (eq? ch #\tab))
-	       (form-next-field form)
-	       (cursor-move form f 0))
-	
-	      ((or (eq? ch KEY_UP)
-		   (eq? ch #\dle))
-	       (form-previous-field form)
-	       (cursor-move form f 0))
-	
-	      ((eq? ch KEY_RIGHT)
-	       (if (< pos len)
-		   (cursor-move form f (1+ pos))))
-	
-	      ((eq? ch KEY_LEFT)
-	       (if (positive? pos)
-		   (cursor-move form f (1- pos))))
-	
+	       (redraw-current-field form f)
+	       'handled)
+
+              ((or (eq? ch KEY_DOWN)
+                   (eq? ch #\so)
+                   (eq? ch #\tab))
+               (let ((status (form-next-field form)))
+                 (cursor-move form f 0)
+                 status))
+
+              ((or (eq? ch KEY_UP)
+                   (eq? ch #\dle))
+               (let ((status (form-previous-field form)))
+                 (cursor-move form f 0)
+                 status))
+
+              ((eq? ch KEY_RIGHT)
+               (if (< pos len)
+                   (cursor-move form f (1+ pos)))
+               'handled)
+
+              ((eq? ch KEY_LEFT)
+               (if (positive? pos)
+                   (cursor-move form f (1- pos)))
+               'handled)
+
 	      ((eq? ch #\soh) ; Ctrl-A
 	       ;; Move to start of field
-	       (cursor-move form f 0))
-	
+	       (cursor-move form f 0)
+	       'handled)
+
 	      ((eq? ch #\enq) ; Ctrl-E
 	       ;; Move to end of field
-	       (cursor-move form f len))
+	       (cursor-move form f len)
+	       'handled)
 	      )
         (when (form-callback form)
               ((form-callback form) form))
@@ -261,7 +273,7 @@ label eq? to N"
           (keypad! win #t)
           (menu-refresh menu)
           (let loop ((ch (getch win)))
-            (if (eq? ch #\newline)
+            (if (or (eq? ch #\newline))
                 (field-set-value! new-field (menu-get-current-item menu))
                 (begin
                   (std-menu-key-handler menu ch)
@@ -279,13 +291,17 @@ label eq? to N"
   (if (< (form-current-item form) (1- (array-length (form-items form))))
       (begin
 	(form-set-current-field form (1+ (form-current-item form)))
-	(refresh (form-window form)))))
+	(refresh (form-window form))
+	'handled)
+      'ignored))
 
 (define (form-previous-field form)
   (if (> (form-current-item form) 0)
       (begin
 	(form-set-current-field form (1- (form-current-item form)))
-	(refresh (form-window form)))))
+	(refresh (form-window form))
+	'handled)
+      'ignored))
 
 (define (form-post form win)
   (form-set-window! form win)
