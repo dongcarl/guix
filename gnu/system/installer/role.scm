@@ -51,64 +51,19 @@
              title
              role-page-refresh
              0
-             role-page-key-handler
-             role-page-mouse-handler))
-
+             #:activator role-page-activate-focused-item))
 
 (define my-buttons `((cancel ,(M_ "Canc_el") #t)))
 
 (define (role-page-activate-focused-item page)
   (let ((menu (page-datum page 'menu)))
-    (set! system-role (menu-get-current-item menu))
-    (page-leave)))
-
-(define (role-page-mouse-handler page device-id x y z button-state)
-  (let* ((menu (page-datum page 'menu))
-         (status (std-menu-mouse-handler menu device-id x y z button-state)))
-    (if (eq? status 'activated)
-      (role-page-activate-focused-item page))
-    status))
-
-(define (role-page-key-handler page ch)
-  (let* ((menu (page-datum page 'menu))
-         (nav  (page-datum page 'navigation))
-         (result (cond ((eq? ch KEY_RIGHT)
-      (menu-set-active! menu #f)
-      (buttons-select-next nav))
-
-     ((eq? ch #\tab)
-      (cond
-       ((menu-active menu)
-	  (menu-set-active! menu #f)
-	  (buttons-select nav 0))
-
-       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-	(menu-set-active! menu #t)
-	(buttons-unselect-all nav))
-
-       (else
-	(buttons-select-next nav))))
-
-     ((eq? ch KEY_LEFT)
-      (menu-set-active! menu #f)
-      (buttons-select-prev nav))
-
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav)
-      (menu-set-active! menu #t))
-
-
-     ((select-key? ch)
-      (if (menu-active menu)
-        (role-page-activate-focused-item page)))
-
-     ((buttons-key-matches-symbol? nav ch 'cancel)
+    (cond
+     ((menu-active menu)
+      (set! system-role (menu-get-current-item menu))
+      (page-leave))
+     (else ; buttons
       (page-leave)
       'cancelled))))
-
-    (std-menu-key-handler menu ch)
-    result))
-
 
 (define (role-page-refresh page)
   (when (not (page-initialised? page))
