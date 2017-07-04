@@ -40,68 +40,34 @@
              title
              users-page-refresh
              0
-             users-page-key-handler
-             users-page-mouse-handler))
+             #:activator users-page-activate-focused-item))
 
 (define my-buttons `((add ,(M_ "_Add") #t)
                      (delete ,(M_ "_Delete") #t)
                      (continue ,(M_ "_Continue") #t)))
 
-(define (users-page-mouse-handler page device-id x y z button-state)
-  'ignored)
-
-(define (users-page-key-handler page ch)
+(define (users-page-activate-focused-item page)
   (let ((menu (page-datum page 'menu))
 	(nav  (page-datum page 'navigation)))
-
     (cond
-     ((eq? ch #\tab)
-      (cond
-       ((menu-active menu)
-	  (menu-set-active! menu #f)
-	  (buttons-select nav 0))
-
-       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-	(menu-set-active! menu #t)
-	(buttons-unselect-all nav))
-
-       (else
-	(buttons-select-next nav))))
-
-     ((eq? ch KEY_RIGHT)
-      (menu-set-active! menu #f)
-      (buttons-select-next nav))
-
-     ((eq? ch KEY_LEFT)
-      (menu-set-active! menu #f)
-      (buttons-select-prev nav))
-
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav)
-      (menu-set-active! menu #t))
-
-     ((and (menu-active menu) (select-key? ch))
+     ((menu-active menu)
       (let* ((account  (menu-get-current-item menu)))
              (if account
                  (page-enter  (make-user-edit-page page  "Edit User" account)))))
 
-     ((buttons-key-matches-symbol? nav ch 'add)
-      (let* (
-	     (next  (make-user-edit-page page  "Add New User" #f)))
-        (page-enter next)))
-
-     ((buttons-key-matches-symbol? nav ch 'continue)
-      (page-leave))
-
-     ((buttons-key-matches-symbol? nav ch 'delete)
-      (set! users (remove (lambda (user)
-                             (equal? user (menu-get-current-item menu)))
-                           users))
-      (page-set-initialised! page #f)))
-
-    (std-menu-key-handler menu ch))
-  #f)
-
+     (else
+      (match (buttons-selected-symbol nav)
+       ('add
+        (let* ((next  (make-user-edit-page page  "Add New User" #f)))
+          (page-enter next)))
+       ('continue
+        (page-leave))
+       ('delete
+        (set! users (remove (lambda (user)
+                              (equal? user (menu-get-current-item menu)))
+                            users))
+        (page-set-initialised! page #f))
+       (_ 'ignored))))))
 
 (define (users-page-refresh page)
   (when (not (page-initialised? page))
