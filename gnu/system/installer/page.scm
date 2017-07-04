@@ -112,13 +112,12 @@ If a form is used it's assumed that the menu is not used and vice versa."
         (if nav
             (buttons-select nav 0)))
 
-       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
+       ((and nav (eqv? (buttons-selected nav) (1- (buttons-n-buttons nav))))
         (if menu
           (menu-set-active! menu #t)
           (if form
             (form-set-enabled! form #t)))
-        (if nav
-            (buttons-unselect-all nav)))
+        (buttons-unselect-all nav))
 
        (else
         (if nav
@@ -152,7 +151,8 @@ If a form is used it's assumed that the menu is not used and vice versa."
 
      (else
       (if form
-          (form-enter form ch))))))
+          (form-enter form ch)
+          'ignored)))))
 
 
 (define* (make-page surface title refresh cursor-visibility
