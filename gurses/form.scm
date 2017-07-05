@@ -214,7 +214,8 @@ label eq? to N"
 
                       ((or (eq? ch KEY_DOWN)
                            (eq? ch #\so)
-                           (eq? ch #\tab))
+                           (eq? ch #\tab)
+                           (eq? ch #\newline))
                        (let ((status (form-next-field form)))
                          (cursor-move form f 0)
                          'handled))
