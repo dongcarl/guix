@@ -158,8 +158,16 @@ If a form is used it's assumed that the menu is not used and vice versa."
           (form-set-enabled! form #t)))
       'handled)
 
-     ((and nav (buttons-fetch-by-key nav ch))
-      (buttons-select-by-symbol nav (buttons-fetch-by-key nav ch))
+     ((and nav (or (buttons-fetch-by-key nav (char-upcase ch))
+                   (buttons-fetch-by-key nav (char-downcase ch))))
+      (buttons-select-by-symbol nav (or (buttons-fetch-by-key nav
+                                                              (char-upcase ch))
+                                        (buttons-fetch-by-key nav
+                                                              (char-downcase ch))))
+      (if menu
+        (menu-set-active! menu #f)
+        (if form
+          (form-set-enabled! form #f)))
       (page-activate-focused-item page))
 
      (else
