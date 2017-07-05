@@ -24,6 +24,8 @@
   #:use-module (gurses menu)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
+  #:use-module (ice-9 ftw)
+  #:use-module (ice-9 match)
 
   #:export (make-tz-browser))
 
@@ -100,22 +102,20 @@
 			      (getmaxx (inner frame))
 			      (getmaxy text-window) 0 #:panel #f))
 
-	 (menu (make-menu
-		(let nn ((ds (opendir (page-datum p 'directory)))
-			 (ll '()))
-		  (let ((o (readdir ds)))
-		    (if (eof-object? o)
-			(begin
-			  (closedir ds)
-			  (sort ll string< ))
-			(nn ds
-			    (cond
-			     ((equal? "." o) ll)
-			     ((equal? ".." o) ll)
-			     ((>= (string-suffix-length o ".tab") 4) ll)
-			     (else
-			      (cons o ll)))))))))
-	 )
+         (menu (make-menu
+                (let* ((dir (page-datum p 'directory))
+                       (all-names (scandir dir))
+                       (useful-names (filter (lambda (name)
+                                               (and
+                                                 (not (string=? "." name))
+                                                 (not (string-suffix? ".tab" name))))
+                                             all-names))
+                       (marked-useful-names (map (lambda (name)
+                                                   (match (stat:type (stat (string-append dir "/" name)))
+                                                    ('directory (string-append name "/"))
+                                                    (_ name)))
+                                                 useful-names)))
+                  (sort marked-useful-names string<)))))
 
     (menu-post menu menu-window)
 
