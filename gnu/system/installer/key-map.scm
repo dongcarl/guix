@@ -98,7 +98,8 @@
          (menu (make-menu
 		(let ((dir (page-datum p 'directory)))
                   (filter (lambda (name)
-                            (not (string=? name ".")))
+                            (and (not (string=? name "./"))
+                                 (not (string=? name "include/"))))
                           (scandir-with-slashes dir))))))
 
     (menu-post menu menu-window)
