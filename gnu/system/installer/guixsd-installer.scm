@@ -287,11 +287,10 @@
         (let ((enc (locale-encoding)))
           (when (not (equal? enc "UTF-8"))
                 (setlocale LC_ALL "en_US.utf8"))
+          ;; We don't want any nasty kernel messages damaging our beautifully
+          ;; crafted display.
+          (system* "dmesg" "--console-off")
           (initscr)))
-
-      ;; We don't want any nasty kernel messages damaging our beautifully
-      ;; crafted display.
-      (system* "dmesg" "--console-off")
 
       ;; Set up mouse
       (mousemask (logior BUTTON1_CLICKED BUTTON1_PRESSED BUTTON1_RELEASED))
