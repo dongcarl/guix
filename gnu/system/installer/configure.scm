@@ -45,8 +45,7 @@
                          title
                          configure-page-refresh
                          0
-                         configure-page-key-handler
-                         configure-page-mouse-handler)))
+                         #:activator configure-page-activate-focused-item)))
     page))
 
 
@@ -76,40 +75,16 @@
    ""
    "/tmp"))
 
-(define (configure-page-mouse-handler page device-id x y z button-state)
-  'ignored)
-
-(define (configure-page-key-handler page ch)
-
+(define (configure-page-activate-focused-item page)
   (let ((nav  (page-datum page 'navigation))
 	(test-window  (page-datum page 'test-window)))
-
-    (cond
-     ((eq? ch KEY_RIGHT)
-      (buttons-select-next nav))
-
-     ((eq? ch #\tab)
-      (cond
-       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-	(buttons-unselect-all nav))
-
-       (else
-	(buttons-select-next nav))))
-
-     ((eq? ch KEY_LEFT)
-      (buttons-select-prev nav))
-
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav))
-
-
-     ((buttons-key-matches-symbol? nav ch 'cancel)
+    (match (buttons-selected-symbol nav)
+     ('cancel
       ;; Close the menu and return
       (page-leave)
       'cancelled)
 
-     ((buttons-key-matches-symbol? nav ch 'save)
-
+     ('save
       ;; Write the configuration and set the file name
       (let ((cfg-port (mkstemp! (string-copy
                                  (string-append tempdir "/guix-config-XXXXXX")))))
@@ -119,7 +94,7 @@
 
       ;; Close the menu and return
       (page-leave))
-     )))
+     (_ 'ignored))))
 
 (define (configure-page-refresh page)
   (when (not (page-initialised? page))
