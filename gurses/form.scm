@@ -257,16 +257,14 @@ label eq? to N"
   (if (not (panel? win))
       (make-panel! win)))
 
-(define (form-set-current-field form which)
-  (let* ((old-field  (get-current-field form))
-         (popup (field-popup old-field)))
-    (when popup
-          (hide-panel popup)))
-  (form-set-current-item! form which)
+(define (maybe-run-modal-popup form which)
+  "Check whether the field at index WHICH has a popup menu.
+If so, show it, run a modal popup menu, then hide it again.
+Set the field value to the newly selected value."
   (let* ((new-field  (array-ref (form-items form) which))
          (popup (field-popup new-field))
-         (win (form-window form))
-         (menu (field-menu new-field)))
+         (menu (field-menu new-field))
+         (win (form-window form)))
     (when popup
           (ensure-panel! popup)
           (show-panel popup)
@@ -290,6 +288,13 @@ label eq? to N"
                   (doupdate)
                   (loop (getch win))))))))
 
+(define (form-set-current-field form which)
+  (let* ((old-field  (get-current-field form))
+         (popup (field-popup old-field)))
+    (when popup
+          (hide-panel popup)))
+  (form-set-current-item! form which)
+  (maybe-run-modal-popup form which))
 
 (define (form-next-field form)
   (if (< (form-current-item form) (1- (array-length (form-items form))))
