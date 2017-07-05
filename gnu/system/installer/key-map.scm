@@ -25,6 +25,7 @@
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
   #:use-module (ice-9 match)
+  #:use-module (ice-9 ftw)
 
   #:export (make-key-map))
 
@@ -95,11 +96,11 @@
 			      (getmaxx (inner frame))
 			      (getmaxy text-window) 0 #:panel #f))
 
-	 (menu (make-menu
+         (menu (make-menu
 		(let ((dir (page-datum p 'directory)))
-		      (slurp (string-append "ls -1 "
-						dir)
-			      identity)))))
+                      (filter (lambda (name)
+                                (not (string=? name ".")))
+                      (scandir dir))))))
 
     (menu-post menu menu-window)
 
@@ -114,6 +115,3 @@
     (refresh* (inner frame))
     (refresh* text-window)
     (refresh* button-window)))
-
-
-
