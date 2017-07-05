@@ -86,6 +86,9 @@ If a form is used it's assumed that the menu is not used and vice versa."
         (nav  (page-datum page 'navigation))
         (form (page-datum page 'form)))
     (cond
+     ((and form (form-enabled? form) (not (eq? 'ignored (form-enter form ch))))
+     'handled)
+
      ((eq? ch KEY_RIGHT)
       (if menu
         (menu-set-active! menu #f))
@@ -134,8 +137,8 @@ If a form is used it's assumed that the menu is not used and vice versa."
      ((select-key? ch)
       (page-activate-focused-item page))
 
-     ((and menu (menu-active menu))
-       (std-menu-key-handler menu ch))
+     ((and menu (menu-active menu) (not (eq? 'ignored (std-menu-key-handler menu ch))))
+      'handled)
 
      ((eq? ch KEY_UP)
       (if nav
@@ -154,9 +157,6 @@ If a form is used it's assumed that the menu is not used and vice versa."
         (if form
           (form-set-enabled! form #t)))
       'handled)
-
-     ((and form (form-enabled? form))
-      (form-enter form ch))
 
      ((and nav (buttons-fetch-by-key nav ch))
       (buttons-select-by-symbol nav (buttons-fetch-by-key nav ch))
