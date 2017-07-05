@@ -325,12 +325,13 @@
                  ;  (#f ...))
                  ((page-mouse-handler current-page) current-page device-id x y z button-state))
                 (_ #f))
-              (let* ((current-page (page-top))
-                        (ret ((page-key-handler current-page) current-page ch)))
-                   (when (eq? ret 'cancelled)
-                     (page-ppop))
-                   (base-page-key-handler current-page ch)))
-            (if ch ; not #f
+              (if ch ; not timeout
+                (let* ((current-page (page-top))
+                          (ret ((page-key-handler current-page) current-page ch)))
+                     (when (eq? ret 'cancelled)
+                       (page-ppop))
+                     (base-page-key-handler current-page ch))))
+            (if ch ; not timeout
               (let ((current-page (page-top))) ; Not necessarily the same.
                 ((page-refresh current-page) current-page))))
           (loop (getch stdscr)))
