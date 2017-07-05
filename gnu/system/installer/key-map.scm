@@ -98,9 +98,13 @@
 
          (menu (make-menu
 		(let ((dir (page-datum p 'directory)))
-                      (filter (lambda (name)
-                                (not (string=? name ".")))
-                      (scandir dir))))))
+                  (map (lambda (name)
+                         (match (stat:type (stat (string-append dir "/" name)))
+                          ('directory (string-append name "/"))
+                          (_ name)))
+                       (filter (lambda (name)
+                                 (not (string=? name ".")))
+                       (scandir dir)))))))
 
     (menu-post menu menu-window)
 
