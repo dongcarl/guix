@@ -218,7 +218,7 @@ label eq? to N"
                            (eq? ch #\newline))
                        (let ((status (form-next-field form)))
                          (cursor-move form f 0)
-                         'handled))
+                         status))
 
                       ((or (eq? ch KEY_UP)
                            (eq? ch #\dle))
