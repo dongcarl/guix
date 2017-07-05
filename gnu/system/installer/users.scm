@@ -82,30 +82,37 @@
 
 (define (users-page-init p)
   (let* ((s (page-surface p))
-	 (pr (make-boxed-window  #f
-	      (- (getmaxy s) 4) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
-	 (text-window (derwin
-		       (inner pr)
-		       5 (getmaxx (inner pr))
-		       0 0
-		       #:panel #f))
+         (pr (make-boxed-window  #f
+              (- (getmaxy s) 4) (- (getmaxx s) 2)
+              2 1
+              #:title (page-title p)))
+         (text-window (derwin
+                       (inner pr)
+                       3 (getmaxx (inner pr))
+                       0 0
+                       #:panel #f))
 
-	 (bwin (derwin (inner pr)
-		       3 (getmaxx (inner pr))
-		       (- (getmaxy (inner pr)) 3) 0
-			  #:panel #f))
-	 (buttons (make-buttons my-buttons 1))
+         (header-window (derwin
+                         (inner pr)
+                         2 (getmaxx (inner pr))
+                         4 0 #:panel #f))
 
-	 (mwin (derwin (inner pr)
-		       (- (getmaxy (inner pr)) (getmaxy text-window) 3)
-		       (- (getmaxx (inner pr)) 0)
-		       (getmaxy text-window) 0 #:panel #f))
+         (mwin (derwin (inner pr)
+                       (- (getmaxy (inner pr)) (getmaxy text-window) 3)
+                       (- (getmaxx (inner pr)) 0)
+                       6 0 #:panel #f))
 
-	 (menu (make-menu users
+         (bwin (derwin (inner pr)
+                       3 (getmaxx (inner pr))
+                       (- (getmaxy (inner pr)) 3) 0
+                       #:panel #f))
+         (buttons (make-buttons my-buttons 1))
+
+
+         (header-format "~16a ~40a")
+         (menu (make-menu users
                           #:disp-proc (lambda (x r)
-                                        (format #f "~16a ~40a"
+                                        (format #f header-format
                                                 (user-account-name x)
                                                 (user-account-comment x))))))
 
@@ -117,6 +124,12 @@
          (format #f (M_
                      "The following user accounts are currently configured.  You can edit the account details here and add or remove them as desired."))))
 
+    (let ((header (format #f header-format (gettext "Username")
+                                           (gettext "Real name"))))
+      (addstr header-window header)
+      (addstr header-window "
+")
+      (hline header-window (acs-hline) (string-length header)))
     (push-cursor (page-cursor-visibility p))
 
     (page-set-wwin! p pr)
@@ -125,5 +138,6 @@
     (menu-post menu mwin)
     (buttons-post buttons bwin)
     (refresh* (outer pr))
+    (refresh* header-window)
     (refresh* text-window)
     (refresh* bwin)))
