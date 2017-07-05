@@ -257,6 +257,27 @@ label eq? to N"
   (if (not (panel? win))
       (make-panel! win)))
 
+(define (run-event-loop form menu end-status)
+  "Run modal event loop for FORM until END-STATUS returns something other
+than #f.  Return that to our caller."
+  (let* ((win (form-window form))
+         (ch (getch win)))
+    (cond
+     ((eqv? ch KEY_MOUSE)
+      (match (getmouse)
+       ((device-id g-x g-y z button-state)
+        (std-menu-mouse-handler menu device-id g-x g-y z button-state))
+       (_ #f)))
+     ((end-status form ch)
+      (end-status form ch))
+     (else
+       (std-menu-key-handler menu ch)
+       (menu-redraw menu)
+       (menu-refresh menu)
+       (update-panels)
+       (doupdate)
+       (run-event-loop form menu end-status)))))
+
 (define (maybe-run-modal-popup form which)
   "Check whether the field at index WHICH has a popup menu.
 If so, show it, run a modal popup menu, then hide it again.
@@ -270,23 +291,18 @@ Set the field value to the newly selected value."
           (show-panel popup)
           (keypad! win #t)
           (menu-refresh menu)
-          (let loop ((ch (getch win)))
-            (if (or (eq? ch #\newline)
-                    (eq? ch #\tab))
-                (begin
-                  (field-set-value! new-field (menu-get-current-item menu))
-                  (hide-panel popup)
-                  (redraw-field form new-field (form-current-item form))
-                  (move win which (form-tabpos form))
-                  (if (eq? ch #\tab)
-                    (form-next-field form)))
-                (begin
-                  (std-menu-key-handler menu ch)
-                  (menu-redraw menu)
-                  (menu-refresh menu)
-                  (update-panels)
-                  (doupdate)
-                  (loop (getch win))))))))
+          (let ((ch (run-event-loop form menu
+                                    (lambda (form ch)
+                                    (if (or (eqv? ch #\newline)
+                                            (eqv? ch #\tab))
+                                        ch
+                                        #f)))))
+            (field-set-value! new-field (menu-get-current-item menu))
+            (hide-panel popup)
+            (redraw-field form new-field (form-current-item form))
+            (move win which (form-tabpos form))
+            (if (eq? ch #\tab)
+              (form-next-field form))))))
 
 (define (form-set-current-field form which)
   (let* ((old-field  (get-current-field form))
