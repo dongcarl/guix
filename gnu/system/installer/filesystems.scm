@@ -136,6 +136,8 @@
 (define my-buttons `((continue ,(M_ "_Continue") #t)
                      (cancel     ,(M_ "Canc_el") #t)))
 
+(define menu-format "~30a ~7a ~16a ~a")
+
 (define (filesystem-page-refresh page)
   (when (not (page-initialised? page))
     (filesystem-page-init page)
@@ -145,8 +147,16 @@
 	(menu (page-datum page 'menu)))
     (clear text-win)
     (addstr text-win
-	    (gettext "Select a partition to change its mount point or filesystem."))
-
+     (gettext "Select a partition to change its mount point or filesystem."))
+    (addstr text-win "
+")
+    (let ((header (format #f menu-format (gettext "Device") (gettext "Size")
+                          (gettext "Filesystem") (gettext "Mountpoint"))))
+      (addstr text-win header)
+      (addstr text-win "
+")
+      (hline text-win (acs-hline) (string-length header))
+    )
     (menu-set-items! menu (partition-volume-pairs))
     (touchwin (outer (page-wwin page)))
     (refresh* (outer (page-wwin page)))
@@ -228,7 +238,7 @@
                          (fs-spec
                           (assoc-ref mount-points name)))
 
-                    (format #f "~30a ~7a ~16a ~a"
+                    (format #f menu-format
                             name
                             (number->size (partition-size part))
                             (if fs-spec (file-system-spec-type fs-spec) "")
