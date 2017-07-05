@@ -292,6 +292,9 @@
           (system* "dmesg" "--console-off")
           (initscr)))
 
+      ;; Set up timeout for getch so that we can update status displays.
+      (timeout! stdscr 500) ; 500 ms
+
       ;; Set up mouse
       (mousemask (logior BUTTON1_CLICKED BUTTON1_PRESSED BUTTON1_RELEASED))
 
@@ -327,8 +330,9 @@
                    (when (eq? ret 'cancelled)
                      (page-ppop))
                    (base-page-key-handler current-page ch)))
-            (let ((current-page (page-top))) ; Not necessarily the same.
-              ((page-refresh current-page) current-page)))
+            (if ch ; not #f
+              (let ((current-page (page-top))) ; Not necessarily the same.
+                ((page-refresh current-page) current-page))))
           (loop (getch stdscr)))
 
         (endwin)))
