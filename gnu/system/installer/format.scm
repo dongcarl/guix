@@ -65,52 +65,25 @@ match those uuids read from the respective partitions"
                          title
                          format-page-refresh
                          0
-                         format-page-key-handler
-                         format-page-mouse-handler)))
+                         #:activator format-page-activate-focused-item)))
     page))
-
 
 (define my-buttons `((format ,(M_ "_Format") #t)
                      (cancel ,(M_ "Canc_el") #t)))
 
-
-(define (format-page-mouse-handler page device-id x y z button-state)
-  'ignored)
-
-(define (format-page-key-handler page ch)
+(define (format-page-activate-focused-item page)
   (let ((nav  (page-datum page 'navigation))
 	(config-window  (page-datum page 'config-window)))
-
-    (cond
-     ((eq? ch KEY_RIGHT)
-      (buttons-select-next nav))
-
-     ((eq? ch #\tab)
-      (cond
-       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-	(buttons-unselect-all nav))
-
-       (else
-	(buttons-select-next nav))))
-
-     ((eq? ch KEY_LEFT)
-      (buttons-select-prev nav))
-
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav))
-
-
-     ((buttons-key-matches-symbol? nav ch 'cancel)
-      ;; Close the menu and return
-      (page-leave)
-      'cancelled)
-
-
-     ((buttons-key-matches-symbol? nav ch 'format)
-      (let ((window-port (make-window-port config-window)))
-        (for-each
-         (lambda (x)
-           (match x
+    (match (buttons-selected-symbol nav)
+      ('cancel
+       ;; Close the menu and return
+       (page-leave)
+       'cancelled)
+      ('format
+       (let ((window-port (make-window-port config-window)))
+         (for-each
+          (lambda (x)
+            (match x
                   ((dev . ($ <file-system-spec> mp label type uuid))
                    (let ((type-str (symbol->string type)))
                      (cond
@@ -143,11 +116,12 @@ match those uuids read from the respective partitions"
 
                       ))))) mount-points)
 
-        (close-port window-port))
+            (close-port window-port))
 
-      (when (filesystems-are-current?)
-            (page-leave))
-      ))))
+            (when (filesystems-are-current?)
+                  (page-leave))
+            'handled)
+      (_ 'ignored))))
 
 (define (format-page-refresh page)
   (when (not (page-initialised? page))
