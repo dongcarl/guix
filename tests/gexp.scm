@@ -984,6 +984,64 @@
   '#~(foo #$bar #$baz:out #$(chbouib 42) #$@(list x y z)
           #+foo #+foo:out #+(chbouib 42) #+@(list x y z)))
 
+(test-equal "hygiene, eval"
+  42
+  ;; Test: (1) that 'x' in one gexp does not shadow 'x' from the other 'gexp',
+  ;; and (2) that 'x' in 'ungexp' is not mistakenly renamed.
+  (let* ((inner (lambda (x)
+                  #~(let ((x 40)) (+ x #$x))))
+         (outer  #~(let ((x 2))
+                     #$(inner #~x))))
+    (primitive-eval (gexp->sexp* outer))))
+
+(test-assert "hygiene, define"
+  (match (gexp->sexp* #~(begin
+                          ;; Top-level defines aren't renamed.
+                          (define top0 0)
+                          (define (top1 x) x)
+                          (define (top2 x y)
+                            ;; Internal define is renamed.
+                            (define inner1 (* x x))
+                            (define (inner2 x) (+ x y))
+                            (+ inner y))))
+    (('begin
+       ('define 'top0 0)
+       ('define ('top1 x0) x0)
+       ('define ('top2 x1 y1)
+         ('begin
+           ('define inner1 ('* x1 x1))
+           ('define (inner2 x2) ('+ x2 y1))
+           ('+ inner y1))))
+     (and (not (eq? x0 'x))
+          (not (eq? x1 'x))
+          (not (eq? y1 'y))
+          (not (eq? inner1 'inner1))
+          (not (eq? inner2 'inner2))
+          (not (eq? x2 x1))))))
+
+(test-assert "hygiene, shadowed syntax"
+  (match (gexp->sexp* #~(lambda (lambda x)
+                          (lambda (x) x)))
+    (('lambda (arg x)
+       (arg (x) x))
+     (and (not (eq? arg 'lambda))
+          (not (eq? x 'x))))))
+
+(test-assert "hygiene, quote"
+  (match (gexp->sexp* #~(lambda (x y z)
+                          (list '(x y z)
+                                `(x ,x (,y ,z) z))))
+    (('lambda (x0 y0 z0)
+       ('list ('quote ('x 'y 'z))
+              ('quasiquote
+               ('x ('unquote x0)
+                   (('unquote y0)
+                    ('unquote z0))
+                   'z))))
+     (and (not (eq? x0 'x))
+          (not (eq? y0 'y))
+          (not (eq? z0 'z))))))
+
 (test-end "gexp")
 
 ;; Local Variables:

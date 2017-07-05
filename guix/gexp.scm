@@ -905,11 +905,188 @@ environment."
                  #,(substitute-references #'exp substs)))
         (x #''x)))
 
+    (define (lookup-binding id env)
+      ;; Lookup ID in ENV.  Return its corresponding generated identifier or
+      ;; #f.
+      (any (match-lambda
+             ((x renamed)
+              (and (bound-identifier=? x id)
+                   renamed)))
+           env))
+
+    (define (generate-bindings lst seed env)
+      ;; Like 'generate-temporaries', but use SEED and ENV as extra data to
+      ;; generate unique identifiers in a deterministic way.
+      (let ((len (length env)))
+        (map (lambda (binding)
+               (datum->syntax
+                binding
+                (string->symbol (format #f "~a-~a-~a"
+                                        (syntax->datum binding)
+                                        (number->string seed 16)
+                                        len))))
+             lst)))
+
+    (define (syntax-uid s)
+      ;; Return a unique numeric identifier for S.
+      (hash s 2147483648))
+
+    (define* (alpha-rename stx env stage
+                           #:optional (quoting 0)
+                           (uid (syntax-uid s)))
+      ;; Perform alpha-renaming of all the identifiers introduced in S, using
+      ;; ENV as the lexical environment.  The goal is to preserve scope across
+      ;; stages, as illustrated by Kiselyov et al. in MetaScheme.  Use UID as
+      ;; a stem when generating unique identifiers.
+      (syntax-case stx (gexp ungexp ungexp-native
+                             ungexp-splicing ungexp-native-splicing
+                             quote quasiquote unquote
+                             lambda let let* letrec define begin)
+        ((proc arg ...)
+         (or (not (identifier? #'proc))
+             (lookup-binding #'proc env))
+         #`(#,(alpha-rename #'proc env stage quoting)
+            #,@(map (lambda (arg)
+                      (alpha-rename arg env stage quoting))
+                    #'(arg ...))))
+        ((quote exp)
+         #'(quote exp))
+        ((quasiquote exp)
+         #`(quasiquote #,(alpha-rename #'exp env stage
+                                       (+ quoting 1))))
+        ((unquote exp)
+         #`(unquote #,(alpha-rename #'exp env stage (- quoting 1))))
+        ;; TODO: 'syntax', 'unsyntax', etc.
+        ((gexp exp rest ...)
+         #`(gexp #,(alpha-rename #'exp env (+ stage 1) quoting)
+                 rest ...))
+        ((ungexp exp rest ...)
+         #`(ungexp #,(alpha-rename #'exp env (- stage 1) quoting)
+                   rest ...))
+        ((ungexp-native exp rest ...)
+         #`(ungexp-native #,(alpha-rename #'exp env (- stage 1) quoting)
+                          rest ...))
+        ((ungexp-splicing exp)
+         #`(ungexp-splicing
+            #,(alpha-rename #'exp env (- stage 1) quoting)))
+        ((ungexp-native-splicing exp)
+         #`(ungexp-native-splicing
+            #,(alpha-rename #'exp env (- stage 1) quoting)))
+        ((lambda (bindings ...) body ...)
+         (with-syntax (((formals ...)
+                        (generate-bindings #'(bindings ...)
+                                           uid env)))
+           #`(lambda (formals ...)
+               #,(alpha-rename #'(begin body ...)
+                               #`((bindings formals) ... #,@env)
+                               stage quoting))))
+        ;; TODO: lambda*, case-lambda
+        ((let ((bindings values) ...) body ...)
+         (with-syntax (((renamed ...)
+                        (generate-bindings #'(bindings ...)
+                                           (syntax-uid #'(values ...))
+                                           env)))
+           #`(let #,(map (lambda (renamed value)
+                           #`(#,renamed #,(alpha-rename value env
+                                                        stage quoting)))
+                         #'(renamed ...)
+                         #'(values ...))
+               #,(alpha-rename #'(begin body ...)
+                               #`((bindings renamed) ... #,@env)
+                               stage quoting))))
+        ;; TODO: named let
+        ((let* ((binding value) rest ...) body ...)
+         (alpha-rename #'(let ((binding value))
+                           (let* (rest ...)
+                             body ...))
+                       env stage quoting))
+        ((let* () body ...)
+         (alpha-rename #'(begin body ...) env stage quoting))
+        ((letrec ((bindings values) ...) body ...)
+         (with-syntax (((renamed ...)
+                        (generate-bindings #'(bindings ...)
+                                           (syntax-uid #'(values ...))
+                                           env)))
+           (let ((env #`((bindings renamed) ... #,@env)))
+             #`(letrec #,(map (lambda (renamed value)
+                                #`(#,renamed #,(alpha-rename value env
+                                                             stage quoting)))
+                              #'(renamed ...)
+                              #'(values ...))
+                 #,(alpha-rename #'(begin body ...) env stage quoting)))))
+        ;; TODO: letrec*
+        ;; TODO: let-syntax, letrec-syntax
+        ((begin exp)
+         (alpha-rename #'exp env stage quoting))
+        ((define (proc formals ...) body ...)     ;top-level
+         (with-syntax (((renamed ...)
+                        (generate-bindings #'(formals ...) uid env)))
+           #`(define (proc renamed ...)
+               #,(alpha-rename #'(begin body ...)
+                               #`((formals renamed) ... #,@env)
+                               stage quoting))))
+        ((define id value)                        ;top-level
+         #`(define id
+             #,(alpha-rename #'value env stage quoting)))
+        ((begin exp ...)
+         (null? env)                              ;top-level
+         #`(begin #,@(map (lambda (exp)
+                            (alpha-rename exp env stage quoting))
+                          #'(exp ...))))
+        ((begin exp ...)                          ;inner 'begin'
+         (with-syntax (((bindings ...)
+                        (filter-map (lambda (exp)
+                                      (syntax-case exp (define)
+                                        ((define (proc _ ...) value)
+                                         #'proc)
+                                        ((define binding value)
+                                         #'binding)
+                                        (_
+                                         #f)))
+                                    #'(exp ...))))
+           (with-syntax (((renamed ...)
+                          (generate-bindings #'(bindings ...)
+                                             uid env)))
+             (let ((env #`((bindings renamed) ... #,@env)))
+               #`(begin
+                   #,@(map (lambda (exp)
+                             (syntax-case exp (define)
+                               ((define (id formals ...) body ...)
+                                (with-syntax ((id (lookup-binding #'id env))
+                                              ((renamed ...)
+                                               (generate-bindings #'(formals ...)
+                                                                  uid env)))
+                                  #`(define (id renamed ...)
+                                      #,(alpha-rename #'(begin body ...)
+                                                      #`((formals renamed) ...
+                                                         #,@env)
+                                                      stage quoting))))
+                               ((define id value)
+                                #`(define #,(lookup-binding #'id env)
+                                    #,(alpha-rename #'value env
+                                                    stage quoting)))
+                               (_
+                                (alpha-rename exp env stage quoting))))
+                           #'(exp ...)))))))
+        ((proc arg ...)
+         #`(#,(alpha-rename #'proc env stage quoting)
+            #,@(map (lambda (arg)
+                      (alpha-rename arg env stage quoting))
+                    #'(arg ...))))
+        (id
+         (identifier? #'id)
+         (if (or (> quoting 0) (< stage 0))
+             #'id
+             (or (lookup-binding #'id env) #'id)))
+        (obj
+         #'obj)))
+
     (syntax-case s (ungexp output)
       ((_ exp)
-       (let* ((escapes (delete-duplicates (collect-escapes #'exp)))
+       (let* ((exp     (alpha-rename #'exp #'() 0))
+              (escapes (delete-duplicates (collect-escapes exp)))
               (formals (generate-temporaries escapes))
-              (sexp    (substitute-references #'exp (zip escapes formals)))
+              (sexp    (substitute-references exp (zip escapes formals)))
               (refs    (map escape->ref escapes)))
          #`(make-gexp (list #,@refs)
                       current-imported-modules
