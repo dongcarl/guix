@@ -184,7 +184,15 @@
       (#f #f)  ;; Do nothing if loadkeys is not found
       (loadkeys-directory
        (let* ((keymap-directory
-               (string-append (dirname loadkeys-directory) "/../share/keymaps"))
+               (string-append (dirname loadkeys-directory) "/../share/keymaps"
+                              (match (utsname:machine (uname))
+                                ("i686" "/i386")
+                                ("x86_64" "/i386")
+                                ("aarch64" "/i386")
+                                ("armv7l" "/i386")
+                                ("powerpc" "/ppc")
+                                ("ppc64" "/ppc")
+                                (_ ""))))
               (p (make-key-map
                   page keymap-directory)))
          (page-enter p)))))))
