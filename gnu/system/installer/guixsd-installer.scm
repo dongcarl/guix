@@ -20,7 +20,6 @@
 
 (use-modules (ncurses curses)
 	     (gurses menu)
-	     (gurses buttons)
 	     (gnu system installer utils)
 	     (gnu system installer misc)
 	     (gnu system installer partition-reader)
@@ -212,20 +211,6 @@
     (page-uniquify)
     ((page-refresh (car stack)) (car stack))))
 
-(define (main-page-mouse-handler page device-id x y z button-state)
-  (let* ((main-menu (page-datum page 'menu))
-         (status (std-menu-mouse-handler main-menu device-id x y z button-state)))
-    (if (eq? 'activated status)
-      (main-page-activate-focused-item page))
-    status))
-
-(define (main-page-key-handler page ch)
-  (let ((main-menu (page-datum page 'menu)))
-    (std-menu-key-handler main-menu ch)
-    (cond
-     ((eq? ch #\newline)
-      (main-page-activate-focused-item page)))))
-
 (define (main-page-init page)
   (let* ((frame (make-boxed-window (page-surface page) (lines) (cols) 0 0
                                    #:title (page-title page)))
@@ -324,8 +309,8 @@
 
       (let ((page (make-page
                    stdscr (gettext "GuixSD Installer")
-                   main-page-refresh 0 main-page-key-handler
-                   main-page-mouse-handler)))
+                   main-page-refresh 0
+                   #:activator main-page-activate-focused-item)))
         (page-enter page)
         (page-push #f)
         (let loop ((ch (getch stdscr)))
