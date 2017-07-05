@@ -162,95 +162,94 @@ label eq? to N"
              (value  (field-value f))
              (len    (string-length value))
              (pos    (field-cursor-position f))
-	     (left   (substring value 0   (min pos len)))
-	     (centre (substring value pos (min (1+ pos) len)))
-	     (right  (substring value (min (1+ pos) len) len)))
+             (left   (substring value 0   (min pos len)))
+             (centre (substring value pos (min (1+ pos) len)))
+             (right  (substring value (min (1+ pos) len) len))
+             (status (cond
+                      ((and (char? ch)
+                       (not (char-set-contains? char-set:iso-control ch)))
 
-	(cond ((and (char? ch)
-		    (not (char-set-contains? char-set:iso-control ch)))
+                       (field-set-value! f (string-join (list left right)
+                                                        (make-string 1 ch)))
 
-	       (field-set-value! f (string-join
-				    (list left right)
-				    (make-string 1 ch)))
-	
-	       (field-set-cursor-position! f (1+ pos))
-	       (addch (form-window form) (inverse ch))
-	       'handled)
+                       (field-set-cursor-position! f (1+ pos))
+                       (addch (form-window form) (inverse ch))
+                       'handled)
 
-	      ((eq? ch KEY_DC)
-	       (field-set-value! f (string-append left right))
-	       (redraw-current-field form f)
-	       (form-update-cursor form)
-	       'handled)
+                      ((eq? ch KEY_DC)
+                       (field-set-value! f (string-append left right))
+                       (redraw-current-field form f)
+                       (form-update-cursor form)
+                       'handled)
 
-	      ((eq? ch #\ack) ; Ctrl-F
-               (when (< pos len)
-                     (field-set-cursor-position! f (1+ pos))
-                     (redraw-current-field form f)
-                     (form-update-cursor form))
-               'handled)
+                      ((eq? ch #\ack) ; Ctrl-F
+                       (when (< pos len)
+                         (field-set-cursor-position! f (1+ pos))
+                         (redraw-current-field form f)
+                         (form-update-cursor form))
+                       'handled)
 
-	      ((eq? ch #\stx) ; Ctrl-B
-               (when (positive? pos)
-                     (field-set-cursor-position! f (1- pos))
-                     (redraw-current-field form f)
-                     (form-update-cursor form))
-               'handled)
+                      ((eq? ch #\stx) ; Ctrl-B
+                       (when (positive? pos)
+                         (field-set-cursor-position! f (1- pos))
+                         (redraw-current-field form f)
+                         (form-update-cursor form))
+                       'handled)
 
-	      ((eq? ch KEY_BACKSPACE)
-	       (when (positive? pos)
-		     (field-set-value! f (string-append
-                                          (string-drop-right left 1) centre right))
-		     (field-set-cursor-position! f (1- pos))
-		     (redraw-current-field form f)
-		     (form-update-cursor form))
-               'handled)
+                      ((eq? ch KEY_BACKSPACE)
+                       (when (positive? pos)
+                         (field-set-value! f (string-append
+                                              (string-drop-right left 1)
+                                              centre right))
+                         (field-set-cursor-position! f (1- pos))
+                         (redraw-current-field form f)
+                         (form-update-cursor form))
+                       'handled)
 
-	      ((eq? ch #\vtab)
-	       ;; Delete to end of line
-	       (field-set-value! f (substring value
-					      0 pos))
-	       (redraw-current-field form f)
-	       'handled)
+                      ((eq? ch #\vtab)
+                       ;; Delete to end of line
+                       (field-set-value! f (substring value 0 pos))
+                       (redraw-current-field form f)
+                       'handled)
 
-              ((or (eq? ch KEY_DOWN)
-                   (eq? ch #\so)
-                   (eq? ch #\tab))
-               (let ((status (form-next-field form)))
-                 (cursor-move form f 0)
-                 status))
+                      ((or (eq? ch KEY_DOWN)
+                           (eq? ch #\so)
+                           (eq? ch #\tab))
+                       (let ((status (form-next-field form)))
+                         (cursor-move form f 0)
+                         'handled))
 
-              ((or (eq? ch KEY_UP)
-                   (eq? ch #\dle))
-               (let ((status (form-previous-field form)))
-                 (cursor-move form f 0)
-                 status))
+                      ((or (eq? ch KEY_UP)
+                           (eq? ch #\dle))
+                       (let ((status (form-previous-field form)))
+                         (cursor-move form f 0)
+                         status))
 
-              ((eq? ch KEY_RIGHT)
-               (if (< pos len)
-                   (cursor-move form f (1+ pos)))
-               'handled)
+                      ((eq? ch KEY_RIGHT)
+                       (if (< pos len)
+                         (cursor-move form f (1+ pos)))
+                       'handled)
 
-              ((eq? ch KEY_LEFT)
-               (if (positive? pos)
-                   (cursor-move form f (1- pos)))
-               'handled)
+                      ((eq? ch KEY_LEFT)
+                       (if (positive? pos)
+                         (cursor-move form f (1- pos)))
+                       'handled)
 
-	      ((eq? ch #\soh) ; Ctrl-A
-	       ;; Move to start of field
-	       (cursor-move form f 0)
-	       'handled)
+                      ((eq? ch #\soh) ; Ctrl-A
+                       ;; Move to start of field
+                       (cursor-move form f 0)
+                       'handled)
 
-	      ((eq? ch #\enq) ; Ctrl-E
-	       ;; Move to end of field
-	       (cursor-move form f len)
-	       'handled)
-	      )
-        (when (form-callback form)
-              ((form-callback form) form))
+                      ((eq? ch #\enq) ; Ctrl-E
+                       ;; Move to end of field
+                       (cursor-move form f len)
+                       'handled)
+                      (else 'ignored))))
+          (when (form-callback form)
+                ((form-callback form) form))
 
-	(refresh (form-window form))
-        'handled)
+          (refresh (form-window form))
+          status)
       'ignored))
 
 (define (ensure-panel! win)
