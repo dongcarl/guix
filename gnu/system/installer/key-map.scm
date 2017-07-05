@@ -25,7 +25,6 @@
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
   #:use-module (ice-9 match)
-  #:use-module (ice-9 ftw)
 
   #:export (make-key-map))
 
@@ -98,13 +97,9 @@
 
          (menu (make-menu
 		(let ((dir (page-datum p 'directory)))
-                  (map (lambda (name)
-                         (match (stat:type (stat (string-append dir "/" name)))
-                          ('directory (string-append name "/"))
-                          (_ name)))
-                       (filter (lambda (name)
-                                 (not (string=? name ".")))
-                       (scandir dir)))))))
+                  (filter (lambda (name)
+                            (not (string=? name ".")))
+                          (scandir-with-slashes dir))))))
 
     (menu-post menu menu-window)
 

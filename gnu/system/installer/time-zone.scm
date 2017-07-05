@@ -24,7 +24,6 @@
   #:use-module (gurses menu)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
-  #:use-module (ice-9 ftw)
   #:use-module (ice-9 match)
 
   #:export (make-tz-browser))
@@ -104,18 +103,13 @@
 
          (menu (make-menu
                 (let* ((dir (page-datum p 'directory))
-                       (all-names (scandir dir))
+                       (all-names (scandir-with-slashes dir))
                        (useful-names (filter (lambda (name)
                                                (and
-                                                 (not (string=? "." name))
+                                                 (not (string=? "./" name))
                                                  (not (string-suffix? ".tab" name))))
-                                             all-names))
-                       (marked-useful-names (map (lambda (name)
-                                                   (match (stat:type (stat (string-append dir "/" name)))
-                                                    ('directory (string-append name "/"))
-                                                    (_ name)))
-                                                 useful-names)))
-                  (sort marked-useful-names string<)))))
+                                             all-names)))
+                  (sort useful-names string<)))))
 
     (menu-post menu menu-window)
 

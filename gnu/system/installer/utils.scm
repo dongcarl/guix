@@ -41,10 +41,13 @@
 	    window-pipe
             pipe-cmd
             refresh*
+            
+            scandir-with-slashes
 
 	    select-key?))
 
 (use-modules (ice-9 popen)
+             (ice-9 ftw)
 	     (ice-9 rdelim)
              (ice-9 match)
 	     (ncurses menu)
@@ -316,3 +319,10 @@ mounts return the device on which the path IN would be mounted."
 			 (list-head subject len)))
 		(caar pp)
 		(loop (cdr pp))))))))
+
+(define (scandir-with-slashes dir)
+  (map (lambda (name)
+         (match (stat:type (stat (string-append dir "/" name)))
+          ('directory (string-append name "/"))
+          (_ name)))
+    (scandir dir)))
