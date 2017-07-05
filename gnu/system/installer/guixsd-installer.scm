@@ -323,7 +323,12 @@
                  ;(match (mouse-trafo win y x #t)
                  ;  ((y x) ...)
                  ;  (#f ...))
-                 ((page-mouse-handler current-page) current-page device-id x y z button-state))
+                 (let ((ret ((page-mouse-handler current-page) current-page
+                                                               device-id
+                                                               x y z
+                                                               button-state)))
+                   (when (eq? ret 'cancelled)
+                     (page-ppop))))
                 (_ #f))
               (if ch ; not timeout
                 (let* ((current-page (page-top))
