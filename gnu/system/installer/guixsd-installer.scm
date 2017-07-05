@@ -328,7 +328,8 @@
                    (when (eq? ret 'cancelled)
                      (page-ppop))
                    (base-page-key-handler current-page ch)))
-            ((page-refresh current-page) current-page))
+            (let ((current-page (page-top))) ; Not necessarily the same.
+              ((page-refresh current-page) current-page)))
           (loop (getch stdscr)))
 
         (endwin)))
