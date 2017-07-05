@@ -206,7 +206,8 @@ which will process each string before returning it."
   (or
    (eqv? c #\nl)
    (eqv? c #\cr)
-   (eqv? c KEY_ENTER)))
+   (eqv? c KEY_ENTER)
+   (eqv? c #\space)))
 
 
 
