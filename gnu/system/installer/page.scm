@@ -158,7 +158,8 @@ If a form is used it's assumed that the menu is not used and vice versa."
           (form-set-enabled! form #t)))
       'handled)
 
-     ((and nav (or (buttons-fetch-by-key nav (char-upcase ch))
+     ((and nav (char? ch)
+               (or (buttons-fetch-by-key nav (char-upcase ch))
                    (buttons-fetch-by-key nav (char-downcase ch))))
       (buttons-select-by-symbol nav (or (buttons-fetch-by-key nav
                                                               (char-upcase ch))
