@@ -185,8 +185,8 @@
           (match (array-ref arry i)
            ((ch win xsym)
             (if (eq? xsym sym)
-              (buttons-set-selected! buttons i))))
-          (loop (1+ i))))))
+              (buttons-set-selected! buttons i)
+              (loop (1+ i)))))))))
 
 (define (buttons-mouse-handler buttons device-id g-x g-y z button-state)
   (if (logtest BUTTON1_CLICKED button-state)
