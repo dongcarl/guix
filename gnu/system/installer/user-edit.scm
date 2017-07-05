@@ -25,6 +25,7 @@
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
   #:use-module (srfi srfi-1)
+  #:use-module (ice-9 match)
 
   #:export (make-user-edit-page)
   )
@@ -40,9 +41,7 @@
                        title
                        user-edit-refresh
                        1
-                       user-edit-page-key-handler
-                       user-edit-page-mouse-handler)))
-
+                       #:activator user-edit-page-activate-focused-item)))
     (page-set-datum! page 'account account)
     (page-set-datum! page 'parent parent)
     page))
@@ -56,17 +55,15 @@
     (refresh* (outer (page-wwin page)))
     (refresh* (form-window form))))
 
-(define (user-edit-page-mouse-handler page device-id x y z button-state)
-  'ignored)
-
-(define (user-edit-page-key-handler page ch)
+(define (user-edit-page-activate-focused-item page)
   (let ((form  (page-datum page 'form))
 	(nav   (page-datum page 'navigation))
         (parent   (page-datum page 'parent))
 	(dev   (page-datum page 'device)))
-
-    (cond
-     ((buttons-key-matches-symbol? nav ch 'save)
+    (match (if (form-enabled? form)
+               'save
+               (buttons-selected-symbol nav))
+     ('save
       (set! users
             (cons
              (user-account
@@ -79,30 +76,13 @@
                        (equal? user (page-datum page 'account)))
                      users)))
       (page-set-initialised! parent #f)
-      (page-leave))
+      (page-leave)
+      'handled)
 
-     ((buttons-key-matches-symbol? nav ch 'cancel)
-      (page-leave))
-
-     ((or (eq? ch KEY_RIGHT)
-	  (eq? ch #\tab))
-      (form-set-enabled! form #f)
-      (buttons-select-next nav))
-
-     ((eq? ch KEY_LEFT)
-      (form-set-enabled! form #f)
-      (buttons-select-prev nav))
-
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav)
-      (form-set-enabled! form #t))
-
-     ((eq? ch KEY_DOWN)
-      (buttons-unselect-all nav)
-      (form-set-enabled! form #t)))
-
-    (form-enter form ch)
-  #f))
+     ('cancel
+      (page-leave)
+      'handled)
+     (_ 'ignored))))
 
 (define my-buttons `((save ,(M_ "Save") #f)
 		     (cancel     ,(M_ "Cancel") #f)))
