@@ -25,10 +25,10 @@
   #:use-module (gurses form)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
+  #:use-module (ice-9 match)
 
   #:export (mount-point-refresh)
-  #:export (mount-point-page-key-handler)
-  #:export (mount-point-page-mouse-handler))
+  #:export (mount-point-page-activate-focused-item))
 
 (include "i18n.scm")
 
@@ -45,16 +45,14 @@
     (refresh* (outer (page-wwin page)))
     (refresh* (form-window form))))
 
-(define (mount-point-page-mouse-handler page)
-  'ignored)
-
-(define (mount-point-page-key-handler page ch)
+(define (mount-point-page-activate-focused-item page)
   (let ((form  (page-datum page 'form))
 	(nav   (page-datum page 'navigation))
 	(dev   (page-datum page 'device)))
-
-    (cond
-     ((buttons-key-matches-symbol? nav ch 'continue)
+    (match (if (form-enabled? form)
+               'continue
+               (buttons-selected-symbol nav))
+     ('continue
       (let ((fss
              (make-file-system-spec
               (form-get-value form 'mount-point)
@@ -64,35 +62,18 @@
               (if fss
                   (assoc-set! mount-points dev fss)
                   (assoc-remove! mount-points dev)))
-        (page-leave)))
+        (page-leave)
+        'handled))
 
-     ((buttons-key-matches-symbol? nav ch 'cancel)
+     ('cancel
       ;; Close the menu and return
-      (page-leave))
+      (page-leave)
+      'handled)
 
-     ((or (eq? ch KEY_RIGHT)
-	  (eq? ch #\tab))
-      (form-set-enabled! form #f)
-      (buttons-select-next nav))
-
-     ((eq? ch KEY_LEFT)
-      (form-set-enabled! form #f)
-      (buttons-select-prev nav))
-
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav)
-      (form-set-enabled! form #t))
-
-     ((eq? ch KEY_DOWN)
-      (buttons-unselect-all nav)
-      (form-set-enabled! form #t))
-     )
-
-    (form-enter form ch))
-  #f)
+     (_ 'ignored))))
 
 (define my-buttons `((continue ,(M_ "Continue") #f)
-		     (cancel     ,(M_ "Cancel") #f)))
+                     (cancel     ,(M_ "Cancel") #f)))
 
 (define (mount-point-page-init p)
   (let* ((s (page-surface p))
