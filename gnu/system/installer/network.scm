@@ -47,7 +47,7 @@
              title
              network-page-refresh
              0
-             #:activator network-page-activate-selected-item))
+             #:activator network-page-activate-item))
 
 (define (interfaces)
   (map (lambda (ifce)
@@ -98,14 +98,11 @@
 (define my-buttons `((continue ,(M_ "_Continue") #t)
                      (test     ,(M_ "_Test") #t)))
 
-(define (network-page-activate-selected-item page)
-  (let* ((menu (page-datum page 'menu))
-         (nav (page-datum page 'navigation))
-         (item (menu-get-current-item menu))
-         (item-name (and item (assq-ref item 'name)))
-         (item-class (and item (assq-ref item 'class))))
-    (cond
-     ((menu-active menu)
+(define (network-page-activate-item page xitem)
+  (match xitem
+   (('menu-item-activated item)
+    (let ((item-name (and item (assq-ref item 'name)))
+          (item-class (and item (assq-ref item 'class))))
       (match item-class
        ('wireless
         (let ((next (make-wireless-page page (M_ "Wireless interface setup")
@@ -114,21 +111,22 @@
        ('ethernet
         (and (zero? (system* "ip" "link" "set" item-name "up"))
              (dhclient item-name)))
-       (_ 'ignored)))
-     (else
-       (match (buttons-selected-symbol nav)
-        ('test
-         (let ((next  (make-page (page-surface page)
-                                 "Ping"
-                                 ping-page-refresh
-                                 0
-                                 #:activator ping-page-activate-selected-item)))
-           (page-enter next)))
-        ('continue
-          ;; Cancel the timer
-          (setitimer ITIMER_REAL 0 0 0 0)
-          (page-leave))
-        (_ #f))))))
+       (_ 'x))
+      'handled))
+   ('test
+    (let ((next  (make-page (page-surface page)
+                            "Ping"
+                             ping-page-refresh
+                             0
+                             #:activator ping-page-activate-item)))
+      (page-enter next)
+      'handled))
+   ('continue
+    ;; Cancel the timer
+    (setitimer ITIMER_REAL 0 0 0 0)
+    (page-leave)
+    'handled)
+   (_ #f)))
 
 (define (network-page-refresh page)
   (when (not (page-initialised? page))

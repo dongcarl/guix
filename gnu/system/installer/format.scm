@@ -65,23 +65,22 @@ match those uuids read from the respective partitions"
                          title
                          format-page-refresh
                          0
-                         #:activator format-page-activate-selected-item)))
+                         #:activator format-page-activate-item)))
     page))
 
 (define my-buttons `((format ,(M_ "_Format") #t)
                      (cancel ,(M_ "Canc_el") #t)))
 
-(define (format-page-activate-selected-item page)
-  (let ((nav  (page-datum page 'navigation))
-	(config-window  (page-datum page 'config-window)))
-    (match (buttons-selected-symbol nav)
-      ('cancel
-       ;; Close the menu and return
-       (page-leave)
-       'cancelled)
-      ('format
-       (let ((window-port (make-window-port config-window)))
-         (for-each
+(define (format-page-activate-item page item)
+  (let ((config-window  (page-datum page 'config-window)))
+    (match item
+     ('cancel
+      ;; Close the menu and return
+      (page-leave)
+      'cancelled)
+     ('format
+      (let ((window-port (make-window-port config-window)))
+        (for-each
           (lambda (x)
             (match x
                   ((dev . ($ <file-system-spec> mp label type uuid))
@@ -118,10 +117,10 @@ match those uuids read from the respective partitions"
 
             (close-port window-port))
 
-            (when (filesystems-are-current?)
-                  (page-leave))
-            'handled)
-      (_ 'ignored))))
+      (when (filesystems-are-current?)
+            (page-leave))
+      'handled)
+     (_ 'ignored))))
 
 (define (format-page-refresh page)
   (when (not (page-initialised? page))

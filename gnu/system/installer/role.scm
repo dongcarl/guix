@@ -46,24 +46,25 @@
   (service-modules role-service-modules))
 
 
-(define (make-role-page parent  title)
+(define (make-role-page parent title)
   (make-page (page-surface parent)
              title
              role-page-refresh
              0
-             #:activator role-page-activate-selected-item))
+             #:activator role-page-activate-item))
 
 (define my-buttons `((cancel ,(M_ "Canc_el") #t)))
 
-(define (role-page-activate-selected-item page)
-  (let ((menu (page-datum page 'menu)))
-    (cond
-     ((menu-active menu)
-      (set! system-role (menu-get-current-item menu))
-      (page-leave))
-     (else ; buttons
-      (page-leave)
-      'cancelled))))
+(define (role-page-activate-item page item)
+  (match item
+   (('menu-item-activated r)
+    (set! system-role r)
+    (page-leave)
+    'handled)
+   ('cancel
+    (page-leave)
+    'cancelled)
+   (_ 'ignored)))
 
 (define (role-page-refresh page)
   (when (not (page-initialised? page))

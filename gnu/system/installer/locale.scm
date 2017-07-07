@@ -25,6 +25,7 @@
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
   #:use-module (ice-9 format)
+  #:use-module (ice-9 match)
   #:export (make-locale-page))
 
 (include "i18n.scm")
@@ -36,7 +37,7 @@
              title
              locale-page-refresh
              0
-             #:activator locale-page-activate-selected-item))
+             #:activator locale-page-activate-item))
 
 (define (locale-page-refresh page)
     (when (not (page-initialised? page))
@@ -56,15 +57,17 @@
       (menu-redraw menu)
       (menu-refresh menu)))
 
-(define (locale-page-activate-selected-item page)
-  (let* ((menu (page-datum page 'menu))
-         (locale (menu-get-current-item menu)))
-    (cond
-      ((menu-active menu)
-        (setlocale LC_ALL (locale-definition-name locale))
-        (page-leave))
-      (else ; "Cancel" button
-        (page-leave)))))
+(define (locale-page-activate-item page item)
+  (match item
+   (('menu-item-activated locale)
+    (setlocale LC_ALL (locale-definition-name locale))
+    (page-leave)
+    'handled)
+   ('cancel
+    (page-leave)
+    'handled)
+   (_
+    'ignored)))
 
 (define (locale-description locale)
   "Return a string describing LOCALE"

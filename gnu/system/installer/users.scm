@@ -40,34 +40,35 @@
              title
              users-page-refresh
              0
-             #:activator users-page-activate-selected-item))
+             #:activator users-page-activate-item))
 
 (define my-buttons `((add ,(M_ "_Add") #t)
                      (delete ,(M_ "_Delete") #t)
                      (continue ,(M_ "_Continue") #t)))
 
-(define (users-page-activate-selected-item page)
-  (let ((menu (page-datum page 'menu))
-	(nav  (page-datum page 'navigation)))
-    (cond
-     ((menu-active menu)
-      (let* ((account  (menu-get-current-item menu)))
-             (if account
-                 (page-enter  (make-user-edit-page page  "Edit User" account)))))
+(define (users-page-activate-item page item)
+  (let ((menu (page-datum page 'menu)))
+    (match item
+     (('menu-item-activated account)
+      (if account
+        (page-enter  (make-user-edit-page page  "Edit User" account)))
+      'handled)
 
-     (else
-      (match (buttons-selected-symbol nav)
-       ('add
-        (let* ((next  (make-user-edit-page page  "Add New User" #f)))
-          (page-enter next)))
-       ('continue
-        (page-leave))
-       ('delete
-        (set! users (remove (lambda (user)
-                              (equal? user (menu-get-current-item menu)))
-                            users))
-        (page-set-initialised! page #f))
-       (_ 'ignored))))))
+     ('add
+      (let* ((next  (make-user-edit-page page  "Add New User" #f)))
+        (page-enter next)
+        'handled))
+     ('continue
+      (page-leave)
+      'handled)
+     ('delete
+      (set! users (remove (lambda (user)
+                            (equal? user (menu-get-current-item menu)))
+                          users))
+      (page-set-initialised! page #f)
+      'handled)
+     (_
+      'ignored))))
 
 (define (users-page-refresh page)
   (when (not (page-initialised? page))

@@ -212,12 +212,15 @@
            (do-task task-name page))))
    task-name-list))
 
-(define (main-page-activate-selected-item page)
-  (let* ((main-menu (page-datum page 'menu))
-         (item (menu-get-current-item main-menu)))
-    (do-task (car item) page)
+(define (main-page-activate-item page item)
+  (match item
+   (#f #f)
+   (('menu-item-activated x)
+    (do-task (car x) page)
     (page-uniquify)
-    ((page-refresh (car stack)) (car stack))))
+    ((page-refresh (car stack)) (car stack))
+    'handled)
+   (_ #f)))
 
 (define (main-page-init page)
   (let* ((frame (make-boxed-window (page-surface page) (lines) (cols) 0 0
@@ -320,7 +323,7 @@
       (let ((page (make-page
                    stdscr (gettext "GuixSD Installer")
                    main-page-refresh 0
-                   #:activator main-page-activate-selected-item)))
+                   #:activator main-page-activate-item)))
         (page-enter page)
         (page-push #f)
         (let loop ((ch (getch stdscr)))

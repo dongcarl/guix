@@ -25,6 +25,7 @@
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
   #:use-module (ice-9 regex)
+  #:use-module (ice-9 match)
 
   #:export (valid-hostname?)
   #:export (make-host-name-page))
@@ -48,8 +49,7 @@
              title
              host-name-refresh
              1
-             host-name-key-handler
-             host-name-mouse-handler))
+             #:activator host-name-activate-item))
 
 (define (host-name-refresh page)
   (when (not (page-initialised? page))
@@ -69,36 +69,21 @@
     (refresh* (outer (page-wwin page)))
     (refresh* (form-window form))))
 
-(define (host-name-mouse-handler page device-id x y z button-state)
-  'ignored)
-
-(define (host-name-key-handler page ch)
+(define (host-name-activate-item page item)
   (let ((form  (page-datum page 'form))
 	(nav   (page-datum page 'navigation))
 	(dev   (page-datum page 'device)))
-
-    (cond
-     ((buttons-key-matches-symbol? nav ch 'cancel)
-      (page-leave)
-      'cancelled)
-
-     ((select-key? ch)
+  (match item
+    ('default
       (set! host-name (form-get-value form 0))
-      (page-leave))
+      (page-leave)
+      'handled)
+    ('cancel
+     (page-leave)
+     'cancelled)
+    (_ 'ignored))))
 
-     ((eq? ch #\tab)
-      (form-set-enabled! form #f)
-      (buttons-select-next nav))
-
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav)
-      (form-set-enabled! form #t))
-
-     ((eq? ch KEY_DOWN)
-      (buttons-unselect-all nav)
-      (form-set-enabled! form #t))
-
-     ;; Do not allow more than 63 characters
+#|     ;; Do not allow more than 63 characters
      ((and (char? ch)
            (char-set-contains? char-set:printing ch)
            (>= (field-cursor-position (get-current-field form)) max-length)))
@@ -114,9 +99,7 @@
            (not (char-set-contains?
                  (char-set-adjoin char-set:letter+digit #\-) ch))
            (positive? (field-cursor-position (get-current-field form)))))
-
-     (else
-      (form-enter form ch)))))
+|#
 
 (define my-buttons `((cancel ,(M_ "Cancel") #f)))
 

@@ -41,7 +41,8 @@
   #:use-module (ncurses curses)
   #:use-module (gnu system installer utils)
   #:use-module (gnu system installer levelled-stack)
-  #:use-module (srfi srfi-9))
+  #:use-module (srfi srfi-9)
+  #:use-module (ice-9 match))
 
 (define-record-type <page>
   (make-page' surface title inited refresh cursor-visibility key-handler mouse-handler data)
@@ -56,27 +57,30 @@
   (wwin page-wwin page-set-wwin!)
   (data page-data page-set-data!))
 
-(define (page-activate-selected-item page)
-  ((page-datum page 'activator) page))
+(define (page-activate-item page info)
+  ((page-datum page 'activator) page info))
 
 (define (page-default-mouse-handler page device-id x y z button-state)
   (let* ((menu (page-datum page 'menu))
-         (status (if menu
-                     (std-menu-mouse-handler menu device-id x y z button-state)
-                     'ignored))
          (buttons (page-datum page 'navigation))
-         (status (if (and (eq? status 'ignored) buttons)
-                     (let ((button-status (buttons-mouse-handler buttons
-                                                                 device-id
-                                                                 x y z
-                                                                 button-state)))
-                       (if (and menu (eq? button-status 'activated))
-                         (menu-set-active! menu #f))
-                       button-status)
-                     status)))
-    (if (eq? status 'activated)
-      (page-activate-selected-item page))
-    status))
+         (status (or (let ((status (std-menu-mouse-handler menu device-id x y z button-state)))
+                                         (match status
+                                           (('menu-item-activated x)
+                                            (list 'menu-item-activated x))
+                                           (_ #f)))
+                     (if buttons
+                                                    (match (buttons-mouse-handler buttons device-id x y z button-state)
+                                                      (#f #f)
+                                                      ('ignored #f)
+                                                      (x
+                                                       ;(if menu
+                                                       ;  (menu-set-active! menu #f))
+                                                       x))))))
+    (if status
+        (begin
+          (page-activate-item page status)
+          'handled)
+        'ignored)))
 
 (define (page-default-key-handler page ch)
   "Handle keypresses in a commonly-used page.
@@ -135,9 +139,13 @@ If a form is used it's assumed that the menu is not used and vice versa."
         'handled)))
 
      ((select-key? ch)
-      (page-activate-selected-item page))
+      (page-activate-item page
+                          (if (and menu (menu-active menu))
+                            (list 'menu-item-activated
+                                  (menu-get-current-item menu))
+                            'default)))
 
-     ((and menu (menu-active menu) (not (eq? 'ignored (std-menu-key-handler menu ch))))
+     ((and menu (menu-active menu) (std-menu-key-handler menu ch))
       'handled)
 
      ((eq? ch KEY_UP)
@@ -161,19 +169,17 @@ If a form is used it's assumed that the menu is not used and vice versa."
      ((and nav (char? ch)
                (or (buttons-fetch-by-key nav (char-upcase ch))
                    (buttons-fetch-by-key nav (char-downcase ch))))
-      (buttons-select-by-symbol nav (or (buttons-fetch-by-key nav
-                                                              (char-upcase ch))
-                                        (buttons-fetch-by-key nav
-                                                              (char-downcase ch))))
-      (if menu
-        (menu-set-active! menu #f)
-        (if form
-          (form-set-enabled! form #f)))
-      (page-activate-selected-item page))
+      (let ((button (or (buttons-fetch-by-key nav (char-upcase ch))
+                        (buttons-fetch-by-key nav (char-downcase ch)))))
+        (if menu
+          (menu-set-active! menu #f)
+          (if form
+            (form-set-enabled! form #f)))
+        (buttons-select-by-symbol nav button)
+        (page-activate-item page button)))
 
      (else
        'ignored))))
-
 
 (define* (make-page surface title refresh cursor-visibility
                     #:optional

@@ -186,8 +186,8 @@ active."
         (menu-up menu)
         'handled)
        (else
-        'ignored))
-      'ignored))
+        #f))
+      #f))
 
 (define (std-menu-mouse-handler menu device-id g-x g-y z button-state)
   (if (logtest BUTTON1_CLICKED button-state)
@@ -202,6 +202,6 @@ active."
                 (begin
                   (menu-set-current-item! menu selected-item-index)
                   (menu-redraw menu)
-                  'activated))))
-         (_ 'ignored)))
-      'ignored))
+                  (list 'menu-item-activated (menu-get-current-item menu))))))
+         (_ #f)))
+      #f))

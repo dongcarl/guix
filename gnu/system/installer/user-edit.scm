@@ -41,7 +41,7 @@
                        title
                        user-edit-refresh
                        1
-                       #:activator user-edit-page-activate-selected-item)))
+                       #:activator user-edit-page-activate-item)))
     (page-set-datum! page 'account account)
     (page-set-datum! page 'parent parent)
     page))
@@ -55,14 +55,12 @@
     (refresh* (outer (page-wwin page)))
     (refresh* (form-window form))))
 
-(define (user-edit-page-activate-selected-item page)
+(define (user-edit-page-activate-item page item)
   (let ((form  (page-datum page 'form))
 	(nav   (page-datum page 'navigation))
         (parent   (page-datum page 'parent))
 	(dev   (page-datum page 'device)))
-    (match (if (form-enabled? form)
-               'save
-               (buttons-selected-symbol nav))
+    (match (if (eq? item 'default) 'save item)
      ('save
       (set! users
             (cons
@@ -82,7 +80,8 @@
      ('cancel
       (page-leave)
       'handled)
-     (_ 'ignored))))
+     (_
+      'ignored))))
 
 (define my-buttons `((save ,(M_ "Save") #f)
 		     (cancel     ,(M_ "Cancel") #f)))

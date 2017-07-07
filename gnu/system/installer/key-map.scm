@@ -35,20 +35,18 @@
 			(gettext "Keyboard Mapping")
 			key-map-page-refresh
                         0
-                        #:activator key-map-page-activate-selected-item)))
+                        #:activator key-map-page-activate-item)))
     (page-set-datum! page 'directory directory)
     page))
 
 
 (define my-buttons `((cancel  ,(M_ "Canc_el") #t)))
 
-(define (key-map-page-activate-selected-item page)
-  (let* ((menu (page-datum page 'menu))
-         (i (menu-get-current-item menu))
-         (directory (page-datum page 'directory))
-         (new-dir (string-append directory "/" i)))
-    (cond
-     ((menu-active menu)
+(define (key-map-page-activate-item page item)
+  (match item
+   (('menu-item-activated i)
+    (let* ((directory (page-datum page 'directory))
+           (new-dir (string-append directory "/" i)))
       (if (eq? 'directory (stat:type (stat new-dir)))
         (let ((p (make-key-map page new-dir)))
           (page-pop) ; Don't go back to the current page!
@@ -57,12 +55,11 @@
           (system* "loadkeys" i)
           (set! key-map i)
           (page-leave)
-          #f)))
-     (else ;buttons
-       (match (buttons-selected-symbol (page-datum page 'navigation))
-        ('cancel
-         (page-leave))
-        (_ 'ignored))))))
+          'handled))))
+   ('cancel
+    (page-leave)
+    'handled)
+   (_ 'ignored)))
 
 (define (key-map-page-refresh page)
   (when (not (page-initialised? page))

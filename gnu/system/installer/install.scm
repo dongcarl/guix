@@ -41,8 +41,8 @@
                          title
                          install-page-refresh
                          0
-                         install-page-key-handler
-                         install-page-mouse-handler)))
+                         #:activator
+                         install-page-activate-item)))
     page))
 
 
@@ -75,41 +75,24 @@
 (define (install-page-mouse-handler page device-id x y z button-state)
   'ignored)
 
-(define (install-page-key-handler page ch)
-  (let ((nav  (page-datum page 'navigation))
-        (config-window  (page-datum page 'config-window)))
-
-    (cond
-     ((eq? ch KEY_RIGHT)
-      (buttons-select-next nav))
-
-     ((eq? ch #\tab)
-      (cond
-       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-	(buttons-unselect-all nav))
-
-       (else
-	(buttons-select-next nav))))
-
-     ((eq? ch KEY_LEFT)
-      (buttons-select-prev nav))
-
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav))
-
-
-     ((buttons-key-matches-symbol? nav ch 'cancel)
+(define (install-page-activate-item page item)
+  (let ((config-window  (page-datum page 'config-window)))
+    (match item
+     ('cancel
       ;; Close the menu and return
-      (page-leave))
+      (page-leave)
+      'handled)
 
-     ((buttons-key-matches-symbol? nav ch 'reboot)
-      (force-reboot))
+     ('reboot
+      (force-reboot)
+      'handled)
 
-     ((buttons-key-matches-symbol? nav ch 'continue)
+     ('continue
       (let ((target (format #f "/target-~a" install-attempts))
             (window-port (make-window-port config-window)))
         (catch #t
                (lambda ()
+                 (force-output window-port)
                  (set! install-attempts (1+ install-attempts))
                  (and
                   (fold
@@ -157,8 +140,9 @@
           (display-error (stack-ref (make-stack #t) 3)
                          window-port subr message args rest)))
 
-      (close-port window-port))))
-  #f))
+      (close-port window-port))
+      'handled)
+     (_ 'ignored))))
 
 (define (install-page-refresh page)
   (when (not (page-initialised? page))

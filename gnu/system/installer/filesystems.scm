@@ -131,7 +131,7 @@
              title
              filesystem-page-refresh
              0
-             #:activator filesystem-page-activate-selected-item))
+             #:activator filesystem-page-activate-item))
 
 (define my-buttons `((continue ,(M_ "_Continue") #t)
                      (cancel     ,(M_ "Canc_el") #t)))
@@ -179,34 +179,30 @@
        (error (format #f "~s is not a partition" p)))
      p)))
 
-(define (filesystem-page-activate-selected-item page)
-  (let* ((menu (page-datum page 'menu)))
-    (cond
-      ((menu-active menu)
-       (let* ((dev (list-ref (menu-items menu) (menu-current-item menu)))
-              (name (partition-name (car dev)))
+(define (filesystem-page-activate-item page item)
+  (match item
+   (('menu-item-activated dev)
+       (let* ((name (partition-name (car dev)))
               (next  (make-page (page-surface page)
                                 (format #f
                                  (gettext "Choose the mount point for device ~s") name)
                                 mount-point-refresh
                                 1
-                                #:activator mount-point-page-activate-selected-item)))
+                                #:activator mount-point-page-activate-item)))
          (page-set-datum! next 'device name)
          (page-enter next)
          'handled))
-      (else ; buttons
-        (match (buttons-selected-symbol (page-datum page 'navigation))
-          ('cancel
-           (page-leave)
-           'cancelled)
-          ('continue
-           (let ((errstr (filesystem-task-incomplete-reason)))
-                 (if errstr
-                   (let ((next (make-dialog page errstr)))
-                     (page-enter next))
-                     (page-leave)))
-           'handled)
-          (_ 'ignored))))))
+   ('cancel
+    (page-leave)
+    'cancelled)
+   ('continue
+    (let ((errstr (filesystem-task-incomplete-reason)))
+      (if errstr
+          (let ((next (make-dialog page errstr)))
+            (page-enter next))
+            (page-leave)))
+    'handled)
+   (_ 'ignored)))
 
 (define (filesystem-page-init p)
   (let* ((s (page-surface p))

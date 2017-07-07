@@ -27,10 +27,11 @@
   #:use-module (ncurses curses)
   #:use-module (web uri)
   #:use-module (srfi srfi-1)
+  #:use-module (ice-9 match)
 
   #:export (substitute-is-reachable?)
   #:export (ping-page-refresh)
-  #:export (ping-page-activate-selected-item))
+  #:export (ping-page-activate-item))
 
 (include "i18n.scm")
 
@@ -51,10 +52,9 @@
 		     (continue  ,(M_ "_Continue") #t)
 		     (cancel     ,(M_ "Canc_el") #t)))
 
-(define (ping-page-activate-selected-item page)
-  (let ((nav  (page-datum page 'navigation))
-	(test-window  (page-datum page 'test-window)))
-    (match (buttons-selected-symbol nav)
+(define (ping-page-activate-item page item)
+  (let ((test-window  (page-datum page 'test-window)))
+    (match item
      ('cancel
       ;; Close the menu and return
       (page-leave)

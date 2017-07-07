@@ -42,7 +42,7 @@
                          title
                          wireless-page-refresh
                          0
-                         #:activator wireless-page-activate-selected-item)))
+                         #:activator wireless-page-activate-item)))
 
     (page-set-datum! page 'ifce interface)
     page))
@@ -50,32 +50,28 @@
 
 (define my-buttons `((cancel ,(M_ "Canc_el") #t)))
 
-(define (wireless-page-activate-selected-item page)
-  (let ((nav  (page-datum page 'navigation))
-        (menu  (page-datum page 'menu))
-        (test-window  (page-datum page 'test-window)))
-
-    (cond
-     ((menu-active menu)
-      (let ((ap (menu-get-current-item menu))
-            (ifce (page-datum page 'ifce)))
-        (if (assq-ref ap 'encryption)
-            (let ((next (make-passphrase-page
-                         page
-                         (M_ "Passphrase entry")
-                         ifce
-                         ap)))
-              (page-enter next))
-            (begin
-              (and (zero? (system* "ip" "link" "set" ifce "up"))
-                   (zero? (system* "iw" "dev" ifce "connect" (assq-ref ap 'essid)))
-                   (dhclient ifce))
-              (page-leave)))))
-     (else
-      (match (buttons-selected-symbol nav)
-        ('cancel
-         (page-leave)
-         'handled))))))
+(define (wireless-page-activate-item page item)
+  (match item
+   (('menu-item-activated ap)
+    (let ((ifce (page-datum page 'ifce)))
+      (if (assq-ref ap 'encryption)
+          (let ((next (make-passphrase-page
+                       page
+                       (M_ "Passphrase entry")
+                       ifce
+                       ap)))
+            (page-enter next))
+          (begin
+            (and (zero? (system* "ip" "link" "set" ifce "up"))
+                 (zero? (system* "iw" "dev" ifce "connect" (assq-ref ap 'essid)))
+                 (dhclient ifce))
+            (page-leave))))
+    'handled)
+   ('cancel
+    (page-leave)
+    'handled)
+   (_
+    'ignored)))
 
 (define (wireless-page-refresh page)
   (when (not (page-initialised? page))

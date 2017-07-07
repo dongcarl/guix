@@ -45,7 +45,7 @@
                          title
                          configure-page-refresh
                          0
-                         #:activator configure-page-activate-selected-item)))
+                         #:activator configure-page-activate-item)))
     page))
 
 
@@ -75,16 +75,14 @@
    ""
    "/tmp"))
 
-(define (configure-page-activate-selected-item page)
-  (let ((nav  (page-datum page 'navigation))
-	(test-window  (page-datum page 'test-window)))
-    (match (buttons-selected-symbol nav)
-     ('cancel
+(define (configure-page-activate-item page item)
+  (match item
+    ('cancel
       ;; Close the menu and return
       (page-leave)
       'cancelled)
 
-     ('save
+    ('save
       ;; Write the configuration and set the file name
       (let ((cfg-port (mkstemp! (string-copy
                                  (string-append tempdir "/guix-config-XXXXXX")))))
@@ -94,7 +92,7 @@
 
       ;; Close the menu and return
       (page-leave))
-     (_ 'ignored))))
+    (_ 'ignored)))
 
 (define (configure-page-refresh page)
   (when (not (page-initialised? page))

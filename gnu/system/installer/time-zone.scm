@@ -35,20 +35,18 @@
 			(gettext "Time Zone")
 			time-zone-page-refresh
                         0
-			#:activator time-zone-page-activate-selected-item)))
+			#:activator time-zone-page-activate-item)))
     (page-set-datum! page 'directory directory)
     page))
 
 
 (define my-buttons `((cancel  ,(M_ "Canc_el") #t)))
 
-(define (time-zone-page-activate-selected-item page)
-  (let* ((menu (page-datum page 'menu)))
-    (cond
-     ((menu-active menu)
-      (time-zone-page-refresh page)
-      (let* ((i (menu-get-current-item menu))
-             (directory (page-datum page 'directory))
+(define (time-zone-page-activate-item page item)
+  (match item
+   (('menu-item-activated i)
+      (time-zone-page-refresh page) ; FIXME remove
+      (let* ((directory (page-datum page 'directory))
              (new-dir (string-append directory "/" i))
              (st (lstat new-dir)))
         (if (and (file-exists? new-dir)
@@ -67,9 +65,11 @@
                 i))
             (page-leave)
             #f))))
-     (else ; buttons
-       (page-leave)
-       'cancelled))))
+     ('cancel
+      (page-leave)
+      'cancelled)
+     (_
+      'ignored)))
 
 (define (time-zone-page-refresh page)
   (when (not (page-initialised? page))
