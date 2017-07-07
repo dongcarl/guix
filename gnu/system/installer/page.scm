@@ -63,19 +63,20 @@
 (define (page-default-mouse-handler page device-id x y z button-state)
   (let* ((menu (page-datum page 'menu))
          (buttons (page-datum page 'navigation))
-         (status (or (let ((status (std-menu-mouse-handler menu device-id x y z button-state)))
-                                         (match status
-                                           (('menu-item-activated x)
-                                            (list 'menu-item-activated x))
-                                           (_ #f)))
+         (status (or (let ((status (and menu (std-menu-mouse-handler menu device-id x y z button-state))))
+                       (match status
+                        (('menu-item-activated x)
+                         (list 'menu-item-activated x))
+                        (_ #f)))
                      (if buttons
-                                                    (match (buttons-mouse-handler buttons device-id x y z button-state)
-                                                      (#f #f)
-                                                      ('ignored #f)
-                                                      (x
-                                                       ;(if menu
-                                                       ;  (menu-set-active! menu #f))
-                                                       x))))))
+                       (match (buttons-mouse-handler buttons device-id x y z button-state)
+                        (#f #f)
+                        ('ignored #f)
+                        (x
+                         (display x)
+                         ;(if menu
+                         ;  (menu-set-active! menu #f))
+                         x))))))
     (if status
         (begin
           (page-activate-item page status)
