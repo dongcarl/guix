@@ -202,8 +202,10 @@ active."
                 (begin
                   (menu-set-current-item! menu selected-item-index)
                   (menu-redraw menu)
-                  (if (logtest BUTTON1_DOUBLE_CLICKED button-state)
-                    (list 'menu-item-activated (menu-get-current-item menu))
-                    #f)))))
+                  (list (if (logtest BUTTON1_DOUBLE_CLICKED button-state)
+                            'menu-item-activated
+                            'menu-item-selected)
+                        (menu-get-current-item menu)))
+                #f)))
          (_ #f)))
       #f))

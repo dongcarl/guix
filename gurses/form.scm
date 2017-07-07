@@ -271,6 +271,8 @@ than #f.  Return that to our caller."
       (match (getmouse)
        ((device-id g-x g-y z button-state)
         (match (std-menu-mouse-handler menu device-id g-x g-y z button-state)
+         (('menu-item-selected x)
+          (end-status form #\newline))
          (('menu-item-activated x)
           (end-status form #\newline))
          (_
