@@ -32,7 +32,12 @@
 
 (include "i18n.scm")
 
-(define (my-fields) `((mount-point ,(M_ "Mount Point") 40)
+(define validator
+  (let ((regexp (make-regexp "^/")))
+    (lambda (text)
+      (regexp-exec regexp text))))
+
+(define (my-fields) `((mount-point ,(M_ "Mount Point") 40 ,validator)
                       (fs-type     ,(M_ "File System Type")
                                    ,(append valid-file-system-types (list "<unused>")))
                       (label       ,(M_ "Label") 16)))
