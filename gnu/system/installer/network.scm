@@ -42,7 +42,7 @@
   (zero? (system* "dhclient" interface)))
 
 
-(define (make-network-page parent  title)
+(define (make-network-page parent title)
   (make-page (page-surface parent)
              title
              network-page-refresh
@@ -122,8 +122,7 @@
                                  "Ping"
                                  ping-page-refresh
                                  0
-                                 ping-page-key-handler
-                                 ping-page-mouse-handler)))
+                                 #:activator ping-page-activate-focused-item)))
            (page-enter next)))
         ('continue
           ;; Cancel the timer

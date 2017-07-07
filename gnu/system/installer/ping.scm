@@ -30,8 +30,7 @@
 
   #:export (substitute-is-reachable?)
   #:export (ping-page-refresh)
-  #:export (ping-page-key-handler)
-  #:export (ping-page-mouse-handler))
+  #:export (ping-page-activate-focused-item))
 
 (include "i18n.scm")
 
@@ -52,54 +51,30 @@
 		     (continue  ,(M_ "_Continue") #t)
 		     (cancel     ,(M_ "Canc_el") #t)))
 
-(define (ping-page-mouse-handler page device-id x y z button-state)
-  'ignored)
-
-(define (ping-page-key-handler page ch)
+(define (ping-page-activate-focused-item page)
   (let ((nav  (page-datum page 'navigation))
 	(test-window  (page-datum page 'test-window)))
-
-    (cond
-     ((buttons-key-matches-symbol? nav ch 'cancel)
+    (match (buttons-selected-symbol nav)
+     ('cancel
       ;; Close the menu and return
-      (page-leave))
+      (page-leave)
+      'handled)
 
-     ((eq? ch KEY_RIGHT)
-      (buttons-select-next nav))
-
-     ((eq? ch #\tab)
-      (cond
-       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-	(buttons-unselect-all nav))
-
-       (else
-	(buttons-select-next nav))))
-
-     ((eq? ch KEY_LEFT)
-      (buttons-select-prev nav))
-
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav))
-
-     ((buttons-key-matches-symbol? nav ch 'continue)
-
+     ('continue
       (delwin (page-datum page 'test-window))
-      (page-leave))
+      (page-leave)
+      'handled)
 
-     ((buttons-key-matches-symbol? nav ch 'test)
+     ('test
       (let* ()
-	(if (zero?
-	     (window-pipe test-window  "ping" "ping" "-c" "3"
+        (if (zero? (window-pipe test-window  "ping" "ping" "-c" "3"
                           (uri-host
                            (string->uri
                             (car %default-substitute-urls)))))
-
-	    (addstr test-window
-		    (G_ "Test successful.  Network is working."))
-	    (addstr test-window
-		    (G_ "Test failed. No servers reached.")))
-
-	(refresh* test-window)))) #f))
+            (addstr test-window (G_ "Test successful.  Network is working."))
+            (addstr test-window (G_ "Test failed. No servers reached.")))
+	(refresh* test-window)
+	'handled)))))
 
 (define (ping-page-refresh page)
   (when (not (page-initialised? page))

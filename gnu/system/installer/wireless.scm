@@ -42,8 +42,7 @@
                          title
                          wireless-page-refresh
                          0
-                         wireless-page-key-handler
-                         wireless-page-mouse-handler)))
+                         #:activator wireless-page-activate-focused-item)))
 
     (page-set-datum! page 'ifce interface)
     page))
@@ -51,36 +50,13 @@
 
 (define my-buttons `((cancel ,(M_ "Canc_el") #t)))
 
-(define (wireless-page-mouse-handler page device-id x y z button-state)
-  'ignored)
-
-(define (wireless-page-key-handler page ch)
+(define (wireless-page-activate-focused-item page)
   (let ((nav  (page-datum page 'navigation))
         (menu  (page-datum page 'menu))
         (test-window  (page-datum page 'test-window)))
 
     (cond
-     ((eq? ch KEY_RIGHT)
-      (buttons-select-next nav))
-
-     ((eq? ch #\tab)
-      (cond
-       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-        (buttons-unselect-all nav))
-
-       (else
-        (buttons-select-next nav))))
-
-     ((eq? ch KEY_LEFT)
-      (buttons-select-prev nav))
-
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav))
-
-     ((buttons-key-matches-symbol? nav ch 'cancel)
-      (page-leave))
-
-     ((select-key? ch)
+     ((menu-active menu)
       (let ((ap (menu-get-current-item menu))
             (ifce (page-datum page 'ifce)))
         (if (assq-ref ap 'encryption)
@@ -94,11 +70,12 @@
               (and (zero? (system* "ip" "link" "set" ifce "up"))
                    (zero? (system* "iw" "dev" ifce "connect" (assq-ref ap 'essid)))
                    (dhclient ifce))
-              (page-leave))))))
-
-    (std-menu-key-handler menu ch)
-
-    #f))
+              (page-leave)))))
+     (else
+      (match (buttons-selected-symbol nav)
+        ('cancel
+         (page-leave)
+         'handled))))))
 
 (define (wireless-page-refresh page)
   (when (not (page-initialised? page))
