@@ -30,7 +30,7 @@
 
   #:export (substitute-is-reachable?)
   #:export (ping-page-refresh)
-  #:export (ping-page-activate-focused-item))
+  #:export (ping-page-activate-selected-item))
 
 (include "i18n.scm")
 
@@ -51,7 +51,7 @@
 		     (continue  ,(M_ "_Continue") #t)
 		     (cancel     ,(M_ "Canc_el") #t)))
 
-(define (ping-page-activate-focused-item page)
+(define (ping-page-activate-selected-item page)
   (let ((nav  (page-datum page 'navigation))
 	(test-window  (page-datum page 'test-window)))
     (match (buttons-selected-symbol nav)

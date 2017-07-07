@@ -41,7 +41,7 @@
                        title
                        user-edit-refresh
                        1
-                       #:activator user-edit-page-activate-focused-item)))
+                       #:activator user-edit-page-activate-selected-item)))
     (page-set-datum! page 'account account)
     (page-set-datum! page 'parent parent)
     page))
@@ -55,7 +55,7 @@
     (refresh* (outer (page-wwin page)))
     (refresh* (form-window form))))
 
-(define (user-edit-page-activate-focused-item page)
+(define (user-edit-page-activate-selected-item page)
   (let ((form  (page-datum page 'form))
 	(nav   (page-datum page 'navigation))
         (parent   (page-datum page 'parent))

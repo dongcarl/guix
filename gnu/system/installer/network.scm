@@ -47,7 +47,7 @@
              title
              network-page-refresh
              0
-             #:activator network-page-activate-focused-item))
+             #:activator network-page-activate-selected-item))
 
 (define (interfaces)
   (map (lambda (ifce)
@@ -98,7 +98,7 @@
 (define my-buttons `((continue ,(M_ "_Continue") #t)
                      (test     ,(M_ "_Test") #t)))
 
-(define (network-page-activate-focused-item page)
+(define (network-page-activate-selected-item page)
   (let* ((menu (page-datum page 'menu))
          (nav (page-datum page 'navigation))
          (item (menu-get-current-item menu))
@@ -122,7 +122,7 @@
                                  "Ping"
                                  ping-page-refresh
                                  0
-                                 #:activator ping-page-activate-focused-item)))
+                                 #:activator ping-page-activate-selected-item)))
            (page-enter next)))
         ('continue
           ;; Cancel the timer

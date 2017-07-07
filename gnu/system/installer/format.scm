@@ -65,13 +65,13 @@ match those uuids read from the respective partitions"
                          title
                          format-page-refresh
                          0
-                         #:activator format-page-activate-focused-item)))
+                         #:activator format-page-activate-selected-item)))
     page))
 
 (define my-buttons `((format ,(M_ "_Format") #t)
                      (cancel ,(M_ "Canc_el") #t)))
 
-(define (format-page-activate-focused-item page)
+(define (format-page-activate-selected-item page)
   (let ((nav  (page-datum page 'navigation))
 	(config-window  (page-datum page 'config-window)))
     (match (buttons-selected-symbol nav)

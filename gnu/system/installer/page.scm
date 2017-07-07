@@ -56,7 +56,7 @@
   (wwin page-wwin page-set-wwin!)
   (data page-data page-set-data!))
 
-(define (page-activate-focused-item page)
+(define (page-activate-selected-item page)
   ((page-datum page 'activator) page))
 
 (define (page-default-mouse-handler page device-id x y z button-state)
@@ -75,7 +75,7 @@
                        button-status)
                      status)))
     (if (eq? status 'activated)
-      (page-activate-focused-item page))
+      (page-activate-selected-item page))
     status))
 
 (define (page-default-key-handler page ch)
@@ -135,7 +135,7 @@ If a form is used it's assumed that the menu is not used and vice versa."
         'handled)))
 
      ((select-key? ch)
-      (page-activate-focused-item page))
+      (page-activate-selected-item page))
 
      ((and menu (menu-active menu) (not (eq? 'ignored (std-menu-key-handler menu ch))))
       'handled)
@@ -169,7 +169,7 @@ If a form is used it's assumed that the menu is not used and vice versa."
         (menu-set-active! menu #f)
         (if form
           (form-set-enabled! form #f)))
-      (page-activate-focused-item page))
+      (page-activate-selected-item page))
 
      (else
        'ignored))))

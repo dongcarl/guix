@@ -51,11 +51,11 @@
              title
              role-page-refresh
              0
-             #:activator role-page-activate-focused-item))
+             #:activator role-page-activate-selected-item))
 
 (define my-buttons `((cancel ,(M_ "Canc_el") #t)))
 
-(define (role-page-activate-focused-item page)
+(define (role-page-activate-selected-item page)
   (let ((menu (page-datum page 'menu)))
     (cond
      ((menu-active menu)

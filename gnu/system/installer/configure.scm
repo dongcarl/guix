@@ -45,7 +45,7 @@
                          title
                          configure-page-refresh
                          0
-                         #:activator configure-page-activate-focused-item)))
+                         #:activator configure-page-activate-selected-item)))
     page))
 
 
@@ -75,7 +75,7 @@
    ""
    "/tmp"))
 
-(define (configure-page-activate-focused-item page)
+(define (configure-page-activate-selected-item page)
   (let ((nav  (page-datum page 'navigation))
 	(test-window  (page-datum page 'test-window)))
     (match (buttons-selected-symbol nav)

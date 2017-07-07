@@ -35,14 +35,14 @@
 			(gettext "Keyboard Mapping")
 			key-map-page-refresh
                         0
-                        #:activator key-map-page-activate-focused-item)))
+                        #:activator key-map-page-activate-selected-item)))
     (page-set-datum! page 'directory directory)
     page))
 
 
 (define my-buttons `((cancel  ,(M_ "Canc_el") #t)))
 
-(define (key-map-page-activate-focused-item page)
+(define (key-map-page-activate-selected-item page)
   (let* ((menu (page-datum page 'menu))
          (i (menu-get-current-item menu))
          (directory (page-datum page 'directory))

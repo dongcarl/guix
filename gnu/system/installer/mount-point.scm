@@ -28,7 +28,7 @@
   #:use-module (ice-9 match)
 
   #:export (mount-point-refresh)
-  #:export (mount-point-page-activate-focused-item))
+  #:export (mount-point-page-activate-selected-item))
 
 (include "i18n.scm")
 
@@ -45,7 +45,7 @@
     (refresh* (outer (page-wwin page)))
     (refresh* (form-window form))))
 
-(define (mount-point-page-activate-focused-item page)
+(define (mount-point-page-activate-selected-item page)
   (let ((form  (page-datum page 'form))
 	(nav   (page-datum page 'navigation))
 	(dev   (page-datum page 'device)))

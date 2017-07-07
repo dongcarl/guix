@@ -40,13 +40,13 @@
              title
              users-page-refresh
              0
-             #:activator users-page-activate-focused-item))
+             #:activator users-page-activate-selected-item))
 
 (define my-buttons `((add ,(M_ "_Add") #t)
                      (delete ,(M_ "_Delete") #t)
                      (continue ,(M_ "_Continue") #t)))
 
-(define (users-page-activate-focused-item page)
+(define (users-page-activate-selected-item page)
   (let ((menu (page-datum page 'menu))
 	(nav  (page-datum page 'navigation)))
     (cond

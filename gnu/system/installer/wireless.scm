@@ -42,7 +42,7 @@
                          title
                          wireless-page-refresh
                          0
-                         #:activator wireless-page-activate-focused-item)))
+                         #:activator wireless-page-activate-selected-item)))
 
     (page-set-datum! page 'ifce interface)
     page))
@@ -50,7 +50,7 @@
 
 (define my-buttons `((cancel ,(M_ "Canc_el") #t)))
 
-(define (wireless-page-activate-focused-item page)
+(define (wireless-page-activate-selected-item page)
   (let ((nav  (page-datum page 'navigation))
         (menu  (page-datum page 'menu))
         (test-window  (page-datum page 'test-window)))

@@ -131,7 +131,7 @@
              title
              filesystem-page-refresh
              0
-             #:activator filesystem-page-activate-focused-item))
+             #:activator filesystem-page-activate-selected-item))
 
 (define my-buttons `((continue ,(M_ "_Continue") #t)
                      (cancel     ,(M_ "Canc_el") #t)))
@@ -179,7 +179,7 @@
        (error (format #f "~s is not a partition" p)))
      p)))
 
-(define (filesystem-page-activate-focused-item page)
+(define (filesystem-page-activate-selected-item page)
   (let* ((menu (page-datum page 'menu)))
     (cond
       ((menu-active menu)
@@ -190,7 +190,7 @@
                                  (gettext "Choose the mount point for device ~s") name)
                                 mount-point-refresh
                                 1
-                                #:activator mount-point-page-activate-focused-item)))
+                                #:activator mount-point-page-activate-selected-item)))
          (page-set-datum! next 'device name)
          (page-enter next)
          'handled))

@@ -35,17 +35,18 @@
 			(gettext "Time Zone")
 			time-zone-page-refresh
                         0
-			#:activator time-zone-page-activate-focused-item)))
+			#:activator time-zone-page-activate-selected-item)))
     (page-set-datum! page 'directory directory)
     page))
 
 
 (define my-buttons `((cancel  ,(M_ "Canc_el") #t)))
 
-(define (time-zone-page-activate-focused-item page)
+(define (time-zone-page-activate-selected-item page)
   (let* ((menu (page-datum page 'menu)))
     (cond
      ((menu-active menu)
+      (time-zone-page-refresh page)
       (let* ((i (menu-get-current-item menu))
              (directory (page-datum page 'directory))
              (new-dir (string-append directory "/" i))

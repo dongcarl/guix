@@ -31,12 +31,12 @@
 
 (define my-buttons `((continue ,(M_ "_Continue") #t)))
 
-(define (make-disk-page parent  title)
+(define (make-disk-page parent title)
   (make-page (page-surface parent)
              title
              disk-page-refresh
              0
-             #:activator disk-page-activate-focused-item))
+             #:activator disk-page-activate-selected-item))
 
 (define (disk-page-refresh page)
     (when (not (page-initialised? page))
@@ -57,7 +57,7 @@
       (menu-redraw menu)
       (menu-refresh menu)))
 
-(define (disk-page-activate-focused-item page)
+(define (disk-page-activate-selected-item page)
   (let ((menu (page-datum page 'menu)))
     (cond
      ((menu-active menu)

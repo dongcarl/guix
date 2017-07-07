@@ -36,7 +36,7 @@
              title
              locale-page-refresh
              0
-             #:activator locale-page-activate-focused-item))
+             #:activator locale-page-activate-selected-item))
 
 (define (locale-page-refresh page)
     (when (not (page-initialised? page))
@@ -56,7 +56,7 @@
       (menu-redraw menu)
       (menu-refresh menu)))
 
-(define (locale-page-activate-focused-item page)
+(define (locale-page-activate-selected-item page)
   (let* ((menu (page-datum page 'menu))
          (locale (menu-get-current-item menu)))
     (cond
