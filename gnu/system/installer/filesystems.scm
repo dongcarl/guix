@@ -81,7 +81,7 @@
 
 (define (make-file-system-spec mount-point label type)
   (if (member type valid-file-system-types)
-      (let ((uuid (slurp "uuidgen" identity)))
+      (let ((uuid (slurp* "uuidgen")))
         (make-file-system-spec' mount-point label
                                 (string->symbol type)
                                 (car uuid)))

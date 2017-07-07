@@ -116,7 +116,7 @@
                                page
                                (or
                                 (getenv "TZDIR")
-                                (string-append (car (slurp "guix build tzdata" #f))
+                                (string-append (car (slurp* "guix" "build" "tzdata"))
                                                "/share/zoneinfo"))))))
 
     (hostname . ,(make-task hostname-menu-title

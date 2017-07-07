@@ -73,8 +73,7 @@
   (dynamic-wind
       (lambda () (set! loc (getenv lc-all))
               (setenv lc-all locale))
-      (lambda () (let ((str (assq-ref (key-value-slurp
-                            (string-append "locale -k LC_IDENTIFICATION"))
+      (lambda () (let ((str (assq-ref (key-value-slurp* "locale" "-k" "LC_IDENTIFICATION")
                                       'title)))
                    ;; String enclosing "" if they exist
                    (if (and (eqv? (string-ref str 0) #\")

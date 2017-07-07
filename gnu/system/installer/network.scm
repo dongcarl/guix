@@ -79,14 +79,20 @@
                   (func     (match->elem m 4))
                   (usb-slot (match->elem m 5)))
               (assoc-ref
-               (slurp
-                (format #f "lspci -v -mm -s~x:~x:~x.~x"
-                        domain bus slot func)
-                (lambda (x)
+                (map
+                 (lambda (x)
                   (let ((idx (string-index x #\:)))
                     (cons (substring x 0 idx)
                           (string-trim
-                           (substring x (1+ idx)))))))
+                           (substring x (1+ idx))))))
+                 (apply slurp*
+                        "lspci"
+                        (list "-v" "-mm" (format #f "-s~x:~x:~x.~x"
+                                                    domain bus slot func))
+                ; TODO lsusb -s 2:2 (in decimal); first is bus number.
+                ; TODO traverse full port chain.
+                ; TODO check /sys/class/net/wlp0s29f7u2/phy80211
+                           ))
                "Device"))))))
 
 (define my-buttons `((continue ,(M_ "_Continue") #t)

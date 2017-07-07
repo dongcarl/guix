@@ -159,7 +159,7 @@ number of Megabytes"
 				  (parse-disk port l)
 				  (parse-partition port l))))))))
 
-  (let* ((port (open-input-pipe-with-fallback "parted -lm"))
+  (let* ((port (open-input-pipe-with-fallback* "parted" "-lm"))
 	 (r (read-partition-info' port '())))
     (close-pipe port)
     r))

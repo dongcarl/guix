@@ -36,7 +36,7 @@
 (include "i18n.scm")
 
 (define (device-attributes dev)
-  (key-value-slurp (string-append "blkid -o export " dev)))
+  (key-value-slurp* "blkid" "-o" "export" dev))
 
 (define (device-fs-uuid dev)
   "Retrieve the UUID of the filesystem on DEV, where DEV is the name of the

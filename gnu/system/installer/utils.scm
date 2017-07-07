@@ -20,8 +20,8 @@
   #:export (
 	    justify*
 	    addstr*
-	    slurp
-            key-value-slurp
+            slurp*
+            key-value-slurp*
 	    quit-key?
 
 	    push-cursor
@@ -34,7 +34,7 @@
             inner
             outer
 
-	    open-input-pipe-with-fallback
+	    open-input-pipe-with-fallback*
 
 	    find-mount-device
 
@@ -141,35 +141,37 @@ This version assumes some external entity puts in the carriage returns."
   "Call the curses addstr procedure passing STR to justify to the width of WIN"
   (addstr win (justify* str (getmaxx win)) #:y y #:x x))
 
-(define (open-input-pipe-with-fallback cmd)
+(define (open-input-pipe* program . args)
+  (apply open-pipe* OPEN_READ program args))
+
+(define (open-input-pipe-with-fallback* program . args)
   "Kludge for testing"
   (let* ((subst (string-append (dirname (current-filename)) "/pipe-subst/"
-	       (string-map (lambda (c) (case c
-					 ((#\space) #\%)
-					 ((#\/) #\,)
-					 (else c)))
-			   cmd))))
+                    (string-map (lambda (c) (case c
+                                             ((#\space) #\%)
+                                             ((#\/) #\,)
+                                             (else c)))
+                                (string-append program " " (string-join args " "))))))
     (if (and (not (eqv? 0 (geteuid)))
-	     (file-exists? subst))
-	(open-input-pipe (string-append "cat " subst))
-	(open-input-pipe cmd))))
+             (file-exists? subst))
+	(open-input-pipe* "cat" subst)
+	(apply open-input-pipe* program args))))
 
-(define (slurp cmd proc)
+(define (slurp* program . args)
   (let ((port #f)
 	(status #f)
 	(result #f))
-    (dynamic-wind (lambda () (set! port (open-input-pipe-with-fallback cmd)))
-		  (lambda () (set! result (slurp-real port proc)))
-		  (lambda () (set! status (close-pipe port))))
+    (dynamic-wind (lambda () (set! port (apply open-input-pipe-with-fallback* program args)))
+                  (lambda () (set! result (slurp-real port)))
+                  (lambda () (set! status (close-pipe port))))
     (if (zero? (status:exit-val status))
 	result
 	#f)))
 
-(define (key-value-slurp cmd)
+(define (key-value-slurp* program . args)
   "Slurp CMD, which is expected to give an output of key-value pairs -
 each pair terminated with a newline and the key/value delimited with ="
-  (slurp cmd
-         (lambda (x)
+  (map (lambda (x)
            (let ((idx (string-index x #\=)))
              (cons (string->symbol (string-fold
                                     (lambda (c acc)
@@ -178,13 +180,13 @@ each pair terminated with a newline and the key/value delimited with ="
                                        (make-string 1 (char-downcase c))))
                                     ""
                                     (substring x 0 idx)))
-                   (substring x (1+ idx) (string-length x)))))))
+                   (substring x (1+ idx) (string-length x)))))
+       (apply slurp* program args)))
 
+(define (slurp-real port)
+  "Return a list of strings from PORT, one per line.
 
-(define (slurp-real port proc)
-  "Execute CMD in a shell and return a list of strings from its standard output,
-one per line.  If PROC is not #f then it must be a procedure taking a string
-which will process each string before returning it."
+Ignore blank lines."
   (let lp ((line-list '()))
     (let  ((l (read-line port)))
       (if (eof-object? l)
@@ -192,7 +194,7 @@ which will process each string before returning it."
 	  (lp
            (if (string= l "") ;; Ignore blank lines
                line-list
-               (cons (if proc (proc l) l) line-list)))))))
+               (cons l line-list)))))))
 
 
 

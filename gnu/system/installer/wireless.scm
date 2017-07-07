@@ -181,7 +181,7 @@
    "" s))
 
 (define (scan-wifi ifce)
-  (match  (slurp (string-append "iwlist " ifce " scan") string-trim-both)
+  (match (map string-trim-both (slurp* "iwlist" ifce "scan"))
     (#f '())
     ((_ . lines) lines))) ;; Ignore the first line
 
