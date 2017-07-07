@@ -34,7 +34,12 @@
 
 (define max-length ((const 63)))
 
-(define my-fields `((name   ,(M_ "Host Name") ,max-length)))
+(define validator
+  (let ((regexp (make-regexp "^[A-Za-z0-9][-A-Za-z0-9]{0,62}$")))
+    (lambda (text)
+      (regexp-exec regexp text))))
+
+(define my-fields `((name   ,(M_ "Host Name") ,max-length ,validator)))
 
 (define (valid-hostname? name)
   "Return #t iff NAME is a valid hostname as defined by RFC 1034"
@@ -82,24 +87,6 @@
      (page-leave)
      'cancelled)
     (_ 'ignored))))
-
-#|     ;; Do not allow more than 63 characters
-     ((and (char? ch)
-           (char-set-contains? char-set:printing ch)
-           (>= (field-cursor-position (get-current-field form)) max-length)))
-
-     ;; The first character may not be  a hyphen
-     ((and (char? ch)
-           (eq? ch #\-)
-           (zero? (field-cursor-position (get-current-field form)))))
-
-     ;; Subsequent characters must be [-A-Za-z0-9]
-     ((and (char? ch)
-           (char-set-contains? char-set:printing ch)
-           (not (char-set-contains?
-                 (char-set-adjoin char-set:letter+digit #\-) ch))
-           (positive? (field-cursor-position (get-current-field form)))))
-|#
 
 (define my-buttons `((cancel ,(M_ "Cancel") #f)))
 
