@@ -70,9 +70,6 @@
    ('cancel
     (page-leave)
     'handled)
-   ('default
-    (page-leave)
-    'handled)
    (_
     'ignored)))
 

@@ -144,7 +144,9 @@ If a form is used it's assumed that the menu is not used and vice versa."
                           (if (and menu (menu-active menu))
                             (list 'menu-item-activated
                                   (menu-get-current-item menu))
-                            'default)))
+                            (if nav
+                              (buttons-selected-symbol nav)
+                              'default))))
 
      ((and menu (menu-active menu) (std-menu-key-handler menu ch))
       'handled)
