@@ -260,24 +260,26 @@ label eq? to N"
 (define (run-event-loop form menu end-status)
   "Run modal event loop for FORM until END-STATUS returns something other
 than #f.  Return that to our caller."
+  (menu-redraw menu)
+  (menu-refresh menu)
+  (update-panels)
+  (doupdate)
   (let* ((win (form-window form))
          (ch (getch win)))
-    (cond
+   (cond
      ((eqv? ch KEY_MOUSE)
       (match (getmouse)
        ((device-id g-x g-y z button-state)
-        (if (eq? 'activated (std-menu-mouse-handler menu device-id g-x g-y z button-state))
-          (end-status form #\newline)
-          (run-event-loop form menu end-status)))
+        (match (std-menu-mouse-handler menu device-id g-x g-y z button-state)
+         (('menu-item-activated x)
+          (end-status form #\newline))
+         (_
+          (run-event-loop form menu end-status))))
        (_ #f)))
      ((end-status form ch)
       (end-status form ch))
      (else
        (std-menu-key-handler menu ch)
-       (menu-redraw menu)
-       (menu-refresh menu)
-       (update-panels)
-       (doupdate)
        (run-event-loop form menu end-status)))))
 
 (define (maybe-run-modal-popup form which)
