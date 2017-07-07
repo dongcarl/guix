@@ -31,6 +31,7 @@
   #:export (form-update-cursor)
   #:export (form-set-current-field)
   #:export (get-current-field)
+  #:export (std-form-mouse-handler)
 
   #:use-module (ncurses curses)
   #:use-module (ncurses panel)
@@ -376,3 +377,20 @@ Set the field value to the newly selected value."
 
 (define (get-current-field form)
   (array-ref (form-items form) (form-current-item form)))
+
+(define (std-form-mouse-handler form device-id g-x g-y z button-state)
+  (if (logtest BUTTON1_CLICKED button-state)
+    (let* ((win (form-window form))
+           (items (form-items form))
+           (item-count (array-length items)))
+      (match (mouse-trafo win g-y g-x #f)
+       ((y x)
+        (if (and (>= y 0) (< y item-count))
+            (begin
+              (form-set-current-field form y)
+              (form-update-cursor form)
+              ;(refresh (form-window form))
+              (list 'form-item-selected y))))
+        (_ #f))
+      'handled)
+    #f))

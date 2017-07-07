@@ -63,6 +63,7 @@
 (define (page-default-mouse-handler page device-id x y z button-state)
   (let* ((menu (page-datum page 'menu))
          (buttons (page-datum page 'navigation))
+         (form (page-datum page 'form))
          (status (or (let ((status (and menu (std-menu-mouse-handler menu device-id x y z button-state))))
                        (match status
                         (('menu-item-activated x)
@@ -77,6 +78,8 @@
                          ;(if menu
                          ;  (menu-set-active! menu #f))
                          x))))))
+    (if form
+      (std-form-mouse-handler form device-id x y z button-state))
     (if status
         (begin
           (page-activate-item page status)
