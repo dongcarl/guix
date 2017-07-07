@@ -74,7 +74,9 @@
             (addstr test-window (G_ "Test successful.  Network is working."))
             (addstr test-window (G_ "Test failed. No servers reached.")))
 	(refresh* test-window)
-	'handled)))))
+	'handled))
+     (_
+       'ignored))))
 
 (define (ping-page-refresh page)
   (when (not (page-initialised? page))
