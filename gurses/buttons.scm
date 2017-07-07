@@ -199,7 +199,7 @@
                 (match (mouse-trafo win g-y g-x #f)
                  ((y x)
                   (buttons-select buttons i)
-                  'activated)
+                  sym)
                   (_ (if (< i len)
                          (loop (1+ i))
                          'ignored)))))
