@@ -65,9 +65,10 @@
     (system* "cfdisk" (disk-name i))
     (system* "partprobe")
     'handled)
-   (else ; "Continue" button activated
+   ('continue
      (page-leave)
-     'handled)))
+     'handled)
+   (_ 'ignored)))
 
 (define (truncate-string ss w)
  (if (> (string-length ss) w)
