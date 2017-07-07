@@ -296,7 +296,8 @@ Set the field value to the newly selected value."
           (let ((ch (run-event-loop form menu
                                     (lambda (form ch)
                                     (if (or (eqv? ch #\newline)
-                                            (eqv? ch #\tab))
+                                            (eqv? ch #\tab)
+                                            (eqv? ch #\space))
                                         ch
                                         #f)))))
             (field-set-value! new-field (menu-get-current-item menu))
