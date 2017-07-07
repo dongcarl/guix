@@ -190,7 +190,7 @@ active."
       #f))
 
 (define (std-menu-mouse-handler menu device-id g-x g-y z button-state)
-  (if (logtest BUTTON1_CLICKED button-state)
+  (if (logtest (logior BUTTON1_CLICKED BUTTON1_DOUBLE_CLICKED) button-state)
       (let* ((win (menu-window menu))
              (top-item-index (menu-top-item menu))
              (item-count (length (menu-items menu))))
@@ -202,6 +202,8 @@ active."
                 (begin
                   (menu-set-current-item! menu selected-item-index)
                   (menu-redraw menu)
-                  (list 'menu-item-activated (menu-get-current-item menu))))))
+                  (if (logtest BUTTON1_DOUBLE_CLICKED button-state)
+                    (list 'menu-item-activated (menu-get-current-item menu))
+                    #f)))))
          (_ #f)))
       #f))

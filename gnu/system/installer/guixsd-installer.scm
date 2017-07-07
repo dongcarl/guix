@@ -308,7 +308,8 @@
       (timeout! stdscr 500) ; 500 ms
 
       ;; Set up mouse
-      (mousemask (logior BUTTON1_CLICKED BUTTON1_PRESSED BUTTON1_RELEASED))
+      (mousemask (logior BUTTON1_CLICKED BUTTON1_PRESSED BUTTON1_RELEASED
+                         BUTTON1_DOUBLE_CLICKED))
 
       (cbreak!)				; Line buffering disabled
       (keypad! stdscr #t)			; Check for function keys
