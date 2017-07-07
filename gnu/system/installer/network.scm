@@ -47,8 +47,7 @@
              title
              network-page-refresh
              0
-             network-page-key-handler
-             network-page-mouse-handler))
+             #:activator network-page-activate-focused-item))
 
 (define (interfaces)
   (map (lambda (ifce)
@@ -71,13 +70,14 @@
 (define (name->description name)
   (if (string=? name "lo")
       "Loop back interface"
-      (let ((m (string-match "^..(P[[:digit:]]+)?(p[[:digit:]]+)(s[[:digit:]]+)(f[[:digit:]]+)?" name)))
+      (let ((m (string-match "^..(P[[:digit:]]+)?(p[[:digit:]]+)(s[[:digit:]]+)(f[[:digit:]]+)?(u[[:digit:]]+)?" name)))
         (if (not m)
             name
-            (let ((domain  (match->elem m 1))
-                  (bus     (match->elem m 2))
-                  (slot    (match->elem m 3))
-                  (func    (match->elem m 4)))
+            (let ((domain   (match->elem m 1))
+                  (bus      (match->elem m 2))
+                  (slot     (match->elem m 3))
+                  (func     (match->elem m 4))
+                  (usb-slot (match->elem m 5)))
               (assoc-ref
                (slurp
                 (format #f "lspci -v -mm -s~x:~x:~x.~x"
@@ -92,71 +92,38 @@
 (define my-buttons `((continue ,(M_ "_Continue") #t)
                      (test     ,(M_ "_Test") #t)))
 
-(define (network-page-mouse-handler page device-id x y z button-state)
-  'ignored)
-
-(define (network-page-key-handler page ch)
-  (let ((menu (page-datum page 'menu))
-	(nav  (page-datum page 'navigation)))
-
+(define (network-page-activate-focused-item page)
+  (let* ((menu (page-datum page 'menu))
+         (nav (page-datum page 'navigation))
+         (item (menu-get-current-item menu))
+         (item-name (and item (assq-ref item 'name)))
+         (item-class (and item (assq-ref item 'class))))
     (cond
-     ((eq? ch KEY_RIGHT)
-      (menu-set-active! menu #f)
-      (buttons-select-next nav))
-
-     ((eq? ch #\tab)
-      (cond
-       ((menu-active menu)
-        (menu-set-active! menu #f)
-        (buttons-select nav 0))
-
-       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-	(menu-set-active! menu #t)
-	(buttons-unselect-all nav))
-
-       (else
-	(buttons-select-next nav))))
-
-     ((eq? ch KEY_LEFT)
-      (menu-set-active! menu #f)
-      (buttons-select-prev nav))
-
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav)
-      (menu-set-active! menu #t))
-
-     ((and (select-key? ch)
-           (eq? 'wireless (assq-ref (menu-get-current-item menu) 'class)))
-
-      (let ((next (make-wireless-page page (M_ "Wireless interface setup")
-                                      (assq-ref (menu-get-current-item menu) 'name))))
-        (page-enter next)))
-
-     ((select-key? ch)
-      (let ((item (menu-get-current-item menu)))
-        (when (eq? (assq-ref item 'class) 'ethernet)
-          (and (zero? (system* "ip" "link" "set" (assq-ref item 'name) "up"))
-               (dhclient (assq-ref item 'name))))))
-
-     ((buttons-key-matches-symbol? nav ch 'test)
-      (let ((next  (make-page (page-surface page)
-                              "Ping"
-                              ping-page-refresh
-                              0
-                              ping-page-key-handler
-                              ping-page-mouse-handler)))
-        (page-enter next)))
-
-     ((buttons-key-matches-symbol? nav ch 'continue)
-
-      ;; Cancel the timer
-      (setitimer ITIMER_REAL 0 0 0 0)
-
-      (page-leave)))
-
-    (std-menu-key-handler menu ch))
-  #f)
-
+     ((menu-active menu)
+      (match item-class
+       ('wireless
+        (let ((next (make-wireless-page page (M_ "Wireless interface setup")
+                                        item-name)))
+          (page-enter next)))
+       ('ethernet
+        (and (zero? (system* "ip" "link" "set" item-name "up"))
+             (dhclient item-name)))
+       (_ 'ignored)))
+     (else
+       (match (buttons-selected-symbol nav)
+        ('test
+         (let ((next  (make-page (page-surface page)
+                                 "Ping"
+                                 ping-page-refresh
+                                 0
+                                 ping-page-key-handler
+                                 ping-page-mouse-handler)))
+           (page-enter next)))
+        ('continue
+          ;; Cancel the timer
+          (setitimer ITIMER_REAL 0 0 0 0)
+          (page-leave))
+        (_ #f))))))
 
 (define (network-page-refresh page)
   (when (not (page-initialised? page))
@@ -203,12 +170,12 @@
                         (interfaces))
 	        #:disp-proc
 	        (lambda (datum row)
-                     (format #f "~55a ~a"
+                     (format #f "~55a (~a) (status: ~a)"
                              (name->description (assq-ref datum 'name))
-                             (if (zero? (logand IFF_RUNNING
-                                                (if-flags datum)))
-                                 (gettext "Down")
-                                 (gettext "Running")))))))
+                             (assq-ref datum 'class)
+                             (if (network-interface-running? (assq-ref datum 'name))
+                                 (gettext "Running")
+                                 (gettext "Down")))))))
 
     (addstr*   text-window  (format #f
                                     (gettext
