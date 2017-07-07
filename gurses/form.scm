@@ -41,7 +41,7 @@
   #:use-module (srfi srfi-9))
 
 (define-record-type <field>
-  (make-field symbol label size menu popup value cursor-position)
+  (make-field symbol label size menu popup value cursor-position validator)
   field?
   (symbol          field-symbol)
   (label           field-label)
@@ -49,7 +49,14 @@
   (menu            field-menu)     ; A menu of acceptable values for this field
   (popup           field-popup     field-set-popup!)
   (value           field-value     field-set-value!)
-  (cursor-position field-cursor-position field-set-cursor-position!))
+  (cursor-position field-cursor-position field-set-cursor-position!)
+  (validator       field-validator)) ; procedure or #f
+
+(define (field-validate field new-value)
+  (let ((validator (field-validator field)))
+    (if validator
+      ((field-validator field) new-value)
+      #t)))
 
 (define-record-type <form>
   (make-form' current-item enabled callback)
@@ -142,9 +149,11 @@ label eq? to N"
                                                         width 0 0 #:panel #f)))
                                         (menu-post menu p)
                                         p)
-                                      "" 0)))
+                                      "" 0 #f)))
                                   ((symbol label (? integer? size))
-                                   (make-field symbol label size #f #f "" 0))))
+                                   (make-field symbol label size #f #f "" 0 #f))
+                                  ((symbol label (? integer? size) validator)
+                                   (make-field symbol label size #f #f "" 0 validator))))
 			 items)))
     form))
 
@@ -168,14 +177,15 @@ label eq? to N"
              (right  (substring value (min (1+ pos) len) len))
              (status (cond
                       ((and (char? ch)
-                       (not (char-set-contains? char-set:iso-control ch)))
-
-                       (field-set-value! f (string-join (list left right)
-                                                        (make-string 1 ch)))
-
-                       (field-set-cursor-position! f (1+ pos))
-                       (addch (form-window form) (inverse ch))
-                       'handled)
+                            (not (char-set-contains? char-set:iso-control ch)))
+                       (let ((new-value (string-join (list left right)
+                                                        (make-string 1 ch))))
+                         (if (field-validate f new-value)
+                           (begin
+                             (field-set-value! f new-value)
+                             (field-set-cursor-position! f (1+ pos))
+                             (addch (form-window form) (inverse ch))))
+                       'handled))
 
                       ((eq? ch KEY_DC)
                        (field-set-value! f (string-append left right))
