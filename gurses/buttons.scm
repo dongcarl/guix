@@ -120,10 +120,10 @@
    (list->array ;; FIXME: Populate the array directly instead of using temp list
     1
     (let loop ((bl (buttons-items buttons))
-	       (i 0)
-	       (alist '()))
+               (i 0)
+               (alist '()))
       (match bl
-             (()	  (reverse alist))
+             (() (reverse alist))
              (((key raw-label use-underscore) . _)
               (let* (
                      ;; Convert the raw-label into a "complex rendered string" which
@@ -158,8 +158,7 @@
                 (buttons-set-bwindows! buttons (cons w (buttons-bwindows buttons)))
                 (box w   0 0)
                 (addchstr w label #:y 1 #:x 1)
-                (loop (cdr bl) (1+ i) (acons mark (list w key label) alist)))
-                ))))))
+                (loop (cdr bl) (1+ i) (acons mark (list w key label) alist)))))))))
 
 
 
