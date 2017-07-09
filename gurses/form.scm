@@ -79,23 +79,25 @@
 
 (define (draw-field-space win field y x)
   "Draws the template for FIELD at Y, X"
-  (addchstr win
-    (make-list (if (list? (field-size field))
-                 (fold (lambda (x prev) (max prev (string-length x))) 0
-                       (field-size field))
-                 (field-size field))
-                 (color (color-index-by-symbol 'form-field) (inverse #\space)))
-    #:y y
-    #:x x))
+  (let ((form-field-color (color-index-by-symbol 'form-field)))
+    (addchstr win
+      (make-list (if (list? (field-size field))
+                   (fold (lambda (x prev) (max prev (string-length x))) 0
+                         (field-size field))
+                   (field-size field))
+                   (color form-field-color (inverse #\space)))
+      #:y y
+      #:x x)))
 
 (define (redraw-field form field n)
   "Redraw the FIELD in FORM"
   (draw-field-space (form-window form) field n (form-tabpos form))
 
-  (addchstr (form-window form)
-            (color (color-index-by-symbol 'form-field) (inverse (field-value field)))
-            #:y n
-            #:x (form-tabpos form)))
+  (let ((form-field-color (color-index-by-symbol 'form-field)))
+    (addchstr (form-window form)
+              (color form-field-color (inverse (field-value field)))
+              #:y n
+              #:x (form-tabpos form))))
 
 (define (form-set-value! form n str)
   (cond
