@@ -24,7 +24,6 @@
   #:use-module (gurses form)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
-  #:use-module (ncurses panel)
   #:use-module (ice-9 regex)
   #:use-module (ice-9 match)
 
