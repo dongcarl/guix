@@ -277,8 +277,6 @@ Ignore blank lines."
         ;(move win 2 1)
         ;(hline win (acs-hline) (- (getmaxx win) 2))
         (color-set! win livery-title)
-        (move win 1 1)
-        (clrtoeol win) ; kills one char too much at the end.
         (addstr win title #:y 0 #:x (round (/ (- (getmaxx win) (string-length title)) 2)))))
     (color-set! win 0)))
 
