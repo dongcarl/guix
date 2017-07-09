@@ -273,13 +273,13 @@ Ignore blank lines."
     ;(addstr win "X")
     (box win (acs-vline) (acs-hline))
     (if title
-      (begin
+      (let ((title (string-append "[ " title " ]")))
         ;(move win 2 1)
         ;(hline win (acs-hline) (- (getmaxx win) 2))
         (color-set! win livery-title)
         (move win 1 1)
         (clrtoeol win) ; kills one char too much at the end.
-        (addstr win title #:y 1 #:x (round (/ (- (getmaxx win) (string-length title)) 2)))))
+        (addstr win title #:y 0 #:x (round (/ (- (getmaxx win) (string-length title)) 2)))))
     (color-set! win 0)))
 
 (define* (make-boxed-window orig height width starty startx #:key (title #f))
@@ -288,7 +288,7 @@ pair whose car is the inner window and whose cdr is the frame."
   (let* ((win  (if orig
                    (derwin orig height width starty startx #:panel #t)
                    (newwin      height width starty startx #:panel #t)))
-          (ystart (if title 2 1)))
+          (ystart (if title 1 1)))
     (let ((sw (derwin win (- (getmaxy win) ystart 1)
                       (- (getmaxx win) 2)
                       ystart 1 #:panel #t)))
