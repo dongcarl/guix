@@ -221,4 +221,5 @@
     (push-cursor (page-cursor-visibility p))
     (page-set-datum! p 'navigation buttons)
     (page-set-datum! p 'text-window text-window)
+    (page-set-datum! p 'config-window config-window)
     (buttons-post buttons bwin)))
