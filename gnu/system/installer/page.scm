@@ -317,7 +317,9 @@ If a form is used it's assumed that the menu is not used and vice versa."
       ((page-refresher p) p)
       (let ((form (page-datum p 'form))
             (buttons (page-datum p 'navigation))
-            (menu (page-datum p 'menu)))
+            (menu (page-datum p 'menu))
+            (config-window (page-datum p 'config-window))
+            (config-window-title (page-datum p 'config-window-title)))
         (if menu
           (begin
             (menu-redraw menu)
@@ -326,6 +328,10 @@ If a form is used it's assumed that the menu is not used and vice versa."
           (buttons-refresh buttons))
         (if form
           (form-refresh form))
+        (if config-window
+          (boxed-window-decoration-refresh config-window
+                                           (or config-window-title
+                                               "Output")))
         (move focused-window y x))))))
 
 (define (page-enter p)
