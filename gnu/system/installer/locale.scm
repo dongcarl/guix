@@ -25,6 +25,7 @@
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
   #:use-module (ice-9 format)
+  #:use-module (ice-9 poe)
   #:use-module (ice-9 match)
   #:export (make-locale-page))
 
@@ -40,22 +41,16 @@
              #:activator locale-page-activate-item))
 
 (define (locale-page-refresh page)
-    (when (not (page-initialised? page))
-      (locale-page-init page)
-      (page-set-initialised! page #t))
+  (when (not (page-initialised? page))
+    (locale-page-init page)
+    (page-set-initialised! page #t))
 
-    (let ((win (page-datum page 'text-window))
-	  (menu (page-datum page 'menu)))
-      (clear win)
-      (addstr win
-	      (justify* (gettext "The following languages are available.")
-			(getmaxx win)))
-
-      (touchwin (outer (page-wwin page)))
-      (refresh* (outer (page-wwin page)))
-      (refresh* (inner (page-wwin page)))
-      (menu-redraw menu)
-      (menu-refresh menu)))
+  (let ((text-window (page-datum page 'text-window))
+        (menu (page-datum page 'menu)))
+    (clear text-window)
+    (addstr text-window
+      (justify* (gettext "The following languages are available.")
+                (getmaxx text-window)))))
 
 (define (locale-page-activate-item page item)
   (match item
@@ -69,7 +64,7 @@
    (_
     'ignored)))
 
-(define (locale-description locale)
+(define (locale-descriptionx locale)
   "Return a string describing LOCALE"
   (define loc #f)
   (define lc-all "LC_ALL")
@@ -88,41 +83,22 @@
             (setenv lc-all loc)
             (unsetenv lc-all)))))
 
+(define locale-description
+  (pure-funcq locale-descriptionx))
+
 (define (locale-page-init p)
-  (let* ((s (page-surface p))
-	 (frame (make-boxed-window  #f
-	      (- (getmaxy s) 4) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
-	 (button-window (derwin (inner frame)
-		       3 (getmaxx (inner frame))
-		       (- (getmaxy (inner frame)) 3) 0
-			  #:panel #f))
-	 (buttons (make-buttons my-buttons 1))
-
-	 (text-window (derwin (inner frame)
-			      4
-			      (getmaxx (inner frame))
-			      0 0 #:panel #f))
-
-	 (menu-window (derwin (inner frame)
-		       (- (getmaxy (inner frame)) 3 (getmaxy text-window))
-		        (getmaxx (inner frame))
-                        (getmaxy text-window) 0 #:panel #f))
-
-	 (menu (make-menu %default-locale-definitions
+  (match (create-vbox (page-surface p) 4 (- (getmaxy (page-surface p)) 4 3) 3)
+   ((text-window menu-window button-window)
+    (let ((buttons (make-buttons my-buttons 1))
+          (menu (make-menu %default-locale-definitions
                           #:disp-proc (lambda (d row)
                                         (format #f "~60a ~10a"
                                         (locale-description
                                          (locale-definition-name d))
                                          (locale-definition-name d))))))
-
-    (push-cursor (page-cursor-visibility p))
-    (page-set-datum! p 'text-window text-window)
-    (page-set-wwin! p frame)
-    (page-set-datum! p 'menu menu)
-    (page-set-datum! p 'navigation buttons)
-    (menu-post menu menu-window)
-    (buttons-post buttons button-window)
-    (refresh* (outer frame))
-    (refresh* button-window)))
+      (push-cursor (page-cursor-visibility p))
+      (page-set-datum! p 'text-window text-window)
+      (page-set-datum! p 'menu menu)
+      (page-set-datum! p 'navigation buttons)
+      (menu-post menu menu-window)
+      (buttons-post buttons button-window)))))

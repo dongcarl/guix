@@ -147,36 +147,29 @@
 (define (install-page-refresh page)
   (when (not (page-initialised? page))
     (install-page-init page)
-    (page-set-initialised! page #t))
-  (touchwin (outer (page-wwin page)))
-  (refresh* (outer (page-wwin page)))
-  (refresh* (inner (page-wwin page))))
+    (page-set-initialised! page #t)))
 
 
 (define (install-page-init p)
   (let* ((s (page-surface p))
-	 (pr (make-boxed-window  #f
-	      (- (getmaxy s) 4) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
 	 (text-window (derwin
-		       (inner pr)
-		       3 (getmaxx (inner pr))
+		       s
+		       3 (getmaxx s)
 		       0 0
-		       #:panel #f))
+		       #:panel #t))
 
-	 (bwin (derwin (inner pr)
-		       3 (getmaxx (inner pr))
-		       (- (getmaxy (inner pr)) 3) 0
-			  #:panel #f))
+	 (bwin (derwin s
+		       3 (getmaxx s)
+		       (- (getmaxy s) 3) 0
+			  #:panel #t))
 	 (buttons (make-buttons my-buttons 1))
 
          (config-window (make-boxed-window
-                         (inner pr)
-                         (- (getmaxy (inner pr))
+                         s
+                         (- (getmaxy s)
                             (getmaxy bwin)
                             (getmaxy text-window))
-                         (getmaxx (inner pr))
+                         (getmaxx s)
                          (getmaxy text-window)
                          0))
          )
@@ -186,11 +179,7 @@
               "Choose \"Continue\" to start installing the system."))
 
     (push-cursor (page-cursor-visibility p))
-    (page-set-wwin! p pr)
     (page-set-datum! p 'navigation buttons)
     (page-set-datum! p 'config-window (inner config-window))
-    (buttons-post buttons bwin)
-    (refresh* (outer pr))
-    (refresh* text-window)
-    (refresh* bwin)))
+    (buttons-post buttons bwin)))
 

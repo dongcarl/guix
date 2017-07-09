@@ -73,7 +73,6 @@
                             (car %default-substitute-urls)))))
             (addstr test-window (G_ "Test successful.  Network is working."))
             (addstr test-window (G_ "Test failed. No servers reached.")))
-	(refresh* test-window)
 	'handled))
      (_
        'ignored))))
@@ -84,40 +83,16 @@
     (page-set-initialised! page #t))
 
   (let ((text-window (page-datum page 'text-window)))
+        (erase text-window)
         (addstr* text-window
-                 (G_ "Choose \"Test\" to check network connectivity."))
-
-        (refresh* text-window)
-        (refresh* (page-datum page 'test-window))))
+                 (G_ "Choose \"Test\" to check network connectivity."))))
 
 (define (ping-page-init p)
-  (let* ((s (page-surface p))
-	 (frame (make-boxed-window  #f
-	      (- (getmaxy s) 4) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
-	 (button-window (derwin (inner frame)
-		       3 (getmaxx (inner frame))
-		       (- (getmaxy (inner frame)) 3) 0
-			  #:panel #f))
-	 (buttons (make-buttons my-buttons 1))
-
-	 (text-window (derwin (inner frame)
-			      4
-			      (getmaxx (inner frame))
-			      0 0 #:panel #f))
-
-	 (test-window (derwin (inner frame)
-			      (- (getmaxy (inner frame)) (getmaxy text-window) (getmaxy button-window))
-			      (getmaxx (inner frame))
-			      (getmaxy text-window) 0 #:panel #f))
-	 )
-
-    (box test-window 0 0)
-    (page-set-wwin! p frame)
-    (page-set-datum! p 'test-window test-window)
-    (page-set-datum! p 'text-window text-window)
-    (page-set-datum! p 'navigation buttons)
-    (buttons-post buttons button-window)
-    (refresh* text-window)
-    (refresh* button-window)))
+  (match (create-vbox (page-surface p) 4 (- (getmaxy (page-surface p)) 4 3) 3)
+   ((text-window test-window button-window)
+    (let ((buttons (make-buttons my-buttons 1)))
+      (box test-window 0 0)
+      (page-set-datum! p 'test-window test-window)
+      (page-set-datum! p 'text-window text-window)
+      (page-set-datum! p 'navigation buttons)
+      (buttons-post buttons button-window)))))

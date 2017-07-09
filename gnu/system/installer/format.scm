@@ -79,7 +79,7 @@ match those uuids read from the respective partitions"
       (page-leave)
       'cancelled)
      ('format
-      (let ((window-port (make-window-port config-window)))
+      (let ((window-port (make-window-port (inner config-window))))
         (for-each
           (lambda (x)
             (match x
@@ -126,40 +126,10 @@ match those uuids read from the respective partitions"
   (when (not (page-initialised? page))
     (format-page-init page)
     (page-set-initialised! page #t))
-  (touchwin (outer (page-wwin page)))
-  (refresh* (outer (page-wwin page)))
-  (refresh* (inner (page-wwin page))))
 
-
-(define (format-page-init p)
-  (let* ((s (page-surface p))
-	 (pr (make-boxed-window  #f
-	      (- (getmaxy s) 4) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
-
-	 (text-window (derwin
-		       (inner pr)
-		       3 (getmaxx (inner pr))
-		       0 0
-		       #:panel #f))
-
-	 (bwin (derwin (inner pr)
-		       3 (getmaxx (inner pr))
-		       (- (getmaxy (inner pr)) 3) 0
-			  #:panel #f))
-	 (buttons (make-buttons my-buttons 1))
-
-
-         (config-window (make-boxed-window
-                         (inner pr)
-                         (- (getmaxy (inner pr))
-                            (getmaxy bwin)
-                            (getmaxy text-window))
-                         (getmaxx (inner pr))
-                         (getmaxy text-window)
-                         0)))
-
+  (let ((text-window (page-datum page 'text-window))
+        (config-window (page-datum page 'config-window)))
+    (erase text-window)
     (render-stexi
      text-window
      (texi-fragment->stexi
@@ -167,17 +137,34 @@ match those uuids read from the respective partitions"
                (G_ "The partitions ~s will be formatted.  @strong{Any existing data on these partitions will be destroyed if you continue!!}")
                (map (lambda (x) (car x))
                     mount-points)))
-     #:markup-table installer-texinfo-markup)
+     #:markup-table installer-texinfo-markup))
+    ; TODO refresh inner config-window
+  )
 
+(define (format-page-init p)
+  (let* ((s (page-surface p))
+         (text-window (derwin
+                       s
+                       3 (getmaxx s)
+                       0 0
+                       #:panel #t))
 
+         (bwin (derwin s
+                       3 (getmaxx s)
+                       (- (getmaxy s) 3) 0
+                       #:panel #t))
+         (buttons (make-buttons my-buttons 1))
+
+         (config-window (make-boxed-window
+                         s
+                         (- (getmaxy s)
+                            (getmaxy bwin)
+                            (getmaxy text-window))
+                         (getmaxx s)
+                         (getmaxy text-window)
+                         0)))
     (push-cursor (page-cursor-visibility p))
-    (page-set-wwin! p pr)
     (page-set-datum! p 'navigation buttons)
-    (page-set-datum! p 'config-window (inner config-window))
-    (buttons-post buttons bwin)
-    (refresh* (outer pr))
-    (refresh* text-window)
-
-    (refresh* (outer config-window))
-
-    (refresh* bwin)))
+    (page-set-datum! p 'text-window text-window)
+    (page-set-datum! p 'config-window config-window)
+    (buttons-post buttons bwin)))

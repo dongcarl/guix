@@ -21,6 +21,7 @@
   #:use-module (gnu system installer utils)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
+  #:use-module (ice-9 match)
 
   #:export (make-dialog))
 
@@ -69,41 +70,20 @@
   (when (not (page-initialised? page))
     (dialog-page-init page)
     (page-set-initialised! page #t))
-  (refresh* (page-datum page 'text-window)))
+  (let ((text-window (page-datum page 'text-window))
+        (m (page-datum page 'message))
+        (justify (page-datum page 'justify)))
+    (erase text-window)
+    (if justify
+        (addstr* text-window (gettext m))
+        (addstr text-window (gettext m)))))
 
 (define (dialog-page-init p)
-  (let* ((s (page-surface p))
-	 (frame (make-boxed-window  #f
-				    (- (getmaxy s) 5) (- (getmaxx s) 2)
-				    2 1
-				    #:title (page-title p)))
-	 (button-window (derwin (inner frame)
-				3 (getmaxx (inner frame))
-				(- (getmaxy (inner frame)) 3) 0
-				#:panel #f))
-	 (buttons (make-buttons my-buttons 1))
-
-	 (text-window (derwin (inner frame)
-			      (- (getmaxy (inner frame)) (getmaxy button-window))
-			      (getmaxx (inner frame))
-			      0 0 #:panel #f)))
-
-    (let ((m (page-datum p 'message))
-	  (justify (page-datum p 'justify)))
-      (if justify
-	  (addstr* text-window (gettext m))
-	  (addstr text-window (gettext m))))
-
-  (push-cursor (page-cursor-visibility p))
-  (page-set-wwin! p frame)
-  (page-set-datum! p 'text-window text-window)
-  (page-set-datum! p 'navigation buttons)
-  (buttons-post buttons button-window)
-  (buttons-select buttons 0)
-  (refresh* (outer frame))
-  (refresh* (inner frame))
-  (refresh* text-window)
-  (refresh* button-window)))
-
-
-
+  (match (create-vbox (page-surface p) (- (getmaxy (page-surface p)) 3) 3)
+   ((text-window button-window)
+    (let ((buttons (make-buttons my-buttons 1)))
+      (push-cursor (page-cursor-visibility p))
+      (page-set-datum! p 'text-window text-window)
+      (page-set-datum! p 'navigation buttons)
+      (buttons-post buttons button-window)
+      (buttons-select buttons 0)))))

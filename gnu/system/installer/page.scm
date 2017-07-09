@@ -34,23 +34,27 @@
   #:export (page-mouse-handler)
   #:export (page-default-key-handler)
   #:export (page-default-mouse-handler)
+  #:export (page-getch)
+  #:export (page-focused-window)
+  #:export (refresh-screen)
 
   #:use-module (gurses buttons)
   #:use-module (gurses menu)
   #:use-module (gurses form)
   #:use-module (ncurses curses)
+  #:use-module (ncurses panel)
   #:use-module (gnu system installer utils)
   #:use-module (gnu system installer levelled-stack)
   #:use-module (srfi srfi-9)
   #:use-module (ice-9 match))
 
 (define-record-type <page>
-  (make-page' surface title inited refresh cursor-visibility key-handler mouse-handler data)
+  (make-page' surface title inited refresher cursor-visibility key-handler mouse-handler data)
   page?
   (title page-title)
   (surface page-surface)
   (inited  page-initialised? page-set-initialised!)
-  (refresh page-refresh)
+  (refresher page-refresher)
   (cursor-visibility page-cursor-visibility)
   (key-handler page-key-handler)
   (mouse-handler page-mouse-handler)
@@ -152,7 +156,6 @@ If a form is used it's assumed that the menu is not used and vice versa."
                               (if nav
                                 (buttons-selected-symbol nav)
                                 'default)))))
-
      ((and menu (menu-active menu) (std-menu-key-handler menu ch))
       'handled)
 
@@ -189,16 +192,23 @@ If a form is used it's assumed that the menu is not used and vice versa."
      (else
        'ignored))))
 
-(define* (make-page surface title refresh cursor-visibility
+(define* (make-page s title refresh cursor-visibility
                     #:optional
                     (key-handler page-default-key-handler)
                     (mouse-handler page-default-mouse-handler)
                     #:key
-                    activator)
-  (let ((result (make-page' surface title #f refresh cursor-visibility key-handler mouse-handler '())))
-    (if activator
-      (page-set-datum! result 'activator activator))
-    result))
+                    activator
+                    (height-subtraction 0))
+  (let* ((frame (make-boxed-window s
+                                 (- (getmaxy s) height-subtraction) (- (getmaxx s) 0)
+                                 0 0
+                                 #:title title))
+         (xsurface  (inner frame)))
+    (let* ((result (make-page' xsurface title #f refresh cursor-visibility key-handler mouse-handler '())))
+      (page-set-wwin! result frame)
+      (if activator
+        (page-set-datum! result 'activator activator))
+      result)))
 
 (define (page-set-datum! page key value)
   (page-set-data! page (acons key value (page-data page))))
@@ -208,9 +218,68 @@ If a form is used it's assumed that the menu is not used and vice versa."
 
 (define (page-leave)
   (pop-cursor)
-  (page-pop))
+  (let* ((frame (page-wwin (page-top)))
+         (window (outer frame)))
+    (hide-panel window)
+    ;(hide-panel (page-surface (page-top)))
+    (deep-visit-windows delwin window)
+    ;(redrawwin stdscr)
+    (update-panels)
+    (doupdate)
+    (page-pop)
+    ;(deep-visit-windows touchwin (outer (page-wwin (page-top)))) ; FIXME
+    ))
+
+(define (page-refresh p)
+  (let ((focused-window (or (page-focused-window p) (page-surface p))))
+    (match (getyx focused-window)
+     ((y x)
+      (erase (page-surface p))
+      ((page-refresher p) p)
+      (let ((form (page-datum p 'form))
+            (buttons (page-datum p 'navigation))
+            (menu (page-datum p 'menu)))
+        (boxed-window-decoration-refresh (page-wwin p) (page-title p))
+        (if menu
+          (begin
+            (menu-redraw menu)
+            (menu-refresh menu)))
+        (if buttons
+          (buttons-refresh buttons))
+        (if form
+          (form-refresh form))
+        (move focused-window y x))))))
 
 (define (page-enter p)
   (page-push p)
-  ((page-refresh p) p))
+  ;(erase (page-surface p))
+  (page-refresh p))
 
+(define (page-focused-window p)
+  (let* ((menu (page-datum p 'menu))
+         (form (page-datum p 'form))
+         (buttons (page-datum p 'navigation)))
+    (cond
+     ((and menu (menu-active menu))
+      (menu-window menu))
+     ((and form (form-enabled? form))
+      (form-window form))
+     (buttons
+      (buttons-window buttons))
+     (else ; shouldn't happen.
+      #f))))
+
+(define (page-getch p)
+  (let ((window (page-focused-window p)))
+    (keypad! window #t)
+    (timeout! window 500) ; ms
+    (getch window)))
+
+(define (refresh-screen)
+  (let* ((page (page-top))
+         (window (page-focused-window page)))
+    (match (getyx window)
+     ((y x)
+      (update-panels)
+      (doupdate)
+      (move window y x)))))

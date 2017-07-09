@@ -75,34 +75,14 @@
   (when (not (page-initialised? page))
     (time-zone-page-init page)
     (page-set-initialised! page #t))
-  (touchwin (outer (page-wwin page)))
-  (refresh* (outer (page-wwin page)))
-  (refresh* (inner (page-wwin page)))
-  (menu-refresh (page-datum page 'menu)))
+  (let ((text-window (page-datum page 'text-window)))
+    (addstr* text-window (gettext "Select the default time zone for the system:" ))))
 
 (define (time-zone-page-init p)
-  (let* ((s (page-surface p))
-	 (frame (make-boxed-window  #f
-	      (- (getmaxy s) 4) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
-	 (button-window (derwin (inner frame)
-		       3 (getmaxx (inner frame))
-		       (- (getmaxy (inner frame)) 3) 0
-			  #:panel #f))
-	 (buttons (make-buttons my-buttons 1))
-
-	 (text-window (derwin (inner frame)
-			      4
-			      (getmaxx (inner frame))
-			      0 0 #:panel #f))
-
-	 (menu-window (derwin (inner frame)
-			      (- (getmaxy (inner frame)) 3 (getmaxy text-window))
-			      (getmaxx (inner frame))
-			      (getmaxy text-window) 0 #:panel #f))
-
-         (menu (make-menu
+  (match (create-vbox (page-surface p) 4 (- (getmaxy (page-surface p)) 4 3) 3)
+   ((text-window menu-window button-window)
+    (let ((buttons (make-buttons my-buttons 1))
+          (menu (make-menu
                 (let* ((dir (page-datum p 'directory))
                        (all-names (scandir-with-slashes dir))
                        (useful-names (filter (lambda (name)
@@ -112,18 +92,11 @@
                                              all-names)))
                   (sort useful-names string<)))))
 
-    (menu-post menu menu-window)
+      (menu-post menu menu-window)
 
-    (addstr* text-window
-	     (gettext "Select the default time zone for the system:" ))
+      (push-cursor (page-cursor-visibility p))
 
-    (push-cursor (page-cursor-visibility p))
-
-    (page-set-wwin! p frame)
-    (page-set-datum! p 'menu menu)
-    (page-set-datum! p 'navigation  buttons)
-    (buttons-post buttons button-window)
-    (refresh* (outer frame))
-    (refresh* (inner frame))
-    (refresh* text-window)
-    (refresh* button-window)))
+      (page-set-datum! p 'menu menu)
+      (page-set-datum! p 'text-window text-window)
+      (page-set-datum! p 'navigation  buttons)
+      (buttons-post buttons button-window)))))

@@ -46,9 +46,16 @@
   (when (not (page-initialised? page))
     (mount-point-page-init page)
     (page-set-initialised! page #t))
-  (let ((form  (page-datum page 'form)))
-    (refresh* (outer (page-wwin page)))
-    (refresh* (form-window form))))
+
+  (let ((dev (page-datum page 'device))
+        (text-window (page-datum page 'text-window)))
+    (erase text-window)
+    (addstr*
+     text-window
+     (format #f
+             (gettext
+             "The device ~s is currently configured as follows.  You may change the configuration here if desired.")
+             dev))))
 
 (define (mount-point-page-activate-item page item)
   (let ((form  (page-datum page 'form))
@@ -81,33 +88,10 @@
                      (cancel     ,(M_ "Cancel") #f)))
 
 (define (mount-point-page-init p)
-  (let* ((s (page-surface p))
-	 (pr (make-boxed-window
-	      #f
-	      (- (getmaxy s) 4) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
-
-	 (text-window (derwin (inner pr) 3 (getmaxx (inner pr))
-			      0 0 #:panel #t))
-
-	 (bwin (derwin (inner pr)
-		       3 (getmaxx (inner pr))
-		       (- (getmaxy (inner pr)) 3) 0
-		       #:panel #t))
-
-	 (nav (make-buttons my-buttons 1))
-
-	 (fw (derwin (inner pr)
-                     (-
-                      (getmaxy (inner pr))
-                      (getmaxy text-window)
-                      (getmaxy bwin))
-		     (getmaxx (inner pr))
-		     (getmaxy text-window) 0 #:panel #f))
-
-
-	 (form (make-form
+  (match (create-vbox (page-surface p) 3 (- (getmaxy (page-surface p)) 3 3) 3)
+    ((text-window fw bwin)
+     (let ((nav (make-buttons my-buttons 1))
+           (form (make-form
                 (my-fields)
                 (lambda (f)
                   (let ((field (get-current-field f)))
@@ -126,38 +110,28 @@
                          (form-set-value! f 'label "")
                          (form-set-value! f 'mount-point ""))))))))))
 
-    (page-set-datum! p 'navigation nav)
-    (let ((dev (page-datum p 'device)))
-      (addstr*
-       text-window
-       (format #f
-	       (gettext
-		"The device ~s is currently configured as follows.  You may change the configuration here if desired.")
-	       dev))
+      (page-set-datum! p 'text-window text-window)
+      (page-set-datum! p 'navigation nav)
+      (form-post form fw)
 
-      (form-post form fw))
+      (let* ((dev (page-datum p 'device))
+             (fss (assoc-ref mount-points dev)))
 
-    (let* ((dev (page-datum p 'device))
-           (fss (assoc-ref mount-points dev)))
+        (form-set-value! form 'label
+                         (if fss
+                             (file-system-spec-label fss)
+                             (string-append host-name
+                             "-")))
+        (when fss
+              (form-set-value! form 'mount-point
+                               (file-system-spec-mount-point fss))
+              (form-set-value! form 'fs-type
+                               (symbol->string
+                               (file-system-spec-type fss)))))
 
-      (form-set-value! form 'label
-                       (if fss
-                           (file-system-spec-label fss)
-                           (string-append host-name
-                           "-")))
-      (when fss
-            (form-set-value! form 'mount-point
-                             (file-system-spec-mount-point fss))
-            (form-set-value! form 'fs-type
-                             (symbol->string
-                             (file-system-spec-type fss)))))
+      (form-set-current-field form 0)
 
-    (form-set-current-field form 0)
-
-    (push-cursor (page-cursor-visibility p))
-    (buttons-post nav bwin)
-    (page-set-datum! p 'form form)
-
-    (page-set-wwin! p pr)
-    (refresh* (outer pr))))
+      (push-cursor (page-cursor-visibility p))
+      (buttons-post nav bwin)
+      (page-set-datum! p 'form form)))))
 

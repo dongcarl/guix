@@ -119,7 +119,7 @@
 
 (define (menu-redraw menu)
   (define win (menu-window menu))
-  (clear win)
+  (erase win)
   (let populate ((row (menu-top-item menu))
 		 (data (list-tail (menu-items menu) (menu-top-item menu) )))
     (if (and
@@ -132,6 +132,7 @@
 	  (populate (1+ row) (cdr data))))))
 
 (define (menu-post menu win)
+  (keypad! win #t)
   (menu-set-window! menu win)
   (menu-redraw menu))
 
@@ -141,16 +142,8 @@
 	(attr (if (menu-active menu) (menu-active-attr menu) A_DIM)))
 
     (bkgd win (color 0 (normal #\space)))
-    (chgat win -1 attr colour #:y
-	   (- (menu-current-item menu) (menu-top-item menu))
-	   #:x 0)
-    (if (panel? win)
-        (begin
-          (update-panels)
-          (doupdate))
-        (refresh win))))
-
-
+    (chgat win -1 attr colour
+           #:y (- (menu-current-item menu) (menu-top-item menu)) #:x 0)))
 
 
 
@@ -158,7 +151,7 @@
   "Handle some often-used menu keys.
 Note that it's the caller's responsibility to check whether the menu is
 active."
-  (if (menu-active menu)
+  (if #t ; FIXME (menu-active menu)
       (cond
        ((eq? ch KEY_NPAGE)
         (menu-down menu #:step (getmaxy (menu-window menu)))
@@ -176,8 +169,8 @@ active."
         (menu-goto-end menu)
         'handled)
 
-       ((or (eq? ch KEY_DOWN)
-            (eq? ch #\so))
+       ((or (eqv? ch KEY_DOWN)
+            (eqv? ch #\so))
         (menu-down menu)
         'handled)
 

@@ -91,17 +91,18 @@
         (close-port cfg-port))
 
       ;; Close the menu and return
-      (page-leave))
+      (page-leave)
+      'handled)
     (_ 'ignored)))
 
 (define (configure-page-refresh page)
   (when (not (page-initialised? page))
     (configure-page-init page)
     (page-set-initialised! page #t))
-  (touchwin (outer (page-wwin page)))
-  (refresh* (outer (page-wwin page)))
-  (refresh* (inner (page-wwin page))))
-
+  (let ((text-window (page-datum page 'text-window)))
+    (addstr* text-window
+             (gettext
+              "The following configuration has been generated for you.  If you are satisfied with it you may save it and continue.  Otherwise go back and change some options."))))
 
 (define (generate-guix-config p width)
   (let ((grub-mount-point
@@ -190,51 +191,34 @@
                          '())))
         (name-service-switch %mdns-host-lookup-nss)) p #:width width)))
 
-
 (define (configure-page-init p)
   (let* ((s (page-surface p))
-	 (pr (make-boxed-window  #f
-	      (- (getmaxy s) 4) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
-
 	 (text-window (derwin
-		       (inner pr)
-		       3 (getmaxx (inner pr))
+		       s
+		       3 (getmaxx s)
 		       0 0
-		       #:panel #f))
+		       #:panel #t))
 
-	 (bwin (derwin (inner pr)
-		       3 (getmaxx (inner pr))
-		       (- (getmaxy (inner pr)) 3) 0
-			  #:panel #f))
+	 (bwin (derwin s
+		       3 (getmaxx s)
+		       (- (getmaxy s) 3) 0
+			  #:panel #t))
 	 (buttons (make-buttons my-buttons 1))
 
-
          (config-window (make-boxed-window
-                         (inner pr)
-                         (- (getmaxy (inner pr))
+                         s
+                         (- (getmaxy s)
                             (getmaxy bwin)
                             (getmaxy text-window))
-                         (getmaxx (inner pr))
+                         (getmaxx s)
                          (getmaxy text-window)
                          0)))
-
-    (addstr* text-window
-             (gettext
-              "The following configuration has been generated for you.  If you are satisfied with it you may save it and continue.  Otherwise go back and change some options."))
 
     (let ((p (make-window-port (inner config-window))))
       (generate-guix-config p (getmaxx (inner config-window)))
       (force-output p))
 
     (push-cursor (page-cursor-visibility p))
-    (page-set-wwin! p pr)
     (page-set-datum! p 'navigation buttons)
-    (buttons-post buttons bwin)
-    (refresh* (outer pr))
-    (refresh* text-window)
-
-    (refresh* (outer config-window))
-
-    (refresh* bwin)))
+    (page-set-datum! p 'text-window text-window)
+    (buttons-post buttons bwin)))

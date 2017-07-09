@@ -132,10 +132,10 @@
   (when (not (page-initialised? page))
     (network-page-init page)
     (page-set-initialised! page #t))
-  (touchwin (outer (page-wwin page)))
-  (refresh* (outer (page-wwin page)))
-  (refresh* (inner (page-wwin page)))
-  (menu-refresh (page-datum page 'menu)))
+  (let ((text-window (page-datum page 'text-window)))
+    (erase text-window)
+    (addstr* text-window (format #f
+      (gettext "To install GuixSD a connection to one of ~s must be available.  The following network devices exist on the system.  Select one to configure or \"Continue\" to proceeed.") %default-substitute-urls))))
 
 (define (if-flags ifce)
   (network-interface-flags
@@ -144,35 +144,16 @@
 
 (define (network-page-init p)
   (define prev-flags (map-in-order if-flags (interfaces)))
-  (let* ((s (page-surface p))
-	 (pr (make-boxed-window  #f
-                                 (- (getmaxy s) 4) (- (getmaxx s) 2)
-                                 2 1
-                                 #:title (page-title p)))
-	 (text-window (derwin
-		       (inner pr)
-		       5 (getmaxx (inner pr))
-		       0 0
-		       #:panel #f))
-
-	 (bwin (derwin (inner pr)
-		       3 (getmaxx (inner pr))
-		       (- (getmaxy (inner pr)) 3) 0
-                       #:panel #f))
-	 (buttons (make-buttons my-buttons 1))
-
-	 (mwin (derwin (inner pr)
-		       (- (getmaxy (inner pr)) (getmaxy text-window) 3)
-		       (- (getmaxx (inner pr)) 0)
-		       (getmaxy text-window) 0 #:panel #f))
-
-	 (menu (make-menu
-	        (filter (lambda (i) (memq
+  (match (create-vbox (page-surface p) 5 (- (getmaxy (page-surface p)) 5 3) 3)
+   ((text-window mwin bwin)
+    (let ((buttons (make-buttons my-buttons 1))
+          (menu (make-menu
+                  (filter (lambda (i) (memq
                                      (assq-ref i 'class)
                                      '(ethernet wireless)))
                         (interfaces))
-	        #:disp-proc
-	        (lambda (datum row)
+                  #:disp-proc
+                  (lambda (datum row)
                      (format #f "~55a (~a) (status: ~a)"
                              (name->description (assq-ref datum 'name))
                              (assq-ref datum 'class)
@@ -180,29 +161,21 @@
                                  (gettext "Running")
                                  (gettext "Down")))))))
 
-    (addstr*   text-window  (format #f
-                                    (gettext
-                                     "To install GuixSD a connection to one of ~s must be available.  The following network devices exist on the system.  Select one to configure or \"Continue\" to proceeed.") %default-substitute-urls))
+      ;; Raise sigalarm every second to refresh the menu
+      (sigaction SIGALRM (lambda (_)
+                           (let ((flags
+                                  (map-in-order
+                                   if-flags
+                                   (interfaces))))
 
+                             (when (not (equal? prev-flags flags))
+                                   (set! prev-flags flags)
+                                   (menu-redraw menu)))))
+      (setitimer ITIMER_REAL 1 0 1 0)
 
-    ;; Raise sigalarm every second to refresh the menu
-    (sigaction SIGALRM (lambda (_)
-                         (let ((flags
-                                (map-in-order
-                                 if-flags
-                                 (interfaces))))
-
-                           (when (not (equal? prev-flags flags))
-                                 (set! prev-flags flags)
-                                 (menu-redraw menu)))))
-    (setitimer ITIMER_REAL 1 0 1 0)
-
-    (push-cursor (page-cursor-visibility p))
-    (page-set-wwin! p pr)
-    (page-set-datum! p 'menu menu)
-    (page-set-datum! p 'navigation buttons)
-    (menu-post menu mwin)
-    (buttons-post buttons bwin)
-    (refresh* (outer pr))
-    (refresh* text-window)
-    (refresh* bwin)))
+      (push-cursor (page-cursor-visibility p))
+      (page-set-datum! p 'menu menu)
+      (page-set-datum! p 'navigation buttons)
+      (page-set-datum! p 'text-window text-window)
+      (menu-post menu mwin)
+      (buttons-post buttons bwin)))))

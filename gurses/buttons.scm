@@ -31,6 +31,8 @@
   #:export (buttons-n-buttons)
   #:export (buttons-key-matches-symbol?)
   #:export (buttons-mouse-handler)
+  #:export (buttons-window)
+  #:export (buttons-refresh)
 
   #:use-module (ncurses curses)
   #:use-module (ice-9 match)
@@ -62,7 +64,8 @@
 (define (draw-button b color)
     (color-set! b color)
     (box b 0 0)
-    (refresh b))
+    ;(refresh b)
+    )
 
 (define (buttons-unselect-all buttons)
   (let* ((arry (buttons-array buttons))
@@ -80,7 +83,7 @@
 	key
         (loop (1+ idx)
               (match (array-ref (buttons-array buttons) idx)
-                     ((ch win sym)
+                     ((ch win sym label)
                       (if (eq? ch c) sym #f)))))))
 
 (define (buttons-select buttons which)
@@ -150,11 +153,13 @@
                      (width (+ (length label) 2))
                      (w (derwin win 3 width 0
                                 (round (- (* (1+ i) (/ (getmaxx win) (1+ n)))
-                                          (/ width 2))) #:panel #f)))
+                                          (/ width 2))) #:panel #t)))
+                (keypad! w #t)
                 (buttons-set-bwindows! buttons (cons w (buttons-bwindows buttons)))
                 (box w   0 0)
                 (addchstr w label #:y 1 #:x 1)
-                (loop (cdr bl) (1+ i) (acons mark (list w key) alist)))))))))
+                (loop (cdr bl) (1+ i) (acons mark (list w key label) alist)))
+                ))))))
 
 
 
@@ -174,7 +179,7 @@
     (if (= current -1)
         #f
         (match (array-ref arry current)
-          ((ch win sym)
+          ((ch win sym label)
            sym)))))
 
 (define (buttons-select-by-symbol buttons sym)
@@ -183,7 +188,7 @@
     (let loop ((i 0))
       (if (< i len)
           (match (array-ref arry i)
-           ((ch win xsym)
+           ((ch win xsym label)
             (if (eq? xsym sym)
               (buttons-set-selected! buttons i)
               (loop (1+ i)))))))))
@@ -195,7 +200,7 @@
         (let loop ((i 0))
           (if (< i len)
               (match (array-ref arry i)
-               ((ch win sym)
+               ((ch win sym label)
                 (match (mouse-trafo win g-y g-x #f)
                  ((y x)
                   (buttons-select buttons i)
@@ -205,3 +210,20 @@
                          'ignored)))))
               'ignored)))
       'ignored))
+
+(define (buttons-window buttons)
+  (car (buttons-bwindows buttons)))
+
+(define (buttons-refresh buttons)
+  (let ((selected-index (buttons-selected buttons))
+        (selected-color (buttons-active-color buttons)))
+    (for-each (lambda (index button a)
+                (draw-button button (if (= index selected-index)
+                                        selected-color
+                                        0))
+                (match a
+                 ((ch win sym label)
+                  (addchstr button label #:y 1 #:x 1))))
+              (iota (length (buttons-bwindows buttons)))
+              (reverse (buttons-bwindows buttons))
+              (array->list (buttons-array buttons)))))

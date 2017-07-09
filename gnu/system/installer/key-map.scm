@@ -65,50 +65,23 @@
   (when (not (page-initialised? page))
     (key-map-page-init page)
     (page-set-initialised! page #t))
-  (touchwin (outer (page-wwin page)))
-  (refresh* (outer (page-wwin page)))
-  (refresh* (inner (page-wwin page)))
-  (menu-refresh (page-datum page 'menu)))
+  ;auto (menu-refresh (page-datum page 'menu))
+  )
 
 (define (key-map-page-init p)
-  (let* ((s (page-surface p))
-	 (frame (make-boxed-window  #f
-	      (- (getmaxy s) 5) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
-	 (button-window (derwin (inner frame)
-		       3 (getmaxx (inner frame))
-		       (- (getmaxy (inner frame)) 3) 0
-			  #:panel #f))
-	 (buttons (make-buttons my-buttons 1))
-
-	 (text-window (derwin (inner frame)
-			      4
-			      (getmaxx (inner frame))
-			      0 0 #:panel #f))
-
-	 (menu-window (derwin (inner frame)
-			      (- (getmaxy (inner frame)) 3 (getmaxy text-window))
-			      (getmaxx (inner frame))
-			      (getmaxy text-window) 0 #:panel #f))
-
-         (menu (make-menu
+  (match (create-vbox (page-surface p) 4 (- (getmaxy (page-surface p)) 3 4) 3)
+   ((text-window menu-window button-window)
+    (let ((buttons (make-buttons my-buttons 1))
+          (menu (make-menu
 		(let ((dir (page-datum p 'directory)))
                   (filter (lambda (name)
                             (and (not (string=? name "./"))
                                  (not (string=? name "include/"))))
                           (scandir-with-slashes dir))))))
+      (menu-post menu menu-window)
 
-    (menu-post menu menu-window)
-
-    (addstr* text-window
-	     (gettext "Select an item most closely matching your keyboard layout:" ))
-    (push-cursor (page-cursor-visibility p))
-    (page-set-wwin! p frame)
-    (page-set-datum! p 'menu menu)
-    (page-set-datum! p 'navigation buttons)
-    (buttons-post buttons button-window)
-    (refresh* (outer frame))
-    (refresh* (inner frame))
-    (refresh* text-window)
-    (refresh* button-window)))
+      (addstr* text-window (gettext "Select an item most closely matching your keyboard layout:" ))
+      (push-cursor (page-cursor-visibility p))
+      (page-set-datum! p 'menu menu)
+      (page-set-datum! p 'navigation buttons)
+      (buttons-post buttons button-window)))))

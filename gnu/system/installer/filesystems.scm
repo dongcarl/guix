@@ -133,8 +133,9 @@
              0
              #:activator filesystem-page-activate-item))
 
-(define my-buttons `((continue ,(M_ "_Continue") #t)
-                     (cancel     ,(M_ "Canc_el") #t)))
+(define my-buttons
+ `((continue ,(M_ "_Continue") #t)
+   (cancel     ,(M_ "Canc_el") #t)))
 
 (define menu-format "~30a ~7a ~16a ~a")
 
@@ -143,24 +144,21 @@
     (filesystem-page-init page)
     (page-set-initialised! page #t))
 
-  (let ((text-win (page-datum page 'text-window))
+  (let ((text-window (page-datum page 'text-window))
 	(menu (page-datum page 'menu)))
-    (clear text-win)
-    (addstr text-win
+    (erase text-window)
+    (addstr text-window
      (gettext "Select a partition to change its mount point or filesystem."))
-    (addstr text-win "
+    (addstr text-window "
 ")
     (let ((header (format #f menu-format (gettext "Device") (gettext "Size")
                           (gettext "Filesystem") (gettext "Mountpoint"))))
-      (addstr text-win header)
-      (addstr text-win "
+      (addstr text-window header)
+      (addstr text-window "
 ")
-      (hline text-win (acs-hline) (string-length header))
+      (hline text-window (acs-hline) (string-length header))
     )
     (menu-set-items! menu (partition-volume-pairs))
-    (touchwin (outer (page-wwin page)))
-    (refresh* (outer (page-wwin page)))
-    (refresh* (inner (page-wwin page)))
     (menu-redraw menu)
     (menu-refresh menu)))
 
@@ -205,50 +203,25 @@
    (_ 'ignored)))
 
 (define (filesystem-page-init p)
-  (let* ((s (page-surface p))
-	 (pr (make-boxed-window  #f
-                                 (- (getmaxy s) 4) (- (getmaxx s) 2)
-                                 2 1
-                                 #:title (page-title p)))
-
-	 (text-window (derwin (inner pr) 3 (getmaxx (inner pr))
-			      0 0 #:panel #f))
-
-	 (bwin (derwin (inner pr)
-		       3 (getmaxx (inner pr))
-		       (- (getmaxy (inner pr)) 3) 0
-                       #:panel #f))
-	 (buttons (make-buttons my-buttons 1))
-
-	 (mwin (derwin (inner pr)
-		       (- (getmaxy (inner pr)) 3 (getmaxy text-window))
-		       (- (getmaxx (inner pr)) 0)
-		       (getmaxy text-window)  0 #:panel #f))
-
-	 (menu (make-menu
-                (partition-volume-pairs)
-                #:disp-proc
-                (lambda (d row)
-                  (let* ((part (car d))
-                         (name (partition-name part))
-                         (fs-spec
-                          (assoc-ref mount-points name)))
-
-                    (format #f menu-format
-                            name
-                            (number->size (partition-size part))
-                            (if fs-spec (file-system-spec-type fs-spec) "")
-                            (if fs-spec
+  (match (create-vbox (page-surface p) 3 (- (getmaxy (page-surface p)) 3 3) 3)
+    ((text-window mwin bwin)
+     (let ((buttons (make-buttons my-buttons 1))
+           (menu (make-menu (partition-volume-pairs)
+                  #:disp-proc
+                  (lambda (d row)
+                    (let* ((part (car d))
+                           (name (partition-name part))
+                           (fs-spec
+                            (assoc-ref mount-points name)))
+                      (format #f menu-format
+                              name
+                              (number->size (partition-size part))
+                              (if fs-spec (file-system-spec-type fs-spec) "")
+                              (if fs-spec
                                 (file-system-spec-mount-point fs-spec) "")))))))
-
-    (push-cursor (page-cursor-visibility p))
-    (page-set-wwin! p pr)
-    (page-set-datum! p 'menu menu)
-    (page-set-datum! p 'navigation buttons)
-    (page-set-datum! p 'text-window text-window)
-    (menu-post menu mwin)
-    (buttons-post buttons bwin)
-    (refresh* (outer pr))
-    (refresh* bwin)))
-
-
+      (push-cursor (page-cursor-visibility p))
+      (page-set-datum! p 'menu menu)
+      (page-set-datum! p 'navigation buttons)
+      (page-set-datum! p 'text-window text-window)
+      (menu-post menu mwin)
+      (buttons-post buttons bwin)))))

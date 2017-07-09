@@ -24,6 +24,7 @@
   #:use-module (gurses form)
   #:use-module (gurses buttons)
   #:use-module (ncurses curses)
+  #:use-module (ncurses panel)
   #:use-module (ice-9 regex)
   #:use-module (ice-9 match)
 
@@ -60,19 +61,15 @@
   (when (not (page-initialised? page))
     (host-name-init page)
     (page-set-initialised! page #t))
-
   (let ((form  (page-datum page 'form))
 	(text-window (page-datum page 'text-window)))
-    (clear text-window)
+    (erase text-window)
     (addstr*
      text-window
       (format
        #f
        (G_ "Enter the host name for the new system.  Only letters, digits and hyphens are allowed. The first character may not be a hyphen.  A maximum of ~a characters are allowed.")
-       max-length))
-    (refresh* text-window)
-    (refresh* (outer (page-wwin page)))
-    (refresh* (form-window form))))
+       max-length))))
 
 (define (host-name-activate-item page item)
   (let ((form  (page-datum page 'form))
@@ -91,38 +88,16 @@
 (define my-buttons `((cancel ,(M_ "Cancel") #f)))
 
 (define (host-name-init p)
-  (let* ((s (page-surface p))
-	 (pr (make-boxed-window
-	      #f
-	      (- (getmaxy s) 4) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
+  (match (create-vbox (page-surface p) 5 (- (getmaxy (page-surface p)) 5 3) 3)
+   ((text-window fw bwin)
+    (let ((nav (make-buttons my-buttons 1))
+          (form (make-form my-fields)))
+      (page-set-datum! p 'navigation nav)
+      (page-set-datum! p 'text-window text-window)
+      (page-set-datum! p 'form form)
+      (page-set-datum! p 'fw fw)
+      (push-cursor (page-cursor-visibility p))
 
-	 (text-window (derwin (inner pr) 5 (getmaxx (inner pr))
-			      0 0 #:panel #f))
-
-	 (bwin (derwin (inner pr)
-		       3 (getmaxx (inner pr))
-		       (- (getmaxy (inner pr)) 3) 0
-		       #:panel #f))
-
-	 (nav (make-buttons my-buttons 1))
-
-	 (fw (derwin (inner pr)
-		     2
-		     (getmaxx (inner pr))
-		     (getmaxy text-window) 0 #:panel #f))
-
-
-	 (form (make-form my-fields)))
-
-    (page-set-datum! p 'navigation nav)
-    (page-set-datum! p 'text-window text-window)
-    (page-set-datum! p 'form form)
-    (push-cursor (page-cursor-visibility p))
-
-    (form-post form fw)
-    (buttons-post nav bwin)
-    (page-set-wwin! p pr)
-    (refresh* (outer pr))))
+      (form-post form fw)
+      (buttons-post nav bwin)))))
 

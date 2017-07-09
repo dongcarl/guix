@@ -46,14 +46,18 @@
     (page-set-datum! page 'parent parent)
     page))
 
-
 (define (user-edit-refresh page)
   (when (not (page-initialised? page))
     (user-edit-page-init page)
     (page-set-initialised! page #t))
-  (let ((form  (page-datum page 'form)))
-    (refresh* (outer (page-wwin page)))
-    (refresh* (form-window form))))
+  (let ((acc (page-datum page 'account))
+        (text-window (page-datum page 'text-window)))
+    (erase text-window)
+    (addstr*
+       text-window
+       (if acc
+         (format #f (M_ "This user account currently has the following details.  You may change any details here as required."))
+         (format #f (M_ "Enter the details of the new user below."))))))
 
 (define (user-edit-page-activate-item page item)
   (let ((form  (page-datum page 'form))
@@ -83,36 +87,15 @@
      (_
       'ignored))))
 
-(define my-buttons `((save ,(M_ "Save") #f)
-		     (cancel     ,(M_ "Cancel") #f)))
+(define my-buttons
+ `((save ,(M_ "Save") #f)
+   (cancel     ,(M_ "Cancel") #f)))
 
 (define (user-edit-page-init p)
-  (let* ((s (page-surface p))
-	 (pr (make-boxed-window
-	      #f
-	      (- (getmaxy s) 4) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
-
-	 (text-window (derwin (inner pr) 3 (getmaxx (inner pr))
-			      0 0 #:panel #t))
-
-	 (bwin (derwin (inner pr)
-		       3 (getmaxx (inner pr))
-		       (- (getmaxy (inner pr)) 3) 0
-		       #:panel #t))
-
-	 (nav (make-buttons my-buttons 1))
-
-	 (fw (derwin (inner pr)
-                     (-
-                      (getmaxy (inner pr))
-                      (getmaxy text-window)
-                      (getmaxy bwin))
-		     (getmaxx (inner pr))
-		     (getmaxy text-window) 0 #:panel #f))
-
-	 (form (make-form (my-fields)
+  (match (create-vbox (page-surface p) 3 (- (getmaxy (page-surface p)) 3 3) 3)
+   ((text-window fw bwin)
+    (let* ((nav (make-buttons my-buttons 1))
+           (form (make-form (my-fields)
                           (lambda (frm)
                             ;; Infer the most likely desired values of the
                             ;; name and home fields from the other field values
@@ -135,15 +118,10 @@
                                                        "/home/"
                                                        (form-get-value
                                                         frm 'name))))))))))
-    (page-set-datum! p 'navigation nav)
+      (page-set-datum! p 'navigation nav)
+      (page-set-datum! p 'text-window text-window)
 
     (let ((acc (page-datum p 'account)))
-      (addstr*
-       text-window
-       (if acc
-       (format #f (M_ "This user account currently has the following details.  You may change any details here as required."))
-       (format #f (M_ "Enter the details of the new user below."))))
-
       (form-post form fw)
 
       (when acc
@@ -153,7 +131,4 @@
 
     (push-cursor (page-cursor-visibility p))
     (buttons-post nav bwin)
-    (page-set-datum! p 'form form)
-
-    (page-set-wwin! p pr)
-    (refresh* (outer pr))))
+    (page-set-datum! p 'form form)))))

@@ -35,7 +35,7 @@
 
 (include "i18n.scm")
 
-(define (make-users-page parent  title)
+(define (make-users-page parent title)
   (make-page (page-surface parent)
              title
              users-page-refresh
@@ -70,53 +70,18 @@
      (_
       'ignored))))
 
+
+(define header-format "~16a ~40a")
+
 (define (users-page-refresh page)
   (when (not (page-initialised? page))
     (users-page-init page)
     (page-set-initialised! page #t))
-  (touchwin (outer (page-wwin page)))
-  (refresh* (outer (page-wwin page)))
-  (refresh* (inner (page-wwin page)))
-  (menu-refresh (page-datum page 'menu)))
-
-
-
-(define (users-page-init p)
-  (let* ((s (page-surface p))
-         (pr (make-boxed-window  #f
-              (- (getmaxy s) 4) (- (getmaxx s) 2)
-              2 1
-              #:title (page-title p)))
-         (text-window (derwin
-                       (inner pr)
-                       3 (getmaxx (inner pr))
-                       0 0
-                       #:panel #f))
-
-         (header-window (derwin
-                         (inner pr)
-                         2 (getmaxx (inner pr))
-                         4 0 #:panel #f))
-
-         (mwin (derwin (inner pr)
-                       (- (getmaxy (inner pr)) (getmaxy text-window) 3)
-                       (- (getmaxx (inner pr)) 0)
-                       6 0 #:panel #f))
-
-         (bwin (derwin (inner pr)
-                       3 (getmaxx (inner pr))
-                       (- (getmaxy (inner pr)) 3) 0
-                       #:panel #f))
-         (buttons (make-buttons my-buttons 1))
-
-
-         (header-format "~16a ~40a")
-         (menu (make-menu users
-                          #:disp-proc (lambda (x r)
-                                        (format #f header-format
-                                                (user-account-name x)
-                                                (user-account-comment x))))))
-
+  (let ((text-window (page-datum page 'text-window))
+        (header-window (page-datum page 'header-window))
+        (header (format #f header-format (gettext "Username")
+                                           (gettext "Real name"))))
+    (erase text-window)
     (addstr*
      text-window
      (if (null? users)
@@ -125,20 +90,26 @@
          (format #f (M_
                      "The following user accounts are currently configured.  You can edit the account details here and add or remove them as desired."))))
 
-    (let ((header (format #f header-format (gettext "Username")
-                                           (gettext "Real name"))))
-      (addstr header-window header)
-      (addstr header-window "
+    (erase header-window)
+    (addstr header-window header)
+    (addstr header-window "
 ")
-      (hline header-window (acs-hline) (string-length header)))
+    (hline header-window (acs-hline) (string-length header))))
+
+(define (users-page-init p)
+  (match (create-vbox (page-surface p) 3 2 (- (getmaxy (page-surface p)) 3 2 3) 3)
+   ((text-window header-window mwin bwin)
+    (let* ((buttons (make-buttons my-buttons 1))
+           (menu (make-menu users
+                          #:disp-proc (lambda (x r)
+                                        (format #f header-format
+                                                (user-account-name x)
+                                                (user-account-comment x))))))
     (push-cursor (page-cursor-visibility p))
 
-    (page-set-wwin! p pr)
     (page-set-datum! p 'menu menu)
     (page-set-datum! p 'navigation buttons)
+    (page-set-datum! p 'text-window text-window)
+    (page-set-datum! p 'header-window header-window)
     (menu-post menu mwin)
-    (buttons-post buttons bwin)
-    (refresh* (outer pr))
-    (refresh* header-window)
-    (refresh* text-window)
-    (refresh* bwin)))
+    (buttons-post buttons bwin)))))

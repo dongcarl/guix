@@ -19,6 +19,7 @@
 (define-module (gnu system installer guixsd-installer))
 
 (use-modules (ncurses curses)
+             (ncurses panel)
 	     (gurses menu)
 	     (gnu system installer utils)
 	     (gnu system installer misc)
@@ -116,9 +117,9 @@
                                page
                                (or
                                 (getenv "TZDIR")
-                                (parameterize ((current-error-port (%make-void-port "w")))
-                                  (string-append (car (slurp* "guix" "build" "tzdata"))
-                                                 "/share/zoneinfo")))))))
+                                (string-append (car (slurp** (page-surface page)
+                                                             "guix" "build" "tzdata"))
+                                                 "/share/zoneinfo"))))))
 
     (hostname . ,(make-task hostname-menu-title
                             '()
@@ -219,74 +220,35 @@
    (('menu-item-activated x)
     (do-task (car x) page)
     (page-uniquify)
-    ((page-refresh (car stack)) (car stack))
+    (page-refresh (car stack))
     'handled)
    (_ #f)))
 
 (define (main-page-init page)
-  (let* ((frame (make-boxed-window (page-surface page) (lines) (cols) 0 0
-                                   #:title (page-title page)))
-         (background (inner frame))
-
-
-	 (text-window (derwin background 4 (getmaxx background)
-			      0 0 #:panel #f))
-
-         (win (derwin background (- (getmaxy background) (getmaxy text-window) 3)
-                      (- (getmaxx background) 2) (getmaxy text-window) 1 #:panel #f))
-
-         (main-menu (make-menu main-options
-                               #:disp-proc (lambda (datum row)
-                                             (gettext (task-title (cdr datum)))))))
-
-
-    (page-set-wwin! page frame)
-    (page-set-datum! page 'menu main-menu)
-    (page-set-datum! page 'text-window text-window)
-    (page-set-datum! page 'background background)
-    (menu-post main-menu win)
-
+  (match (create-vbox (page-surface page) 4 (- (getmaxy (page-surface page)) 4))
+    ((text-window win)
+     (let ((main-menu (make-menu main-options
+                           #:disp-proc (lambda (datum row)
+                                         (gettext (task-title (cdr datum)))))))
+       (page-set-datum! page 'menu main-menu)
+       (page-set-datum! page 'text-window text-window)
+       (menu-post main-menu win)))
     (push-cursor (page-cursor-visibility page))))
-
 
 (define (main-page-refresh page)
   (when (not (page-initialised? page))
     (main-page-init page)
     (page-set-initialised! page #t))
-
   (let ((text-window (page-datum page 'text-window))
-        (menu (page-datum page 'menu))
-        (background (page-datum page 'background)))
-
-    (clear background)
-
+        (menu (page-datum page 'menu)))
+    (erase text-window)
     (addstr*
      text-window
      (format
       #f
       (gettext
        "To start the complete installation process, choose ~s.  Alternatively, you may run each step individually for a slower, more controlled experience.")
-      (gettext installation-menu-title)))
-
-
-    ;; Do the key action labels
-    (let ((ypos (1- (getmaxy background)))
-          (str0 (gettext "Get a Shell <F1>"))
-          (str1 (gettext "Language <F9>"))
-          (str2 (gettext "Keyboard <F10>")))
-
-      (addstr background str0 #:y ypos #:x 0)
-      (addstr background str1 #:y ypos #:x
-              (truncate (/ (- (getmaxx background)
-                              (string-length str1)) 2)))
-      (addstr background str2 #:y ypos #:x
-              (- (getmaxx background) (string-length str2))))
-
-    (touchwin (outer (page-wwin page)))
-    (refresh* (outer (page-wwin page)))
-    (refresh* (inner (page-wwin page)))
-    (menu-redraw menu)
-    (menu-refresh menu)))
+      (gettext installation-menu-title)))))
 
 
 (define-public (guixsd-installer)
@@ -303,6 +265,21 @@
           ;; crafted display.
           (system* "dmesg" "--console-off")
           (initscr)))
+
+    ;; Do the key action labels
+    (let ((ypos (1- (getmaxy stdscr)))
+          (str0 (gettext "Get a Shell <F1>"))
+          (str1 (gettext "Language <F9>"))
+          (str2 (gettext "Keyboard <F10>")))
+
+      (addstr stdscr str0 #:y ypos #:x 0)
+      (addstr stdscr str1 #:y ypos #:x
+              (truncate (/ (- (getmaxx stdscr)
+                              (string-length str1)) 2)))
+      (addstr stdscr str2 #:y ypos #:x
+              (- (getmaxx stdscr)
+               (string-length str2))))
+
 
       ;; Set up timeout for getch so that we can update status displays.
       (timeout! stdscr 500) ; 500 ms
@@ -325,10 +302,12 @@
       (let ((page (make-page
                    stdscr (gettext "GuixSD Installer")
                    main-page-refresh 0
-                   #:activator main-page-activate-item)))
+                   #:activator main-page-activate-item
+                   #:height-subtraction 1)))
         (page-enter page)
         (page-push #f)
-        (let loop ((ch (getch stdscr)))
+        (refresh-screen)
+        (let loop ((ch (page-getch (page-top))))
           (let ((current-page (page-top)))
             (if (eqv? ch KEY_MOUSE)
               (match (or (getmouse) '())
@@ -340,8 +319,14 @@
                                                                device-id
                                                                x y z
                                                                button-state)))
-                   (when (eq? ret 'cancelled)
-                     (page-ppop))))
+                   (match ret
+                    ('cancelled
+                     (page-ppop))
+                    (#f #f)
+                    ('ignored #f)
+                    (_ ; Refresh just in case.
+                      (page-refresh (page-top))
+                      (refresh-screen)))))
                 (_ #f))
               (if ch ; not timeout
                 (let* ((current-page (page-top))
@@ -351,8 +336,9 @@
                      (base-page-key-handler current-page ch))))
             (if ch ; not timeout
               (let ((current-page (page-top))) ; Not necessarily the same.
-                ((page-refresh current-page) current-page))))
-          (loop (getch stdscr)))
+                (page-refresh current-page)
+                (refresh-screen))))
+          (loop (page-getch (page-top))))
 
         (endwin)))
     (lambda (key . args)

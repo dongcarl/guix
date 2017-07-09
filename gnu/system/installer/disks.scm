@@ -30,7 +30,8 @@
 
 (include "i18n.scm")
 
-(define my-buttons `((continue ,(M_ "_Continue") #t)))
+(define my-buttons
+ `((continue ,(M_ "_Continue") #t)))
 
 (define (make-disk-page parent title)
   (make-page (page-surface parent)
@@ -43,20 +44,15 @@
     (when (not (page-initialised? page))
       (disk-page-init page)
       (page-set-initialised! page #t))
-
-    (let ((win (page-datum page 'text-window))
-	  (menu (page-datum page 'menu)))
-      (clear win)
-      (addstr win
-	      (justify* (gettext "Select a disk to partition (or repartition), or choose \"Continue\" to leave the disk(s) unchanged.")
-			(getmaxx win)))
-
+    (let ((text-window (page-datum page 'text-window))
+          (menu (page-datum page 'menu)))
+      (erase text-window)
+      (addstr text-window (justify* (gettext "Select a disk to partition (or repartition), or choose \"Continue\" to leave the disk(s) unchanged.")
+                                    (getmaxx text-window)))
       (menu-set-items! menu (volumes))
-      (touchwin (outer (page-wwin page)))
-      (refresh* (outer (page-wwin page)))
-      (refresh* (inner (page-wwin page)))
       (menu-redraw menu)
-      (menu-refresh menu)))
+      (menu-refresh menu)
+      (buttons-refresh (page-datum page 'navigation))))
 
 (define (disk-page-activate-item page item)
   (match item
@@ -71,51 +67,29 @@
    (_ 'ignored)))
 
 (define (truncate-string ss w)
- (if (> (string-length ss) w)
-	  (string-append
-	   (string-take ss (- w 3)) "...")
-	  ss))
+  (if (> (string-length ss) w)
+      (string-append (string-take ss (- w 3)) "...")
+      ss))
 
 (define (disk-page-init p)
-  (let* ((s (page-surface p))
-	 (frame (make-boxed-window  #f
-	      (- (getmaxy s) 4) (- (getmaxx s) 2)
-	      2 1
-	      #:title (page-title p)))
-	 (button-window (derwin (inner frame)
-		       3 (getmaxx (inner frame))
-		       (- (getmaxy (inner frame)) 3) 0
-			  #:panel #f))
-	 (buttons (make-buttons my-buttons 1))
-
-	 (text-window (derwin (inner frame)
-			      4
-			      (getmaxx (inner frame))
-			      0 0 #:panel #f))
-
-	 (menu-window (derwin (inner frame)
-		       (- (getmaxy (inner frame)) 3 (getmaxy text-window))
-		        (getmaxx (inner frame))
-		       (getmaxy text-window) 0 #:panel #f))
-	 (menu (make-menu  (volumes)
-			   #:disp-proc
-			   (lambda (d row)
-			     (let ((w 23))
-			       (format #f (ngettext "~28a ~? ~6a  (~a partition)"
-						    "~28a ~? ~6a  (~a partitions)"
-						    (length (disk-partitions d)))
-				       (disk-name d)
-				       (format #f "~~~aa" (1+ w))
-				       (list (truncate-string (disk-vendor d) w))
-				       (number->size (disk-size d))
-				       (length (disk-partitions d))))))))
-
-    (push-cursor (page-cursor-visibility p))
-    (page-set-datum! p 'text-window text-window)
-    (page-set-wwin! p frame)
-    (page-set-datum! p 'menu menu)
-    (page-set-datum! p 'navigation buttons)
-    (menu-post menu menu-window)
-    (buttons-post buttons button-window)
-    (refresh* (outer frame))
-    (refresh* button-window)))
+  (match (create-vbox (page-surface p) 4 (- (getmaxy (page-surface p)) 4 3) 3)
+    ((text-window menu-window button-window)
+     (let* ((buttons (make-buttons my-buttons 1))
+            (menu (make-menu (volumes)
+                   #:disp-proc
+                   (lambda (d row)
+                     (let ((w 23))
+                       (format #f (ngettext "~28a ~? ~6a  (~a partition)"
+                                            "~28a ~? ~6a  (~a partitions)"
+                                            (length (disk-partitions d)))
+                                  (disk-name d)
+                                  (format #f "~~~aa" (1+ w))
+                                  (list (truncate-string (disk-vendor d) w))
+                                  (number->size (disk-size d))
+                                  (length (disk-partitions d))))))))
+      (push-cursor (page-cursor-visibility p))
+      (page-set-datum! p 'text-window text-window)
+      (page-set-datum! p 'menu menu)
+      (page-set-datum! p 'navigation buttons)
+      (menu-post menu menu-window)
+      (buttons-post buttons button-window)))))

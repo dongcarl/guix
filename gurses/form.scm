@@ -32,6 +32,7 @@
   #:export (form-set-current-field)
   #:export (get-current-field)
   #:export (std-form-mouse-handler)
+  #:export (form-refresh)
 
   #:use-module (ncurses curses)
   #:use-module (ncurses panel)
@@ -69,7 +70,7 @@
   (callback     form-callback))
 
 (define (form-update-cursor form)
-  "Updates the cursor for FIELD in FORM"
+  "Updates the cursor for the current field in FORM"
   (let ((field (array-ref (form-items form) (form-current-item form))))
     (move (form-window form) (form-current-item form)
 	  (+ (field-cursor-position field)
@@ -146,7 +147,8 @@ label eq? to N"
                                      (make-field
                                       symbol label width menu
                                       (let ((p (newwin (length things)
-                                                        width 0 0 #:panel #f)))
+                                                        width 0 0 #:panel #t)))
+                                        (hide-panel p)
                                         (menu-post menu p)
                                         p)
                                       "" 0 #f)))
@@ -346,23 +348,26 @@ Set the field value to the newly selected value."
 	'handled)
       'ignored))
 
-(define (form-post form win)
-  (form-set-window! form win)
-  (let ((xpos
-	 ;; Print the labels and return the length of the longest
-	 (let loop ((fields (form-items form))
-		    (pos 0)
-		    (maxlen 0))
-	   (if (not (array-in-bounds? fields pos))
-	       (+ maxlen 2)
-	       (let ((f (array-ref fields pos)))
-		 ;; Print the label
-		 (addstr win (format #f "~a:" (field-label f)) #:y pos #:x 0)
-		 (loop fields (1+ pos) (max maxlen
-					    (string-length (field-label f)))))))))
+(define (form-redraw-labels form)
+  (let* ((win (form-window form))
+         (xpos
+          ;; Print the labels and return the length of the longest
+         (let loop ((fields (form-items form)) (pos 0) (maxlen 0))
+           (if (not (array-in-bounds? fields pos))
+             (+ maxlen 2)
+             (let ((f (array-ref fields pos)))
+               ;; Print the label
+               (addstr win (format #f "~a:" (field-label f)) #:y pos #:x 0)
+               (loop fields (1+ pos) (max maxlen
+                (string-length (field-label f)))))))))
 
     (form-set-tabpos! form xpos)
+    xpos))
 
+(define (form-post form win)
+  (keypad! win #t)
+  (form-set-window! form win)
+  (let ((xpos (form-redraw-labels form)))
     (let loop ((fields (form-items form))
                (pos 0))
       (when (array-in-bounds? fields pos)
@@ -370,7 +375,7 @@ Set the field value to the newly selected value."
                   (p (field-popup f)))
               (when p
                     (ensure-panel! win)
-                    (mvwin p
+                    (move-panel p
                            (+ (getbegy win) pos)
                            (+ (form-tabpos form) (getbegx win))))
               (loop fields (1+ pos)))))
@@ -384,6 +389,17 @@ Set the field value to the newly selected value."
 	    (loop fields (1+ pos))))))
 
     (form-update-cursor form))
+
+(define (form-refresh form) ; TODO redraw labels
+  (erase (form-window form))
+  (form-redraw-labels form)
+  (let loop ((fields (form-items form))
+             (pos 0))
+    (if (array-in-bounds? fields pos)
+      (begin
+        (redraw-field form (array-ref fields pos) pos)
+        (loop fields (1+ pos)))))
+  (form-update-cursor form))
 
 (define (get-current-field form)
   (array-ref (form-items form) (form-current-item form)))

@@ -21,6 +21,7 @@
 	    justify*
 	    addstr*
             slurp*
+            slurp**
             key-value-slurp*
 	    quit-key?
 
@@ -33,6 +34,7 @@
 	    make-boxed-window
             inner
             outer
+            deep-visit-windows
 
 	    open-input-pipe-with-fallback*
 
@@ -41,8 +43,10 @@
 	    window-pipe
             pipe-cmd
             refresh*
-            
+
             scandir-with-slashes
+            create-vbox
+            boxed-window-decoration-refresh
 
 	    select-key?))
 
@@ -58,11 +62,7 @@
              (ncurses curses))
 
 (define (refresh* win)
-  (if (panel? win)
-      (begin
-        (update-panels)
-        (doupdate))
-      (refresh win)))
+  #f)
 
 (define (make-window-port win)
   "Return a port which writes to the curses window WIN"
@@ -76,7 +76,9 @@
    (vector
     (lambda (c) (addch win c))
     (lambda (s) (addstr win s))
-    (lambda () (refresh* win))
+    (lambda () (refresh* win)
+               (update-panels)
+               (doupdate))
     #f
     #f)
    "w"))
@@ -168,6 +170,17 @@ This version assumes some external entity puts in the carriage returns."
 	result
 	#f)))
 
+(define (slurp** surface program . args)
+  (addstr surface "Please wait..." #:x 20 #:y 13)
+  (refresh* surface)
+  ;; This probably doesn't work because the window port is a soft port.
+  ;; pipe-cmd has a weird workaround for that.
+  (parameterize ((current-error-port (make-window-port surface)))
+    (let ((result (apply slurp* program args)))
+      (force-output (current-error-port))
+      (close-port (current-error-port))
+      result)))
+
 (define (key-value-slurp* program . args)
   "Slurp CMD, which is expected to give an output of key-value pairs -
 each pair terminated with a newline and the key/value delimited with ="
@@ -254,31 +267,35 @@ Ignore blank lines."
          (error "~s is not a window" outside))
      outside)))
 
+(define* (boxed-window-decoration-refresh pr title)
+  (let ((win (outer pr)))
+    ;(erase win) ; FIXME Why does this nuke the label in an unrelated window? WTF.
+    (color-set! win 0)
+    (box win (acs-vline) (acs-hline))
+    (if title
+      (begin
+        ;(move win 2 1)
+        ;(hline win (acs-hline) (- (getmaxx win) 2))
+        (color-set! win livery-title)
+        (move win 1 1)
+        (clrtoeol win) ; kills one char too much at the end.
+        (addstr win title #:y 1 #:x (round (/ (- (getmaxx win) (string-length title)) 2)))))
+    (color-set! win 0)))
 
 (define* (make-boxed-window orig height width starty startx #:key (title #f))
   "Create a window with a frame around it, and optionally a TITLE.  Returns a
 pair whose car is the inner window and whose cdr is the frame."
   (let* ((win  (if orig
-		   (derwin orig height width starty startx #:panel #f)
-		   (newwin      height width starty startx #:panel #f)))
-	 (ystart (if title 3 1))
-	 (sw (derwin win (- (getmaxy win) ystart 1)
-		     (- (getmaxx win) 2)
-		     ystart 1 #:panel #f)))
-    (clear win)
-    (box win (acs-vline) (acs-hline))
-
-    (if title
-	(begin
-	  (move win 2 1)
-	  (hline win (acs-hline) (- (getmaxx win) 2))
-	  (color-set! win livery-title)
-	  (addstr win title #:y 1
-		  #:x (round (/ (- (getmaxx win) (string-length title)) 2)))))
-
-    (refresh* sw)
-    ;; Return the inner and outer windows
-    (cons sw win)))
+                   (derwin orig height width starty startx #:panel #t)
+                   (newwin      height width starty startx #:panel #t)))
+          (ystart (if title 2 1)))
+    (let ((sw (derwin win (- (getmaxy win) ystart 1)
+                      (- (getmaxx win) 2)
+                      ystart 1 #:panel #t)))
+      (boxed-window-decoration-refresh (cons sw win) title)
+      ;(refresh* sw)
+      ;; Return the inner and outer windows
+      (cons sw win))))
 
 
 (define (find-mount-device in mp)
@@ -329,3 +346,24 @@ mounts return the device on which the path IN would be mounted."
           ('directory (string-append name "/"))
           (_ name)))
     (scandir dir)))
+
+(define (deep-visit-windows proc window)
+  (let ((panels (panels-map identity)))
+    (for-each
+      (lambda (subwindow)
+        (if (eq? (getparent subwindow) window)
+          (deep-visit-windows proc subwindow)))
+      panels))
+  (proc window))
+
+(define (create-vbox-i parent-window item-heights y)
+  (if (null? item-heights)
+      '()
+      (let ((item-height (car item-heights))
+            (maxx (getmaxx parent-window)))
+        (cons (derwin parent-window item-height maxx y 0 #:panel #t)
+              (create-vbox-i parent-window (cdr item-heights)
+                             (+ y item-height))))))
+
+(define (create-vbox parent-window . item-heights)
+  (create-vbox-i parent-window item-heights 0))

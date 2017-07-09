@@ -77,36 +77,17 @@
   (when (not (page-initialised? page))
     (wireless-page-init page)
     (page-set-initialised! page #t))
-  (touchwin (outer (page-wwin page)))
-  (refresh* (outer (page-wwin page)))
-  (refresh* (inner (page-wwin page)))
-  (menu-refresh (page-datum page 'menu)))
-
+  (let ((text-window (page-datum page 'text-window)))
+    (erase text-window)
+    (addstr*   text-window  (format #f
+                                    (gettext
+                                     "Select an access point to connect.")))))
 
 (define (wireless-page-init p)
-  (let* ((s (page-surface p))
-         (pr (make-boxed-window  #f
-                                 (- (getmaxy s) 4) (- (getmaxx s) 2)
-                                 2 1
-                                 #:title (page-title p)))
-         (text-window (derwin
-                       (inner pr)
-                       5 (getmaxx (inner pr))
-                       0 0
-                       #:panel #f))
-
-         (bwin (derwin (inner pr)
-                       3 (getmaxx (inner pr))
-                       (- (getmaxy (inner pr)) 3) 0
-                       #:panel #f))
-         (buttons (make-buttons my-buttons 1))
-
-         (mwin (derwin (inner pr)
-                       (- (getmaxy (inner pr)) (getmaxy text-window) 3)
-                       (- (getmaxx (inner pr)) 0)
-                       (getmaxy text-window) 0 #:panel #f))
-
-         (menu (make-menu
+  (match (create-vbox (page-surface p) 5 (- (getmaxy (page-surface p)) 5 3) 3)
+   ((text-window mwin bwin)
+    (let* ((buttons (make-buttons my-buttons 1))
+           (menu (make-menu
                 ;; Present a menu of available Access points in decreasing
                 ;; order of signal strength
                 (sort
@@ -123,20 +104,12 @@
                            (and=> (assq-ref d 'encryption)
                                   symbol->string)
                             (M_ "clear")))))))
-
-    (addstr*   text-window  (format #f
-                                    (gettext
-                                     "Select an access point to connect.")))
-
-    (push-cursor (page-cursor-visibility p))
-    (page-set-wwin! p pr)
-    (page-set-datum! p 'menu menu)
-    (page-set-datum! p 'navigation buttons)
-    (menu-post menu mwin)
-    (buttons-post buttons bwin)
-    (refresh* (outer pr))
-    (refresh* text-window)
-    (refresh* bwin)))
+      (push-cursor (page-cursor-visibility p))
+      (page-set-datum! p 'menu menu)
+      (page-set-datum! p 'navigation buttons)
+      (page-set-datum! p 'text-window text-window)
+      (menu-post menu mwin)
+      (buttons-post buttons bwin)))))
 
 
 
