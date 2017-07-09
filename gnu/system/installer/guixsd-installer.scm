@@ -19,8 +19,7 @@
 (define-module (gnu system installer guixsd-installer))
 
 (use-modules (ncurses curses)
-             (ncurses panel)
-	     (gurses menu)
+             (gurses menu)
 	     (gnu system installer utils)
 	     (gnu system installer misc)
 	     (gnu system installer partition-reader)
@@ -293,9 +292,7 @@
       (noecho!)
 
       (start-color!)
-
-      (init-pair! livery-title COLOR_MAGENTA COLOR_BLACK)
-      (init-pair! strong-colour COLOR_RED COLOR_BLACK)
+      (register-color-palette!)
 
       (curs-set 0)
 

@@ -35,6 +35,7 @@
             inner
             outer
             deep-visit-windows
+            register-color-palette!
 
 	    open-input-pipe-with-fallback*
 
@@ -264,6 +265,10 @@ Ignore blank lines."
      (if (not (window? outside))
          (error "~s is not a window" outside))
      outside)))
+
+(define (register-color-palette!)
+  (init-pair! livery-title COLOR_MAGENTA COLOR_BLACK)
+  (init-pair! strong-colour COLOR_RED COLOR_BLACK))
 
 (define* (boxed-window-decoration-refresh pr title)
   (let ((win (outer pr)))
