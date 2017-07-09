@@ -139,7 +139,7 @@ match those uuids read from the respective partitions"
                     mount-points)))
      #:markup-table installer-texinfo-markup))
     ; TODO refresh inner config-window
-  )
+)
 
 (define (format-page-init p)
   (let* ((s (page-surface p))
@@ -167,4 +167,5 @@ match those uuids read from the respective partitions"
     (page-set-datum! p 'navigation buttons)
     (page-set-datum! p 'text-window text-window)
     (page-set-datum! p 'config-window config-window)
-    (buttons-post buttons bwin)))
+    (buttons-post buttons bwin)
+    (buttons-select-by-symbol buttons 'cancel)))
