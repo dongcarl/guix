@@ -78,7 +78,7 @@
      (else
       #f))))
 
-(define* (page-set-focus page widget)
+(define* (page-set-focused-widget page widget)
   (let* ((menu (page-datum page 'menu))
          (nav  (page-datum page 'navigation))
          (form (page-datum page 'form))
@@ -183,10 +183,10 @@
          (status (or (let ((status (and menu (std-menu-mouse-handler menu device-id x y z button-state))))
                        (match status
                         (('menu-item-activated x)
-                         (page-set-focus page menu)
+                         (page-set-focused-widget page menu)
                          (list 'menu-item-activated x))
                         (('menu-item-selected x)
-                         (page-set-focus page menu)
+                         (page-set-focused-widget page menu)
                          (list 'menu-item-selected x))
                         (_ #f)))
                      (if buttons
@@ -194,7 +194,7 @@
                         (#f #f)
                         ('ignored #f)
                         (x
-                         (page-set-focus page buttons)
+                         (page-set-focused-widget page buttons)
                          ;(display x)
                          ;(if menu
                          ;  (menu-set-active! menu #f))
