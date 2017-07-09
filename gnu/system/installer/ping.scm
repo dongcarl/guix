@@ -48,9 +48,10 @@
                               (uri-host (string->uri x))))))
                 #f %default-substitute-urls))))))
 
-(define my-buttons `((test ,(M_ "_Test") #t)
-		     (continue  ,(M_ "_Continue") #t)
-		     (cancel     ,(M_ "Canc_el") #t)))
+(define my-buttons
+ `((test ,(M_ "_Test") #t)
+   (continue  ,(M_ "_Continue") #t)
+   (cancel     ,(M_ "Canc_el") #t)))
 
 (define (ping-page-activate-item page item)
   (let ((test-window  (page-datum page 'test-window)))
