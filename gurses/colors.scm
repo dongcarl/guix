@@ -12,13 +12,13 @@
 
 (define-public (color-index-by-symbol color)
   (let loop ((i 0) (p colors))
-    (if (null? colors)
+    (if (null? p)
         (error "unknown color" color)
-        (match (car colors)
+        (match (car p)
          ((color-symbol foreground background)
           (if (eq? color-symbol color)
               i
-              (loop (1+ i) (cdr colors))))))))
+              (loop (1+ i) (cdr p))))))))
 
 (define-public (register-color-palette!)
   (for-each (lambda (index entry)
