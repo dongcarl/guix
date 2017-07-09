@@ -12,7 +12,7 @@
         (list 'normal COLOR_BLACK COLOR_WHITE)
         (list 'selected-menu-item COLOR_GREEN COLOR_BLUE)
         (list 'menu-item COLOR_BLACK COLOR_WHITE)
-        (list 'explanation COLOR_MAGENTA COLOR_WHITE)
+        (list 'explanation COLOR_BLACK COLOR_WHITE)
         (list 'form-field COLOR_BLUE COLOR_WHITE)))
 
 (define-public (color-index-by-symbol color)
