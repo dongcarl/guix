@@ -64,6 +64,118 @@
 (define (page-activate-item page info)
   ((page-datum page 'activator) page info))
 
+(define (page-focused-widget page)
+  (let* ((menu (page-datum page 'menu))
+         (nav  (page-datum page 'navigation))
+         (form (page-datum page 'form)))
+    (cond
+     ((and menu (menu-active menu))
+      menu)
+     ((and form (form-enabled? form))
+      form)
+     ((and nav (buttons-selected-symbol nav))
+      nav)
+     (else
+      #f))))
+
+(define* (page-set-focus page widget)
+  (let* ((menu (page-datum page 'menu))
+         (nav  (page-datum page 'navigation))
+         (form (page-datum page 'form))
+         (widgets (filter (lambda (entry)
+                            (match entry
+                             ((widget focused? set-focused!)
+                               widget)))
+                          (list (list menu menu-active menu-set-active!)
+                                (list form form-enabled? form-set-enabled!)
+                                (list nav buttons-selected-symbol (lambda (buttons value)
+                                                                    (buttons-select buttons
+                                                                      (if value
+                                                                          0
+                                                                          -1))))))))
+    ;; Unfocus all widgets but this one
+    (for-each (lambda (entry)
+                (match entry
+                 ((xwidget focused? set-focused!)
+                  (set-focused! xwidget (eq? widget xwidget)))))
+              widgets)
+    widget))
+
+(define* (page-focus-widget-relative page direction #:key (buttons? #f) (wrap? #f))
+  (define (focused-widget-cons widgets)
+    (if widgets
+        (match (car widgets)
+         ((xwidget focused? set-focused!)
+          (if (focused? xwidget)
+              widgets
+              (focused-widget-cons (cdr widgets)))))
+        '()))
+  (let* ((menu (page-datum page 'menu))
+         (nav  (page-datum page 'navigation))
+         (form (page-datum page 'form))
+         (widgets (filter (lambda (entry)
+                            (match entry
+                             ((widget focused? set-focused!)
+                               widget)))
+                          (list (list menu menu-active menu-set-active!)
+                                (list form form-enabled? form-set-enabled!)
+                                (list nav buttons-selected-symbol
+                                      (lambda (buttons value)
+                                        (let ((index (buttons-selected buttons)))
+                                          (buttons-unselect-all buttons)
+                                          (if value
+                                            (buttons-select buttons
+                                                            (if (= index -1)
+                                                                0
+                                                                index)))))))))
+         (c (focused-widget-cons widgets))
+         (n (if c (cdr c) '()))
+         (next-widget-entry (if (null? n)
+                                (if wrap?
+                                    (if (null? widgets)
+                                        #f
+                                        (car widgets))
+                                    #f)
+                                (car n))))
+    (if c
+        (match (car c)
+         ((ywidget yfocused? yset-focused!)
+          (match direction
+           ('next
+            (if (and buttons? nav (eq? ywidget nav)
+                     (not (eqv? (buttons-selected nav)
+                                (1- (buttons-n-buttons nav))))) ; last button
+                (begin
+                  (buttons-select-next nav)
+                  nav)
+                (begin
+                  (match next-widget-entry
+                   ((xwidget xfocused? xset-focused!)
+                    (yset-focused! ywidget #f)
+                    (xset-focused! xwidget #t)
+                    xwidget)
+                   (_ #f)))))
+           ('prev
+            (if (and buttons? nav (eq? ywidget nav)
+                     (not (eqv? (buttons-selected nav)
+                                0))) ; first button
+                (begin
+                  (buttons-select-prev nav)
+                  nav)
+                (begin
+                  (let loop ((p widgets))
+                    (cond
+                     ((null? p) #f) ; TODO wrap.
+                     ((eq? (cdr p) c) ; p in front of current
+                      (let ((prev-widget-entry (car p)))
+                        (match prev-widget-entry
+                         ((xwidget xfocused? xset-focused!)
+                          (yset-focused! ywidget #f)
+                          (xset-focused! xwidget #t)
+                          xwidget))))
+                     (else
+                      (loop (cdr p))))))))))))))
+
 (define (page-default-mouse-handler page device-id x y z button-state)
   (let* ((menu (page-datum page 'menu))
          (buttons (page-datum page 'navigation))
@@ -71,14 +183,19 @@
          (status (or (let ((status (and menu (std-menu-mouse-handler menu device-id x y z button-state))))
                        (match status
                         (('menu-item-activated x)
+                         (page-set-focus page menu)
                          (list 'menu-item-activated x))
+                        (('menu-item-selected x)
+                         (page-set-focus page menu)
+                         (list 'menu-item-selected x))
                         (_ #f)))
                      (if buttons
                        (match (buttons-mouse-handler buttons device-id x y z button-state)
                         (#f #f)
                         ('ignored #f)
                         (x
-                         (display x)
+                         (page-set-focus page buttons)
+                         ;(display x)
                          ;(if menu
                          ;  (menu-set-active! menu #f))
                          x))))))
@@ -94,57 +211,27 @@
   "Handle keypresses in a commonly-used page.
 The page is assumed to have only at most a menu, a form and a navigation.
 If a form is used it's assumed that the menu is not used and vice versa."
-  (let ((menu (page-datum page 'menu))
-        (nav  (page-datum page 'navigation))
-        (form (page-datum page 'form)))
+  (let* ((menu (page-datum page 'menu))
+         (nav  (page-datum page 'navigation))
+         (form (page-datum page 'form)))
     (cond
      ((and form (form-enabled? form) (not (eq? 'ignored (form-enter form ch))))
      'handled)
 
      ((eq? ch KEY_RIGHT)
-      (if menu
-        (menu-set-active! menu #f))
-      (if form
-        (form-set-enabled! form #f))
-      (if nav
-        (buttons-select-next nav))
+      (page-focus-widget-relative page 'next #:buttons? #t)
       'handled)
 
      ((eq? ch KEY_LEFT)
-      (if menu
-        (menu-set-active! menu #f))
-      (if form
-        (form-set-enabled! form #f))
-      (if nav
-        (buttons-select-prev nav))
+      (if (and nav (eq? nav (page-focused-widget page)))
+          ;; Don't go to other widgets.
+          (buttons-select-prev nav)
+          (page-focus-widget-relative page 'prev #:buttons? #t))
       'handled)
 
      ((eq? ch #\tab)
-      (cond
-       ((and menu (menu-active menu))
-        (menu-set-active! menu #f)
-        (if nav
-            (buttons-select nav 0))
-        'handled)
-
-       ((and form (form-enabled? form))
-        (form-set-enabled! form #f)
-        (if nav
-            (buttons-select nav 0))
-        'handled)
-
-       ((and nav (eqv? (buttons-selected nav) (1- (buttons-n-buttons nav))))
-        (if menu
-          (menu-set-active! menu #t)
-          (if form
-            (form-set-enabled! form #t)))
-        (buttons-unselect-all nav)
-        'handled)
-
-       (else
-        (if nav
-            (buttons-select-next nav))
-        'handled)))
+      (page-focus-widget-relative page 'next #:buttons? #t #:wrap? #t)
+      'handled)
 
      ((select-key? ch)
       (page-activate-item page
@@ -160,21 +247,11 @@ If a form is used it's assumed that the menu is not used and vice versa."
       'handled)
 
      ((eq? ch KEY_UP)
-      (if nav
-          (buttons-unselect-all nav))
-      (if menu
-        (menu-set-active! menu #t)
-        (if form
-          (form-set-enabled! form #t)))
+      (page-focus-widget-relative page 'prev #:buttons? #f)
       'handled)
 
      ((eq? ch KEY_DOWN)
-      (if nav
-          (buttons-unselect-all nav))
-      (if menu
-        (menu-set-active! menu #t)
-        (if form
-          (form-set-enabled! form #t)))
+      (page-focus-widget-relative page 'next #:buttons? #f)
       'handled)
 
      ((and nav (char? ch)
@@ -182,11 +259,11 @@ If a form is used it's assumed that the menu is not used and vice versa."
                    (buttons-fetch-by-key nav (char-downcase ch))))
       (let ((button (or (buttons-fetch-by-key nav (char-upcase ch))
                         (buttons-fetch-by-key nav (char-downcase ch)))))
-        (if menu
-          (menu-set-active! menu #f)
-          (if form
-            (form-set-enabled! form #f)))
-        (buttons-select-by-symbol nav button)
+        ;(if menu
+        ;  (menu-set-active! menu #f)
+        ;  (if form
+        ;    (form-set-enabled! form #f)))
+        ;(buttons-select-by-symbol nav button)
         (page-activate-item page button)))
 
      (else
@@ -234,12 +311,12 @@ If a form is used it's assumed that the menu is not used and vice versa."
   (let ((focused-window (or (page-focused-window p) (page-surface p))))
     (match (getyx focused-window)
      ((y x)
+      (boxed-window-decoration-refresh (page-wwin p) (page-title p))
       (erase (page-surface p))
       ((page-refresher p) p)
       (let ((form (page-datum p 'form))
             (buttons (page-datum p 'navigation))
             (menu (page-datum p 'menu)))
-        (boxed-window-decoration-refresh (page-wwin p) (page-title p))
         (if menu
           (begin
             (menu-redraw menu)
