@@ -76,6 +76,7 @@
     (time-zone-page-init page)
     (page-set-initialised! page #t))
   (let ((text-window (page-datum page 'text-window)))
+    (erase text-window)
     (addstr* text-window (gettext "Select the default time zone for the system:" ))))
 
 (define (time-zone-page-init p)
