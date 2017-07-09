@@ -274,7 +274,7 @@ Ignore blank lines."
     ;(addstr win "X")
     (box win (acs-vline) (acs-hline))
     (if title
-      (let ((title (string-append "[ " title " ]")))
+      (let ((title (string-append " " title " ")))
         ;(move win 2 1)
         ;(hline win (acs-hline) (- (getmaxx win) 2))
         (select-color! win 'livery-title)
@@ -291,7 +291,7 @@ pair whose car is the inner window and whose cdr is the frame."
     (let ((sw (derwin win (- (getmaxy win) ystart 1)
                       (- (getmaxx win) 2)
                       ystart 1 #:panel #t)))
-      (bkgdset! sw (color 1 (dim #\space)))
+      (bkgdset! sw (color (color-index-by-symbol 'explanation) (dim #\space)))
       (boxed-window-decoration-refresh (cons sw win) title)
       ;(refresh* sw)
       ;; Return the inner and outer windows
