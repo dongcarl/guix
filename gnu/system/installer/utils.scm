@@ -76,7 +76,7 @@
    (vector
     (lambda (c) (addch win c))
     (lambda (s) (addstr win s))
-    (lambda () (refresh* win)
+    (lambda () ;; Note: This will lose the cursor position.
                (update-panels)
                (doupdate))
     #f
@@ -171,8 +171,6 @@ This version assumes some external entity puts in the carriage returns."
 	#f)))
 
 (define (slurp** surface program . args)
-  (addstr surface "Please wait..." #:x 20 #:y 13)
-  (refresh* surface)
   ;; This probably doesn't work because the window port is a soft port.
   ;; pipe-cmd has a weird workaround for that.
   (parameterize ((current-error-port (make-window-port surface)))
@@ -269,8 +267,10 @@ Ignore blank lines."
 
 (define* (boxed-window-decoration-refresh pr title)
   (let ((win (outer pr)))
-    ;(erase win) ; FIXME Why does this nuke the label in an unrelated window? WTF.
+    ;(erase win)
     (color-set! win 0)
+    (move win 0 0)
+    ;(addstr win "X")
     (box win (acs-vline) (acs-hline))
     (if title
       (begin
