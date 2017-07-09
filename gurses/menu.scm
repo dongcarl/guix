@@ -151,7 +151,7 @@
   "Handle some often-used menu keys.
 Note that it's the caller's responsibility to check whether the menu is
 active."
-  (if #t ; FIXME (menu-active menu)
+  (if (menu-active menu)
       (cond
        ((eq? ch KEY_NPAGE)
         (menu-down menu #:step (getmaxy (menu-window menu)))
@@ -169,8 +169,8 @@ active."
         (menu-goto-end menu)
         'handled)
 
-       ((or (eqv? ch KEY_DOWN)
-            (eqv? ch #\so))
+       ((or (eq? ch KEY_DOWN)
+            (eq? ch #\so))
         (menu-down menu)
         'handled)
 
