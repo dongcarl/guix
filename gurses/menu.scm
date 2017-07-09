@@ -31,7 +31,6 @@
   #:export (menu-set-active!)
   #:export (menu-set-items!)
   #:export (menu-set-active-attr!)
-  ;#:export (menu-set-active-color!)
   #:export (menu-top-item)
 
   #:export (menu-get-current-item)
