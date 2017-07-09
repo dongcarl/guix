@@ -35,7 +35,6 @@
             inner
             outer
             deep-visit-windows
-            register-color-palette!
 
 	    open-input-pipe-with-fallback*
 
@@ -60,7 +59,8 @@
              (gnu system installer filesystems)
 	     (ncurses form)
              (ncurses panel)
-             (ncurses curses))
+             (ncurses curses)
+             (gurses colors))
 
 (define (refresh* win)
   #f)
@@ -266,14 +266,10 @@ Ignore blank lines."
          (error "~s is not a window" outside))
      outside)))
 
-(define (register-color-palette!)
-  (init-pair! livery-title COLOR_MAGENTA COLOR_BLACK)
-  (init-pair! strong-colour COLOR_RED COLOR_BLACK))
-
 (define* (boxed-window-decoration-refresh pr title)
   (let ((win (outer pr)))
     ;(erase win)
-    (color-set! win 0)
+    (select-color! win 'normal)
     (move win 0 0)
     ;(addstr win "X")
     (box win (acs-vline) (acs-hline))
@@ -281,9 +277,9 @@ Ignore blank lines."
       (let ((title (string-append "[ " title " ]")))
         ;(move win 2 1)
         ;(hline win (acs-hline) (- (getmaxx win) 2))
-        (color-set! win livery-title)
+        (select-color! win 'livery-title)
         (addstr win title #:y 0 #:x (round (/ (- (getmaxx win) (string-length title)) 2)))))
-    (color-set! win 0)))
+    (select-color! win 'normal)))
 
 (define* (make-boxed-window orig height width starty startx #:key (title #f))
   "Create a window with a frame around it, and optionally a TITLE.  Returns a

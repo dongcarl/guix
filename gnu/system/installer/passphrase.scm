@@ -105,7 +105,7 @@
 (define (passphrase-init p)
   (match (create-vbox (page-surface p) 5 (- (getmaxy (page-surface p)) 5 3) 3)
    ((text-window fw bwin)
-    (let ((nav (make-buttons my-buttons 1))
+    (let ((nav (make-buttons my-buttons))
           (form (make-form my-fields)))
 
       (push-cursor (page-cursor-visibility p))

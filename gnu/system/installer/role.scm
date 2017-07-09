@@ -98,7 +98,7 @@
 (define (role-page-init p)
   (match (create-vbox (page-surface p) 5 (- (getmaxy (page-surface p)) 5 3) 3)
    ((text-window mwin bwin)
-    (let* ((buttons (make-buttons my-buttons 1))
+    (let* ((buttons (make-buttons my-buttons))
            (menu (make-menu roles
                           #:disp-proc (lambda (datum row)
                                         (gettext (role-description datum))))))

@@ -205,7 +205,7 @@
 (define (filesystem-page-init p)
   (match (create-vbox (page-surface p) 3 (- (getmaxy (page-surface p)) 3 3) 3)
     ((text-window mwin bwin)
-     (let ((buttons (make-buttons my-buttons 1))
+     (let ((buttons (make-buttons my-buttons))
            (menu (make-menu (partition-volume-pairs)
                   #:disp-proc
                   (lambda (d row)

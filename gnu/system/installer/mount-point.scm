@@ -90,7 +90,7 @@
 (define (mount-point-page-init p)
   (match (create-vbox (page-surface p) 3 (- (getmaxy (page-surface p)) 3 3) 3)
     ((text-window fw bwin)
-     (let ((nav (make-buttons my-buttons 1))
+     (let ((nav (make-buttons my-buttons))
            (form (make-form
                 (my-fields)
                 (lambda (f)

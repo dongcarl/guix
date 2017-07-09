@@ -89,7 +89,7 @@
 (define (host-name-init p)
   (match (create-vbox (page-surface p) 5 (- (getmaxy (page-surface p)) 5 3) 3)
    ((text-window fw bwin)
-    (let ((nav (make-buttons my-buttons 1))
+    (let ((nav (make-buttons my-buttons))
           (form (make-form my-fields)))
       (page-set-datum! p 'navigation nav)
       (page-set-datum! p 'text-window text-window)

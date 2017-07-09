@@ -153,7 +153,7 @@ match those uuids read from the respective partitions"
                        3 (getmaxx s)
                        (- (getmaxy s) 3) 0
                        #:panel #t))
-         (buttons (make-buttons my-buttons 1))
+         (buttons (make-buttons my-buttons))
 
          (config-window (make-boxed-window
                          s

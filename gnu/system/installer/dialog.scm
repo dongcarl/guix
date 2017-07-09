@@ -81,7 +81,7 @@
 (define (dialog-page-init p)
   (match (create-vbox (page-surface p) (- (getmaxy (page-surface p)) 3) 3)
    ((text-window button-window)
-    (let ((buttons (make-buttons my-buttons 1)))
+    (let ((buttons (make-buttons my-buttons)))
       (push-cursor (page-cursor-visibility p))
       (page-set-datum! p 'text-window text-window)
       (page-set-datum! p 'navigation buttons)

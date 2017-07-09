@@ -35,21 +35,21 @@
   #:export (buttons-refresh)
 
   #:use-module (ncurses curses)
+  #:use-module (gurses colors)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9))
 
 (define-record-type <buttons>
-  (make-buttons' items bwindows selected active-color)
+  (make-buttons' items bwindows selected)
   buttons?
   (items         buttons-items  buttons-set-items!) ;; FIXME this need not be here
   (bwindows      buttons-bwindows buttons-set-bwindows!)
   (selected      buttons-selected buttons-set-selected!)
-  (array         buttons-array  buttons-set-array!)
-  (active-color  buttons-active-color))
+  (array         buttons-array  buttons-set-array!))
 
-(define (make-buttons items color)
-  (make-buttons' items '()  -1 color))
+(define (make-buttons items)
+  (make-buttons' items '()  -1))
 
 (define (buttons-n-buttons buttons)
   (array-length (buttons-array buttons)))
@@ -62,7 +62,7 @@
       (list-ref (array-ref (buttons-array buttons) sel) 2))))
 
 (define (draw-button b color)
-    (color-set! b color)
+    (select-color! b color)
     (box b 0 0)
     ;(refresh b)
     )
@@ -73,7 +73,7 @@
 	 (old (if (array-in-bounds? arry current)
 		  (cadr (array-ref arry current)) #f)))
   (if old
-      (draw-button old 0))
+      (draw-button old 'button))
   (buttons-set-selected! buttons -1)))
 
 (define (buttons-fetch-by-key buttons c)
@@ -95,9 +95,9 @@
 		       (cadr (array-ref arry current)) #f)))
 	  (if (not (eqv? old new))
 	      (begin
-	      (draw-button new (buttons-active-color buttons))
+	      (draw-button new 'focused-button)
 	      (if old
-		  (draw-button old 0))))
+		  (draw-button old 'button))))
 	  (buttons-set-selected! buttons which)))))
 
 (define (buttons-select-prev buttons)
@@ -214,12 +214,11 @@
   (car (buttons-bwindows buttons)))
 
 (define (buttons-refresh buttons)
-  (let ((selected-index (buttons-selected buttons))
-        (selected-color (buttons-active-color buttons)))
+  (let ((selected-index (buttons-selected buttons)))
     (for-each (lambda (index button a)
                 (draw-button button (if (= index selected-index)
-                                        selected-color
-                                        0))
+                                        'focused-button
+                                        'button))
                 (match a
                  ((ch win sym label)
                   (addchstr button label #:y 1 #:x 1))))

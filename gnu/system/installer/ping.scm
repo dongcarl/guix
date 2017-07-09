@@ -91,7 +91,7 @@
 (define (ping-page-init p)
   (match (create-vbox (page-surface p) 4 (- (getmaxy (page-surface p)) 4 3) 3)
    ((text-window test-window button-window)
-    (let ((buttons (make-buttons my-buttons 1)))
+    (let ((buttons (make-buttons my-buttons)))
       (box test-window 0 0)
       (page-set-datum! p 'test-window test-window)
       (page-set-datum! p 'text-window text-window)

@@ -70,7 +70,7 @@
 (define (disk-page-init p)
   (match (create-vbox (page-surface p) 4 (- (getmaxy (page-surface p)) 4 3) 3)
     ((text-window menu-window button-window)
-     (let* ((buttons (make-buttons my-buttons 1))
+     (let* ((buttons (make-buttons my-buttons))
             (menu (make-menu (volumes)
                    #:disp-proc
                    (lambda (d row)

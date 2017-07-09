@@ -18,10 +18,9 @@
 
 (define-module (gnu system installer misc)
   #:use-module (ncurses curses)
+  #:use-module (gurses colors)
   #:use-module (gnu system shadow)
 
-  #:export (livery-title)
-  #:export (strong-colour)
   #:export (time-zone)
   #:export (host-name)
   #:export (config-file)
@@ -31,9 +30,6 @@
   #:export (installer-texinfo-markup)
   #:export (install-attempts)
   #:export (mount-points))
-
-(define livery-title 1)
-(define strong-colour 2)
 
 (define mount-points '())
 
@@ -63,7 +59,7 @@
     (acro         . ,normal)
     (email        . ,normal)
     (emph         . ,dim)
-    (strong       . ,(lambda (x) (color strong-colour x)))
+    (strong       . ,(lambda (x) (color (color-index-by-symbol 'strong) x)))
     (sample       . ,normal)
     (sc           . ,normal)
     (titlefont    . ,normal)

@@ -32,10 +32,10 @@
 
 (define* (make-key-map parent directory)
   (let ((page (make-page (page-surface parent)
-			(gettext "Keyboard Mapping")
-			key-map-page-refresh
-                        0
-                        #:activator key-map-page-activate-item)))
+                         (gettext "Keyboard Mapping")
+                         key-map-page-refresh
+                         0
+                         #:activator key-map-page-activate-item)))
     (page-set-datum! page 'directory directory)
     page))
 
@@ -71,7 +71,7 @@
 (define (key-map-page-init p)
   (match (create-vbox (page-surface p) 4 (- (getmaxy (page-surface p)) 3 4) 3)
    ((text-window menu-window button-window)
-    (let ((buttons (make-buttons my-buttons 1))
+    (let ((buttons (make-buttons my-buttons))
           (menu (make-menu
 		(let ((dir (page-datum p 'directory)))
                   (filter (lambda (name)

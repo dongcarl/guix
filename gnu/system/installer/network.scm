@@ -146,7 +146,7 @@
   (define prev-flags (map-in-order if-flags (interfaces)))
   (match (create-vbox (page-surface p) 5 (- (getmaxy (page-surface p)) 5 3) 3)
    ((text-window mwin bwin)
-    (let ((buttons (make-buttons my-buttons 1))
+    (let ((buttons (make-buttons my-buttons))
           (menu (make-menu
                   (filter (lambda (i) (memq
                                      (assq-ref i 'class)

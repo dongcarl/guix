@@ -182,6 +182,7 @@ MODULES =					\
 if HAVE_GUILE_NCURSES
 
 MODULES +=					\
+  gurses/colors.scm                             \
   gurses/buttons.scm                            \
   gurses/form.scm                               \
   gurses/menu.scm				\

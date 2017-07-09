@@ -99,7 +99,7 @@
 (define (users-page-init p)
   (match (create-vbox (page-surface p) 3 2 (- (getmaxy (page-surface p)) 3 2 3) 3)
    ((text-window header-window mwin bwin)
-    (let* ((buttons (make-buttons my-buttons 1))
+    (let* ((buttons (make-buttons my-buttons))
            (menu (make-menu users
                           #:disp-proc (lambda (x r)
                                         (format #f header-format
