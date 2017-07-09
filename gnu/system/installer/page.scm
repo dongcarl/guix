@@ -103,13 +103,13 @@
 
 (define* (page-focus-widget-relative page direction #:key (buttons? #f) (wrap? #f))
   (define (focused-widget-cons widgets)
-    (if widgets
+    (if (null? widgets)
+        '()
         (match (car widgets)
          ((xwidget focused? set-focused!)
           (if (focused? xwidget)
               widgets
-              (focused-widget-cons (cdr widgets)))))
-        '()))
+              (focused-widget-cons (cdr widgets)))))))
   (let* ((menu (page-datum page 'menu))
          (nav  (page-datum page 'navigation))
          (form (page-datum page 'form))
@@ -129,7 +129,7 @@
                                                                 0
                                                                 index)))))))))
          (c (focused-widget-cons widgets))
-         (n (if c (cdr c) '()))
+         (n (if (null? c) '() (cdr c)))
          (next-widget-entry (if (null? n)
                                 (if wrap?
                                     (if (null? widgets)
@@ -137,7 +137,8 @@
                                         (car widgets))
                                     #f)
                                 (car n))))
-    (if c
+    (if (null? c)
+        #f
         (match (car c)
          ((ywidget yfocused? yset-focused!)
           (match direction
