@@ -47,7 +47,7 @@
 
   (let ((text-window (page-datum page 'text-window))
         (menu (page-datum page 'menu)))
-    (clear text-window)
+    (erase text-window)
     (addstr text-window
       (justify* (gettext "The following languages are available.")
                 (getmaxx text-window)))))
