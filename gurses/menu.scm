@@ -31,7 +31,7 @@
   #:export (menu-set-active!)
   #:export (menu-set-items!)
   #:export (menu-set-active-attr!)
-  #:export (menu-set-active-color!)
+  ;#:export (menu-set-active-color!)
   #:export (menu-top-item)
 
   #:export (menu-get-current-item)
@@ -41,11 +41,12 @@
 
   #:use-module (ncurses curses)
   #:use-module (ncurses panel)
+  #:use-module (gurses colors)
   #:use-module (srfi srfi-9)
   #:use-module (ice-9 match))
 
 (define-record-type <menu>
-  (make-menu' current-item items top-item active active-attr active-color disp)
+  (make-menu' current-item items top-item active active-attr disp)
   menu?
   (current-item menu-current-item menu-set-current-item!)
   (items        menu-items menu-set-items!)
@@ -53,12 +54,11 @@
   (disp         menu-disp-proc)
   (active       menu-active menu-set-active!)
   (active-attr  menu-active-attr menu-set-active-attr!)
-  (active-color menu-active-color menu-set-active-color!)
   (window       menu-window menu-set-window!))
 
 (define* (make-menu items #:key (disp-proc (lambda (datum row)
 					     (format #f "~a" datum))))
-  (make-menu' 0 items 0 #t A_STANDOUT 0 disp-proc))
+  (make-menu' 0 items 0 #t A_STANDOUT disp-proc))
 
 
 
@@ -120,6 +120,7 @@
 (define (menu-redraw menu)
   (define win (menu-window menu))
   (erase win)
+  (select-color! win 'menu-item)
   (let populate ((row (menu-top-item menu))
 		 (data (list-tail (menu-items menu) (menu-top-item menu) )))
     (if (and
@@ -138,10 +139,11 @@
 
 (define (menu-refresh menu)
   (let ((win (menu-window menu))
-	(colour (if (menu-active menu) (menu-active-color menu) 0))
+	(colour (color-index-by-symbol (if (menu-active menu)
+                                           'selected-menu-item
+                                           'menu-item)))
 	(attr (if (menu-active menu) (menu-active-attr menu) A_DIM)))
-
-    (bkgd win (color 0 (normal #\space)))
+    (bkgd win (color (color-index-by-symbol 'normal) (normal #\space)))
     (chgat win -1 attr colour
            #:y (- (menu-current-item menu) (menu-top-item menu)) #:x 0)))
 

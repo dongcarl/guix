@@ -37,6 +37,7 @@
   #:use-module (ncurses curses)
   #:use-module (ncurses panel)
   #:use-module (gurses menu)
+  #:use-module (gurses colors)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9))
@@ -79,22 +80,22 @@
 (define (draw-field-space win field y x)
   "Draws the template for FIELD at Y, X"
   (addchstr win
-	    (make-list
-             (if (list? (field-size field))
+    (make-list (if (list? (field-size field))
                  (fold (lambda (x prev) (max prev (string-length x))) 0
                        (field-size field))
                  (field-size field))
-             (inverse #\space))
-	    #:y y
-	    #:x x))
+                 (color (color-index-by-symbol 'form-field) (inverse #\space)))
+    #:y y
+    #:x x))
 
 (define (redraw-field form field n)
   "Redraw the FIELD in FORM"
   (draw-field-space (form-window form) field n (form-tabpos form))
 
-  (addchstr (form-window form) (inverse (field-value field))
-	  #:y n
-	  #:x (form-tabpos form)))
+  (addchstr (form-window form)
+            (color (color-index-by-symbol 'form-field) (inverse (field-value field)))
+            #:y n
+            #:x (form-tabpos form)))
 
 (define (form-set-value! form n str)
   (cond

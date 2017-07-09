@@ -62,10 +62,11 @@
       (list-ref (array-ref (buttons-array buttons) sel) 2))))
 
 (define (draw-button b color)
-    (select-color! b color)
-    (box b 0 0)
-    ;(refresh b)
-    )
+  (select-color! b color)
+  (chgat b -1 A_BLINK 2 #:y 1 #:x 1)
+  (chgat b -1 A_BLINK 2 #:y 0 #:x (- (getmaxx b) 1))
+
+  )
 
 (define (buttons-unselect-all buttons)
   (let* ((arry (buttons-array buttons))
@@ -132,7 +133,7 @@
                       (let mk-label ((us #f)
                                      (mark #f)
                                      (output '())
-                                     (input (string->list raw-label)))
+                                     (input (string->list (string-append " " raw-label " "))))
                         (if (null? input)
                             (cons (reverse output) mark)
                             (let ((c (car input)))
@@ -150,16 +151,16 @@
                                         (cdr input))))))
                      (label (car label.mark))
                      (mark  (cdr label.mark))
-                     (width (+ (length label) 2))
+                     (width (+ (length label) 1))
                      (w (derwin win 3 width 0
                                 (round (- (* (1+ i) (/ (getmaxx win) (1+ n)))
                                           (/ width 2))) #:panel #t)))
                 (keypad! w #t)
                 (buttons-set-bwindows! buttons (cons w (buttons-bwindows buttons)))
-                (box w   0 0)
-                (addchstr w label #:y 1 #:x 1)
+                ;(box w   0 0)
+                ;(select-color! w 'button)
+                ;(addchstr w label #:y 0 #:x 0)
                 (loop (cdr bl) (1+ i) (acons mark (list w key label) alist)))))))))
-
 
 
 (define (buttons-key-matches-symbol? nav ch symbol)
@@ -216,12 +217,14 @@
 (define (buttons-refresh buttons)
   (let ((selected-index (buttons-selected buttons)))
     (for-each (lambda (index button a)
-                (draw-button button (if (= index selected-index)
-                                        'focused-button
-                                        'button))
-                (match a
-                 ((ch win sym label)
-                  (addchstr button label #:y 1 #:x 1))))
+                (let ((color-s (if (= index selected-index)
+                                   'focused-button
+                                   'button)))
+                  (draw-button button color-s)
+                  (match a
+                   ((ch win sym label)
+                    (addchstr win (color (color-index-by-symbol color-s)
+                                         label) #:y 0 #:x 0)))))
               (iota (length (buttons-bwindows buttons)))
               (reverse (buttons-bwindows buttons))
               (array->list (buttons-array buttons)))))

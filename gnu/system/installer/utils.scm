@@ -291,6 +291,7 @@ pair whose car is the inner window and whose cdr is the frame."
     (let ((sw (derwin win (- (getmaxy win) ystart 1)
                       (- (getmaxx win) 2)
                       ystart 1 #:panel #t)))
+      (bkgdset! sw (color 1 (dim #\space)))
       (boxed-window-decoration-refresh (cons sw win) title)
       ;(refresh* sw)
       ;; Return the inner and outer windows

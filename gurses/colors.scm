@@ -3,12 +3,17 @@
   #:use-module (ice-9 match))
 
 (define colors
-  (list (list 'normal COLOR_WHITE COLOR_BLACK)
-        (list 'livery-title COLOR_MAGENTA COLOR_BLACK)
+  (list (list 'xxx COLOR_BLACK COLOR_WHITE)
+        (list 'livery-title COLOR_MAGENTA COLOR_WHITE)
         (list 'strong COLOR_RED COLOR_BLACK)
         (list 'button COLOR_BLACK COLOR_GREEN)
         (list 'button-shadow COLOR_BLACK COLOR_BLACK)
-        (list 'focused-button COLOR_CYAN COLOR_GREEN)))
+        (list 'focused-button COLOR_CYAN COLOR_GREEN)
+        (list 'normal COLOR_BLACK COLOR_WHITE)
+        (list 'selected-menu-item COLOR_GREEN COLOR_BLUE)
+        (list 'menu-item COLOR_BLACK COLOR_WHITE)
+        (list 'explanation COLOR_MAGENTA COLOR_WHITE)
+        (list 'form-field COLOR_BLUE COLOR_WHITE)))
 
 (define-public (color-index-by-symbol color)
   (let loop ((i 0) (p colors))
@@ -29,5 +34,4 @@
             colors))
 
 (define-public (select-color! win color)
-;  (color-set! win (color-index-by-symbol color))
-1)
+  (color-set! win (color-index-by-symbol color)))
