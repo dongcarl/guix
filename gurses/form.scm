@@ -134,9 +134,9 @@ label eq? to N"
 (define* (make-form items #:optional (callback #f))
   (let ((form (make-form' 0 #t callback)))
     (form-set-items! form
-		     (list->array
-		      1 (map-in-order
-			 (lambda (x)
+                     (list->array
+                     1 (map-in-order
+                         (lambda (x)
                            (match x
                                   ((symbol label (? list? things))
                                    (let ((width (apply max
@@ -156,9 +156,8 @@ label eq? to N"
                                    (make-field symbol label size #f #f "" 0 #f))
                                   ((symbol label (? integer? size) validator)
                                    (make-field symbol label size #f #f "" 0 validator))))
-			 items)))
+                         items)))
     form))
-
 
 (define (form-enter form ch)
   (define (redraw-current-field form field)
@@ -390,7 +389,7 @@ Set the field value to the newly selected value."
 
     (form-update-cursor form))
 
-(define (form-refresh form) ; TODO redraw labels
+(define (form-refresh form)
   (erase (form-window form))
   (form-redraw-labels form)
   (let loop ((fields (form-items form))
