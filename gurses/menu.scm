@@ -169,10 +169,17 @@ active."
         (menu-goto-end menu)
         'handled)
 
+       ((eq? ch KEY_RIGHT)
+        'handled)
+
+       ((eq? ch KEY_LEFT)
+        'handled)
+
        ((or (eq? ch KEY_DOWN)
             (eq? ch #\so))
-        (menu-down menu)
-        'handled)
+        (if (menu-down menu)
+            'handled
+            #f))
 
        ((or (eq? ch KEY_UP)
             (eq? ch #\dle))

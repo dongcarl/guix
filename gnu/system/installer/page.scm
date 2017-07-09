@@ -218,6 +218,9 @@ If a form is used it's assumed that the menu is not used and vice versa."
      ((and form (form-enabled? form) (not (eq? 'ignored (form-enter form ch))))
      'handled)
 
+     ((and menu (menu-active menu) (std-menu-key-handler menu ch))
+      'handled)
+
      ((eq? ch KEY_RIGHT)
       (page-focus-widget-relative page 'next #:buttons? #t)
       'handled)
@@ -243,8 +246,6 @@ If a form is used it's assumed that the menu is not used and vice versa."
                               (if nav
                                 (buttons-selected-symbol nav)
                                 'default)))))
-     ((and menu (menu-active menu) (std-menu-key-handler menu ch))
-      'handled)
 
      ((eq? ch KEY_UP)
       (page-focus-widget-relative page 'prev #:buttons? #f)
