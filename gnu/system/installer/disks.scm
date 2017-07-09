@@ -48,11 +48,7 @@
           (menu (page-datum page 'menu)))
       (erase text-window)
       (addstr text-window (justify* (gettext "Select a disk to partition (or repartition), or choose \"Continue\" to leave the disk(s) unchanged.")
-                                    (getmaxx text-window)))
-      (menu-set-items! menu (volumes))
-      (menu-redraw menu)
-      (menu-refresh menu)
-      (buttons-refresh (page-datum page 'navigation))))
+                                    (getmaxx text-window)))))
 
 (define (disk-page-activate-item page item)
   (match item
@@ -89,6 +85,7 @@
                                   (length (disk-partitions d))))))))
       (push-cursor (page-cursor-visibility p))
       (page-set-datum! p 'text-window text-window)
+      (menu-set-items! menu (volumes))
       (page-set-datum! p 'menu menu)
       (page-set-datum! p 'navigation buttons)
       (menu-post menu menu-window)
