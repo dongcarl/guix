@@ -24,6 +24,7 @@
    #:use-module (guix ui)
    #:use-module (ice-9 rdelim)
    #:use-module (ice-9 match)
+   #:use-module (gurses colors)
    #:use-module (gurses buttons)
    #:use-module (ncurses curses)
    #:use-module (srfi srfi-1)
@@ -79,7 +80,7 @@ match those uuids read from the respective partitions"
       (page-leave)
       'cancelled)
      ('format
-      (let ((window-port (make-window-port (inner config-window))))
+      (let ((window-port (page-datum page 'config-window-port)))
         (for-each
           (lambda (x)
             (match x
@@ -112,11 +113,7 @@ match those uuids read from the respective partitions"
                                           "-U" uuid
                                           "-f"
                                           dev))))
-
-                      ))))) mount-points)
-
-            (close-port window-port))
-
+                      ))))) mount-points))
       (when (filesystems-are-current?)
             (page-leave))
       'handled)
