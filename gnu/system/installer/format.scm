@@ -167,5 +167,6 @@ match those uuids read from the respective partitions"
     (page-set-datum! p 'navigation buttons)
     (page-set-datum! p 'text-window text-window)
     (page-set-datum! p 'config-window config-window)
+    (page-set-datum! p 'config-window-port (open-output-string))
     (buttons-post buttons bwin)
     (buttons-select-by-symbol buttons 'cancel)))

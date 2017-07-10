@@ -214,9 +214,10 @@
                          (getmaxy text-window)
                          0)))
 
-    (let ((p (make-window-port (inner config-window))))
-      (generate-guix-config p (getmaxx (inner config-window)))
-      (force-output p))
+    (let ((port (open-output-string)))
+      (generate-guix-config port (getmaxx (inner config-window)))
+      (force-output port)
+      (page-set-datum! p 'config-window-port port))
 
     (push-cursor (page-cursor-visibility p))
     (page-set-datum! p 'navigation buttons)

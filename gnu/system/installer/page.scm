@@ -320,6 +320,7 @@ If a form is used it's assumed that the menu is not used and vice versa."
             (buttons (page-datum p 'navigation))
             (menu (page-datum p 'menu))
             (config-window (page-datum p 'config-window))
+            (config-window-port (page-datum p 'config-window-port))
             (config-window-title (page-datum p 'config-window-title)))
         (if menu
           (begin
@@ -330,9 +331,14 @@ If a form is used it's assumed that the menu is not used and vice versa."
         (if form
           (form-refresh form))
         (if config-window
-          (boxed-window-decoration-refresh config-window
-                                           (or config-window-title
-                                               "Output")))
+          (begin
+            (boxed-window-decoration-refresh config-window
+                                             (or config-window-title
+                                                 "Output"))
+            (erase (inner config-window))
+            ; TODO scrolling...
+            (if config-window-port
+                (addstr (inner config-window) (get-output-string config-window-port)))))
         (move focused-window y x))))))
 
 (define (page-enter p)

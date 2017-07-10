@@ -149,7 +149,6 @@
     (install-page-init page)
     (page-set-initialised! page #t)))
 
-
 (define (install-page-init p)
   (let* ((s (page-surface p))
 	 (text-window (derwin
@@ -181,5 +180,6 @@
     (push-cursor (page-cursor-visibility p))
     (page-set-datum! p 'navigation buttons)
     (page-set-datum! p 'config-window (inner config-window))
+    (page-set-datum! p 'config-window-port (open-output-string))
     (buttons-post buttons bwin)))
 
