@@ -46,7 +46,7 @@
   (match item
    (('menu-item-activated i)
     (let* ((directory (page-datum page 'directory))
-           (new-dir (string-append directory "/" i)))
+           (new-dir (string-append directory i)))
       (if (eq? 'directory (stat:type (stat new-dir)))
         (let ((p (make-key-map page new-dir)))
           (page-pop) ; Don't go back to the current page!

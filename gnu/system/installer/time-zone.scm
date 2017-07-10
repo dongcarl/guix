@@ -47,7 +47,7 @@
    (('menu-item-activated i)
       (time-zone-page-refresh page) ; FIXME remove
       (let* ((directory (page-datum page 'directory))
-             (new-dir (string-append directory "/" i))
+             (new-dir (string-append directory i))
              (st (lstat new-dir)))
         (if (and (file-exists? new-dir)
                  (eq? 'directory (stat:type st)))

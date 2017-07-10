@@ -115,11 +115,11 @@
                             (lambda (page)
                               (make-tz-browser
                                page
-                               (or
-                                (getenv "TZDIR")
-                                (string-append (car (slurp** (page-surface page)
-                                                             "guix" "build" "tzdata"))
-                                                 "/share/zoneinfo"))))))
+                               (string-append (or (getenv "TZDIR")
+                                                  (string-append
+                                                   (car (slurp** (page-surface page)
+                                                                 "guix" "build" "tzdata"))
+                                                   "/share/zoneinfo/")) "/")))))
 
     (hostname . ,(make-task hostname-menu-title
                             '()
@@ -188,13 +188,13 @@
        (let* ((keymap-directory
                (string-append (dirname loadkeys-directory) "/../share/keymaps"
                               (match (utsname:machine (uname))
-                                ("i686" "/i386")
-                                ("x86_64" "/i386")
-                                ("aarch64" "/i386")
-                                ("armv7l" "/i386")
-                                ("powerpc" "/ppc")
-                                ("ppc64" "/ppc")
-                                (_ ""))))
+                                ("i686" "/i386/")
+                                ("x86_64" "/i386/")
+                                ("aarch64" "/i386/")
+                                ("armv7l" "/i386/")
+                                ("powerpc" "/ppc/")
+                                ("ppc64" "/ppc/")
+                                (_ "/"))))
               (p (make-key-map
                   page keymap-directory)))
          (page-enter p)))))))
