@@ -266,7 +266,7 @@ Ignore blank lines."
          (error "~s is not a window" outside))
      outside)))
 
-(define* (boxed-window-decoration-refresh pr title)
+(define* (boxed-window-decoration-refresh pr title #:key (scrollbar-fraction #f))
   (let ((win (outer pr)))
     ;(erase win)
     (select-color! win 'normal)
@@ -279,6 +279,21 @@ Ignore blank lines."
         ;(hline win (acs-hline) (- (getmaxx win) 2))
         (select-color! win 'livery-title)
         (addstr win title #:y 0 #:x (round (/ (- (getmaxx win) (string-length title)) 2)))))
+    (select-color! win 'scrollbar)
+    (if scrollbar-fraction
+      (let ((scrollbar-x (- (getmaxx win) 1))
+            (outer-maxy (getmaxy win)))
+        (vline win
+               (acs-ckboard)
+               (- outer-maxy 4)
+               #:y 2 #:x scrollbar-x)
+        (addch win
+               (inverse (acs-uarrow))
+               #:y 1 #:x scrollbar-x)
+        (addch win
+              (inverse (acs-darrow))
+              #:y (- outer-maxy 2)
+              #:x scrollbar-x)))
     (select-color! win 'normal)))
 
 (define* (make-boxed-window orig height width starty startx #:key (title #f))

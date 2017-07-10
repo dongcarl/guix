@@ -13,7 +13,8 @@
         (list 'selected-menu-item COLOR_GREEN COLOR_BLUE)
         (list 'menu-item COLOR_BLACK COLOR_WHITE)
         (list 'explanation COLOR_BLACK COLOR_WHITE)
-        (list 'form-field COLOR_BLUE COLOR_WHITE)))
+        (list 'form-field COLOR_BLUE COLOR_WHITE)
+        (list 'scrollbar COLOR_BLUE COLOR_WHITE)))
 
 (define-public (color-index-by-symbol color)
   (let loop ((i 0) (p colors))

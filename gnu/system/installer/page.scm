@@ -354,7 +354,8 @@ If a form is used it's assumed that the menu is not used and vice versa."
           (begin
             (boxed-window-decoration-refresh config-window
                                              (or config-window-title
-                                                 "Output"))
+                                                 "Output")
+                                             #:scrollbar-fraction 0.3)
             (erase (inner config-window))
             ; TODO scrolling...
             (if config-window-port
