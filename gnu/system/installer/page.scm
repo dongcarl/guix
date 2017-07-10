@@ -35,7 +35,8 @@
   #:export (page-default-key-handler)
   #:export (page-default-mouse-handler)
   #:export (page-getch)
-  #:export (page-focused-window)
+  #:export (page-focused-widget)
+  #:export (page-set-focused-widget)
   #:export (refresh-screen)
 
   #:use-module (gurses buttons)
@@ -46,6 +47,7 @@
   #:use-module (gnu system installer utils)
   #:use-module (gnu system installer levelled-stack)
   #:use-module (srfi srfi-9)
+  #:use-module (srfi srfi-26)
   #:use-module (ice-9 match))
 
 (define-record-type <page>
@@ -67,7 +69,9 @@
 (define (page-focused-widget page)
   (let* ((menu (page-datum page 'menu))
          (nav  (page-datum page 'navigation))
-         (form (page-datum page 'form)))
+         (form (page-datum page 'form))
+         (config-window (and=> (page-datum page 'config-window)
+                               (cut inner <>))))
     (cond
      ((and menu (menu-active menu))
       menu)
@@ -75,6 +79,8 @@
       form)
      ((and nav (buttons-selected-symbol nav))
       nav)
+     ((and config-window (page-datum page 'config-window-focused))
+      config-window)
      (else
       #f))))
 
@@ -82,12 +88,19 @@
   (let* ((menu (page-datum page 'menu))
          (nav  (page-datum page 'navigation))
          (form (page-datum page 'form))
+         (config-window (and=> (page-datum page 'config-window)
+                               (cut inner <>)))
          (widgets (filter (lambda (entry)
                             (match entry
                              ((widget focused? set-focused!)
                                widget)))
                           (list (list menu menu-active menu-set-active!)
                                 (list form form-enabled? form-set-enabled!)
+                                (list config-window
+                                      (lambda (w)
+                                        (page-datum page 'config-window-focused))
+                                      (lambda (w value)
+                                        (page-set-datum! page 'config-window-focused value)))
                                 (list nav buttons-selected-symbol (lambda (buttons value)
                                                                     (buttons-select buttons
                                                                       (if value
@@ -113,12 +126,18 @@
   (let* ((menu (page-datum page 'menu))
          (nav  (page-datum page 'navigation))
          (form (page-datum page 'form))
+         (config-window (and=> (page-datum page 'config-window) (cut inner <>)))
          (widgets (filter (lambda (entry)
                             (match entry
                              ((widget focused? set-focused!)
                                widget)))
                           (list (list menu menu-active menu-set-active!)
                                 (list form form-enabled? form-set-enabled!)
+                                (list config-window
+                                      (lambda (w)
+                                        (page-datum page 'config-window-focused))
+                                      (lambda (w value)
+                                        (page-set-datum! page 'config-window-focused value)))
                                 (list nav buttons-selected-symbol
                                       (lambda (buttons value)
                                         (let ((index (buttons-selected buttons)))
@@ -285,6 +304,7 @@ If a form is used it's assumed that the menu is not used and vice versa."
          (xsurface  (inner frame)))
     (let* ((result (make-page' xsurface title #f refresh cursor-visibility key-handler mouse-handler '())))
       (page-set-wwin! result frame)
+      (page-set-datum! result 'config-window-focused #f)
       (if activator
         (page-set-datum! result 'activator activator))
       result)))

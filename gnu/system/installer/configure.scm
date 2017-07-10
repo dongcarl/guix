@@ -223,4 +223,5 @@
     (page-set-datum! p 'navigation buttons)
     (page-set-datum! p 'text-window text-window)
     (page-set-datum! p 'config-window config-window)
-    (buttons-post buttons bwin)))
+    (buttons-post buttons bwin)
+    (page-set-focused-widget p (inner config-window))))

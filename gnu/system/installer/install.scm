@@ -181,5 +181,5 @@
     (page-set-datum! p 'navigation buttons)
     (page-set-datum! p 'config-window (inner config-window))
     (page-set-datum! p 'config-window-port (open-output-string))
-    (buttons-post buttons bwin)))
-
+    (buttons-post buttons bwin)
+    (page-set-focused-widget p (inner config-window))))
