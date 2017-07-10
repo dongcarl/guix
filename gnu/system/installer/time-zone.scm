@@ -54,14 +54,14 @@
           (let ((p (make-tz-browser page new-dir)))
             (page-set-datum! p 'stem
                (if (page-datum page 'stem)
-                 (string-append (page-datum page 'stem) "/" i)
+                 (string-append (page-datum page 'stem) i)
                  i))
             (page-pop)  ; Don't go back to the current page!
             (page-enter p))
           (begin
             (set! time-zone
               (if (page-datum page 'stem)
-                (string-append (page-datum page 'stem) "/" i)
+                (string-append (page-datum page 'stem) i)
                 i))
             (page-leave)
             #f))))
