@@ -94,7 +94,7 @@ manual."
                               (string-append #$which      "/bin"))
                              ":"))
                     (setenv "GUILE_LOAD_PATH"
-                            (string-append #$guile-ncurses "/share/guile/site/2.0"))
+                            (string-append #$guile-ncurses/gpm "/share/guile/site/2.2"))
                     ;; "(current-guix)" should probably be changed to "guix"
                     ;; at some point.
                     (execl (string-append #$(current-guix) "/bin/guix")
