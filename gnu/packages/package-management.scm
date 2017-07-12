@@ -250,6 +250,7 @@
       (propagated-inputs
        `(("gnutls" ,gnutls/guile-2.2)             ;for 'guix download' & co.
          ("guile-json" ,guile-json)
+         ("guile-ncurses/gpm" ,guile-ncurses/gpm)
          ("guile-ssh" ,guile-ssh)))
 
       (home-page "https://www.gnu.org/software/guix/")
