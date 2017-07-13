@@ -35,8 +35,7 @@
 			(gettext "Information")
 			dialog-page-refresh
                         0
-			dialog-page-key-handler
-			dialog-page-mouse-handler)))
+			#:activator dialog-page-activate-item)))
     (page-set-datum! page 'message message)
     (page-set-datum! page 'justify justify)
     page))
@@ -44,27 +43,12 @@
 
 (define my-buttons `((ok  ,(M_ "_OK") #t)))
 
-(define (dialog-page-mouse-handler page device-id x y z button-state)
-  'ignored)
-
-(define (dialog-page-key-handler page ch)
-  (let ((nav  (page-datum page 'navigation)))
-
-    (cond
-     ((eq? ch #\tab)
-      (cond
-       ((eqv? (buttons-selected nav) (1- (buttons-n-buttons nav)))
-	(buttons-unselect-all nav))
-
-       (else
-	(buttons-select-next nav))))
-
-     ((buttons-key-matches-symbol? nav ch 'ok)
-
+(define (dialog-page-activate-item page item)
+  (match item
+   ('ok
       (delwin (page-datum page 'text-window))
       (page-leave)
-      ))
-    #f))
+      'handled)))
 
 (define (dialog-page-refresh page)
   (when (not (page-initialised? page))
