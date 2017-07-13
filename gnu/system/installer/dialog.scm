@@ -46,9 +46,11 @@
 (define (dialog-page-activate-item page item)
   (match item
    ('ok
-      (delwin (page-datum page 'text-window))
-      (page-leave)
-      'handled)))
+    (delwin (page-datum page 'text-window))
+    (page-leave)
+    'handled)
+   (_
+    'ignored)))
 
 (define (dialog-page-refresh page)
   (when (not (page-initialised? page))
