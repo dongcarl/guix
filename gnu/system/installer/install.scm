@@ -72,9 +72,6 @@
      #f)))
 
 
-(define (install-page-mouse-handler page device-id x y z button-state)
-  'ignored)
-
 (define (install-page-activate-item page item)
   (let ((config-window  (page-datum page 'config-window)))
     (match item
