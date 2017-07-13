@@ -42,8 +42,7 @@
                     title
                     passphrase-refresh
                     1
-                    passphrase-key-handler
-                    passphrase-mouse-handler)))
+                    #:activator passphrase-activate-item)))
     (page-set-datum! page 'access-point access-point)
     (page-set-datum! page 'ifce ifce)
     page))
@@ -63,42 +62,23 @@
       (format #f "Enter the passphrase for the network ~a."
               (assq-ref access-point 'essid))))))
 
-(define (passphrase-mouse-handler page device-id x y z button-state)
-  'ignored)
-
-(define (passphrase-key-handler page ch)
-  (let ((form  (page-datum page 'form))
-        (nav   (page-datum page 'navigation))
-        (access-point (page-datum page 'access-point))
-        (dev   (page-datum page 'device)))
-
-    (cond
-     ((buttons-key-matches-symbol? nav ch 'cancel)
-      (page-leave))
-
-     ((eq? ch #\tab)
-      (form-set-enabled! form #f)
-      (buttons-select-next nav))
-
-     ((eq? ch KEY_UP)
-      (buttons-unselect-all nav)
-      (form-set-enabled! form #t))
-
-     ((eq? ch KEY_DOWN)
-      (buttons-unselect-all nav)
-      (form-set-enabled! form #t))
-
-     ((select-key? ch)
+(define (passphrase-activate-item page item)
+  (match item
+   ('cancel
+    (page-leave)
+    'handled)
+   ('default
+    (let ((access-point (page-datum page 'access-point))
+          (form (page-datum page 'form)))
       (wireless-connect
        (page-datum page 'ifce)
        access-point
-       (form-get-value form 'passphrase))
-      (page-pop)
-      (page-leave))
-
-     (else
-      (form-enter form ch)))
-    #f))
+       (form-get-value form 'passphrase)))
+    (page-pop)
+    (page-leave)
+    'handled)
+   (_
+    'ignored)))
 
 (define my-buttons `((cancel ,(M_ "Cancel") #f)))
 
