@@ -88,18 +88,24 @@
                       (if (eq? ch c) sym #f)))))))
 
 (define (buttons-select buttons which)
+  " Select the button WHICH, or no button if WHICH = -1. """
   (let ((arry (buttons-array buttons))
 	(current (buttons-selected buttons)))
-    (if (array-in-bounds? arry which)
-	(let ((new (cadr (array-ref arry which)))
-	      (old (if (array-in-bounds? arry current)
-		       (cadr (array-ref arry current)) #f)))
-	  (if (not (eqv? old new))
-	      (begin
-	      (draw-button new 'focused-button)
-	      (if old
-		  (draw-button old 'button))))
-	  (buttons-set-selected! buttons which)))))
+    (cond
+      ((= which -1)
+       (buttons-unselect-all buttons))
+      ((array-in-bounds? arry which)
+       (let ((new (cadr (array-ref arry which)))
+             (old (if (array-in-bounds? arry current)
+                      (cadr (array-ref arry current))
+                      #f)))
+         (if (not (eqv? old new))
+             (begin
+               (draw-button new 'focused-button)
+               (if old
+                 (draw-button old 'button))))
+         (buttons-set-selected! buttons which)))
+      (else #f))))
 
 (define (buttons-select-prev buttons)
   (let ((current (buttons-selected buttons)))
