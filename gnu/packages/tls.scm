@@ -81,7 +81,8 @@ specifications.")
       (origin
         (inherit (package-source libtasn1))
         (patches
-          (search-patches "libtasn1-CVE-2017-6891.patch"))))))
+          (search-patches "libtasn1-CVE-2017-6891.patch"
+                          "libtasn1-CVE-2017-10790.patch"))))))
 
 (define-public asn1c
   (package
@@ -113,7 +114,7 @@ in intelligent transportation networks.")
 (define-public p11-kit
   (package
     (name "p11-kit")
-    (version "0.23.7")
+    (version "0.23.8")
     (source
      (origin
       (method url-fetch)
@@ -121,7 +122,7 @@ in intelligent transportation networks.")
                           "download/" version "/p11-kit-" version ".tar.gz"))
       (sha256
        (base32
-        "0hdy4h8byvcvd4av504xqfqyd1h6xy914j034mq3c6v4ya37r3lq"))))
+        "0gqk1d09yyin75lvlywpbf3kxlnrcwbq8ridgapvqqjbzvjk98ab"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("pkg-config" ,pkg-config)))
@@ -140,6 +141,9 @@ coordinating the use of PKCS#11 by different components or libraries
 living in the same process.")
     (license license:bsd-3)))
 
+
+;; TODO Add net-tools-for-tests to #:disallowed-references when we can afford
+;; rebuild GnuTLS (i.e. core-updates).
 (define-public gnutls
   (package
     (name "gnutls")
@@ -194,7 +198,7 @@ living in the same process.")
                "debug"
                "doc"))                            ;4.1 MiB of man pages
     (native-inputs
-     `(("net-tools" ,net-tools)
+     `(("net-tools" ,net-tools-for-tests)
        ("pkg-config" ,pkg-config)
        ("which" ,which)))
     (inputs
@@ -455,22 +459,22 @@ required structures.")
 (define-public libressl
   (package
     (name "libressl")
-    (version "2.5.4")
-    (source
-     (origin
-      (method url-fetch)
-      (uri (string-append
-             "http://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-"
-             version ".tar.gz"))
-      (sha256
-       (base32
-        "1ykf6dqlbafafhbdfmcj19pjj1z6wmsq0rmyqga1i0xv5x95nyhh"))))
+    (version "2.5.5")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://openbsd/LibreSSL/"
+                                  name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1i77viqy1afvbr392npk9v54k9zhr9zq2vhv6pliza22b0ymwzz5"))))
     (build-system gnu-build-system)
     (arguments
      ;; Do as if 'getentropy' was missing since older Linux kernels lack it
      ;; and libc would return ENOSYS, which is not properly handled.
      ;; See <https://lists.gnu.org/archive/html/guix-devel/2017-04/msg00235.html>.
-     '(#:configure-flags '("ac_cv_func_getentropy=no")))
+     '(#:configure-flags '("ac_cv_func_getentropy=no"
+                           ;; Provide a TLS-enabled netcat.
+                           "--enable-nc")))
     (native-search-paths
       ;; FIXME: These two variables must designate a single file or directory
       ;; and are not actually "search paths."  In practice it works OK in
@@ -484,9 +488,10 @@ required structures.")
             (files '("etc/ssl/certs/ca-certificates.crt")))))
     (home-page "https://www.libressl.org/")
     (synopsis "SSL/TLS implementation")
-    (description "LibreSSL is a version of the TLS/crypto stack forked
-from OpenSSL in 2014, with the goals of modernizing the codebase, improving
-security, and applying best practice development processes.")
+    (description "LibreSSL is a version of the TLS/crypto stack, forked from
+OpenSSL in 2014 with the goals of modernizing the codebase, improving security,
+and applying best practice development processes.  This package also includes a
+netcat implementation that supports TLS.")
     ;; Files taken from OpenSSL keep their license, others are under various
     ;; non-copyleft licenses.
     (license (list license:openssl
@@ -498,13 +503,13 @@ security, and applying best practice development processes.")
   (package
     (name "python-acme")
     ;; Remember to update the hash of certbot when updating python-acme.
-    (version "0.15.0")
+    (version "0.17.0")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "acme" version))
       (sha256
        (base32
-        "11zwgj663vr575pbqw74ia10wxaw16i8rnkcivsrbsx148rxdbcz"))))
+        "0vmnv7qhdhl9qhq03v6zrcj1lsmpmpjb94s0xsc7piwqxfmf9jrw"))))
     (build-system python-build-system)
     (arguments
      `(#:phases
@@ -555,7 +560,7 @@ security, and applying best practice development processes.")
               (uri (pypi-uri name version))
               (sha256
                (base32
-                "1srvmjxz75dbafx7xfg1w3n9h3srr9p2ljnfsih9dwwd5cxh9i5q"))))
+                "173619jkq4bg88f6i837z3pcjkrfabrvv8vrpyx18k9i7xnb5xa3"))))
     (build-system python-build-system)
     (arguments
      `(,@(substitute-keyword-arguments (package-arguments python-acme)

@@ -106,6 +106,7 @@
   #:use-module (guix build-system python)
   #:use-module (guix build-system trivial)
   #:use-module (guix download)
+  #:use-module (guix git-download)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
   #:use-module (guix utils)
@@ -340,7 +341,7 @@ for ARCH and optionally VARIANT, or #f if there is no such configuration."
                     (kmod   (assoc-ref (or native-inputs inputs) "kmod")))
                ;; Install kernel image, kernel configuration and link map.
                (for-each (lambda (file) (install-file file out))
-                         (find-files "." "^(\\.config|bzImage|zImage|vmlinuz|System\\.map)$"))
+                         (find-files "." "^(\\.config|bzImage|zImage|Image|vmlinuz|System\\.map)$"))
                ;; Install device tree files
                (for-each (lambda (file) (install-file file dtbdir))
                          (find-files "." "\\.dtb$"))
@@ -363,8 +364,8 @@ It has been modified to remove all non-free binary blobs.")
 
 (define %intel-compatible-systems '("x86_64-linux" "i686-linux"))
 
-(define %linux-libre-version "4.11.8")
-(define %linux-libre-hash "1z35h6xr8gdzq31xv3dpdz6ddz4q3183fwvkmx8qd7h9bhy13aw6")
+(define %linux-libre-version "4.12.8")
+(define %linux-libre-hash "1p4ah15qs94id2yj6lhp6abdycvgp7lvn3ccsfs7f6n34hdij0cm")
 
 (define-public linux-libre
   (make-linux-libre %linux-libre-version
@@ -373,20 +374,20 @@ It has been modified to remove all non-free binary blobs.")
                     #:configuration-file kernel-config))
 
 (define-public linux-libre-4.9
-  (make-linux-libre "4.9.35"
-                    "0fs90jgb01jybkclngg5asvbs1y70f2abs395qcb3lxpx7zxhy1h"
+  (make-linux-libre "4.9.44"
+                    "0a92bsb5d0pyhyn5ypc8ashwxixhivdadvikcpv31376j842fmj2"
                     %intel-compatible-systems
                     #:configuration-file kernel-config))
 
 (define-public linux-libre-4.4
-  (make-linux-libre "4.4.75"
-                    "1h687flrdzlcd1ms5n2khm0mxybr8bj2jfnnm7qvy6ha2vsngb5b"
+  (make-linux-libre "4.4.83"
+                    "1fv3j0w0v82aa9s9n4a4qyrxc5bpq2ag9riawlabx57a380x1n62"
                     %intel-compatible-systems
                     #:configuration-file kernel-config))
 
 (define-public linux-libre-4.1
-  (make-linux-libre "4.1.42"
-                    "1g5jhn7cm6ixn7w8ciqm6qgxv7k1jg50v6k05hsvzvrqfpaxqlbz"
+  (make-linux-libre "4.1.43"
+                    "0ycqmvczj7lm7czilnwpyp14n2lzilyx7m43rsq1qdm2m5rp4q2w"
                     %intel-compatible-systems
                     #:configuration-file kernel-config))
 
@@ -426,11 +427,18 @@ It has been modified to remove all non-free binary blobs.")
        ;; ("cracklib" ,cracklib)
        ))
     (arguments
-     '(;; Most users, such as `shadow', expect the headers to be under
+     `(;; Most users, such as `shadow', expect the headers to be under
        ;; `security'.
        #:configure-flags (list (string-append "--includedir="
                                               (assoc-ref %outputs "out")
-                                              "/include/security"))
+                                              "/include/security")
+
+                               ;; XXX: <rpc/rpc.h> is missing from glibc when
+                               ;; cross-compiling, so we have to disable NIS
+                               ;; support altogether.
+                               ,@(if (%current-target-system)
+                                     '("--disable-nis")
+                                     '()))
 
        ;; XXX: Tests won't run in chroot, presumably because /etc/pam.d
        ;; isn't available.
@@ -554,7 +562,12 @@ providing the system administrator with some help in common tasks.")
                                    (find-files "lib" "\\.a$")))
                        #t))))))
     (inputs `(("zlib" ,zlib)
-              ("ncurses" ,ncurses)))
+              ("ncurses" ,ncurses)
+
+              ;; XXX: This is so that the 'pre-check' phase can find it.
+              ,@(if (%current-target-system)
+                    `(("net-base" ,net-base))
+                    '())))
     (native-inputs
      `(("perl" ,perl)
        ("net-base" ,net-base)))                   ;for tests
@@ -667,16 +680,17 @@ slabtop, and skill.")
 (define-public e2fsprogs
   (package
     (name "e2fsprogs")
-    (version "1.43.4")
+    (version "1.43.5")
     (source (origin
              (method url-fetch)
              (uri (string-append
                    "mirror://kernel.org/linux/kernel/people/tytso/"
                    name "/v" version "/"
                    name "-" version ".tar.xz"))
+             (patches (search-patches "e2fsprogs-32bit-quota-warnings.patch"))
              (sha256
               (base32
-               "092absr4vrlqrkdf9nwh4ykj40ab6hhwrkdr6sjsccd54c8z5csl"))))
+               "05ssjpmy0fpv2ik6ibm1f47wr6794nf0q50r581vygrqvsd3s7r6"))))
     (build-system gnu-build-system)
     (inputs `(("util-linux" ,util-linux)))
     (native-inputs `(("pkg-config" ,pkg-config)
@@ -809,49 +823,49 @@ ext3 or ext4 partition.")
 (define-public zerofree
   (package
     (name "zerofree")
-    (version "1.0.3")
-    (home-page "http://intgat.tigress.co.uk/rmy/uml/")
+    (version "1.1.0")
+    (home-page "https://frippery.org/uml/")
     (source (origin
               (method url-fetch)
               (uri (string-append home-page name "-" version
                                   ".tgz"))
               (sha256
                (base32
-                "1xncw3dn2cp922ly42m96p6fh7jv8ysg6bwqbk5xvw701f3dmkrs"))))
+                "059g29x5r1xj6wcj4xj85l8w6qrxyl86yqbybjqqz6nxz4falxzf"))))
     (build-system gnu-build-system)
     (arguments
-     '(#:phases (alist-replace
-                 'install
-                 (lambda* (#:key outputs #:allow-other-keys)
-                   (let* ((out (assoc-ref outputs "out"))
-                          (bin (string-append out "/bin")))
-                     (mkdir-p bin)
-                     (copy-file "zerofree"
-                                (string-append bin "/zerofree"))
-                     (chmod (string-append bin "/zerofree")
-                            #o555)
-                     #t))
-                 (alist-delete 'configure %standard-phases))
-       #:tests? #f))                              ;no tests
+     '(#:phases
+       (modify-phases %standard-phases
+         (delete 'configure)            ; no configure script
+         (replace 'install
+           ;; The Makefile lacks an ‘install’ target.
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (bin (string-append out "/bin")))
+               (chmod "zerofree" #o555)
+               (install-file "zerofree" bin)
+               #t))))
+       #:tests? #f))                    ; no tests
     (inputs `(("libext2fs" ,e2fsprogs)))
     (synopsis "Zero non-allocated regions in ext2/ext3/ext4 file systems")
     (description
-     "The zerofree command scans the free blocks in an ext2 file system and
-fills any non-zero blocks with zeroes.  This is a useful way to make disk
-images more compressible.")
+     "Zerofree finds the unallocated blocks with non-zero value content in an
+ext2, ext3, or ext4 file system and fills them with zeroes (or another value).
+This is a simple way to make disk images more compressible.
+Zerofree requires the file system to be unmounted or mounted read-only.")
     (license license:gpl2)))
 
 (define-public strace
   (package
     (name "strace")
-    (version "4.17")
+    (version "4.18")
     (source (origin
              (method url-fetch)
              (uri (string-append "mirror://sourceforge/strace/strace/" version
                                  "/strace-" version ".tar.xz"))
              (sha256
               (base32
-               "06bl4dld5fk4a3iiq4pyrkm6sh63599ah8dmds0glg5vbw45pww1"))))
+               "026agy9nq238nx3ynhmi8h3vx96yra4xacfsm2ybs9k23ry8ibc9"))))
     (build-system gnu-build-system)
     (arguments
      '(#:phases
@@ -1115,7 +1129,7 @@ that the Ethernet protocol is much simpler than the IP protocol.")
 (define-public iproute
   (package
     (name "iproute2")
-    (version "4.11.0")
+    (version "4.12.0")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -1123,7 +1137,7 @@ that the Ethernet protocol is much simpler than the IP protocol.")
                     version ".tar.xz"))
               (sha256
                (base32
-                "09l0phf09mw17bn3xlzfr80sbhw14mq8xv28iz5x15m6pll10rvj"))))
+                "0zdxdsxyaazl85xhwskvsmpyzwf5qp21cvjsi1lw3xnrc914q2if"))))
     (build-system gnu-build-system)
     (arguments
      `(#:tests? #f                                ; no test suite
@@ -1175,14 +1189,96 @@ consists of several tools, of which the most important are @command{ip} and
 messages and are accompanied by a set of manpages.")
     (license license:gpl2+)))
 
+;; There are two packages for net-tools. The first, net-tools, is more recent
+;; and probably safer to use with untrusted inputs (i.e. the internet).  The
+;; second, net-tools-for-tests, is relatively old and buggy. It can be used in
+;; package test suites and should never be referred to by a built package. Use
+;; #:disallowed-references to enforce this.
+;;
+;; When we are able to rebuild many packages (i.e. core-updates), we can update
+;; net-tools-for-tests if appropriate.
+;;
+;; See <https://bugs.gnu.org/27811> for more information.
 (define-public net-tools
   ;; XXX: This package is basically unmaintained, but it provides a few
   ;; commands not yet provided by Inetutils, such as 'route', so we have to
   ;; live with it.
-  (package
-    (name "net-tools")
+  (let ((commit "479bb4a7e11a4084e2935c0a576388f92469225b")
+        (revision "0"))
+    (package
+      (name "net-tools")
+      (version (string-append "1.60-" revision "." (string-take commit 7)))
+      (source (origin
+               (method git-fetch)
+               (uri (git-reference
+                      (url "https://git.code.sf.net/p/net-tools/code")
+                      (commit commit)))
+               (file-name (string-append name "-" version "-checkout"))
+               (sha256
+                (base32
+                 "189mdjfbd7j7j0jysy34nqn5byy9g5f6ylip1sikk7kz08vjml4s"))))
+      (home-page "http://net-tools.sourceforge.net/")
+      (build-system gnu-build-system)
+      (arguments
+       '(#:modules ((guix build gnu-build-system)
+                    (guix build utils)
+                    (srfi srfi-1)
+                    (srfi srfi-26))
+         #:phases
+         (modify-phases %standard-phases
+           (replace 'configure
+             (lambda* (#:key outputs #:allow-other-keys)
+               (let ((out (assoc-ref outputs "out")))
+                 (mkdir-p (string-append out "/bin"))
+                 (mkdir-p (string-append out "/sbin"))
+
+                 ;; Pretend we have everything...
+                 (system "yes | make config")
+
+                 ;; ... except for the things we don't have.
+                 ;; HAVE_AFDECnet requires libdnet, which we don't have.
+                 ;; HAVE_HWSTRIP and HAVE_HWTR require kernel headers
+                 ;; that have been removed.
+                 ;; XXX SELINUX and AFBLUETOOTH are removed for now, but we should
+                 ;; think about adding them later.
+                 (substitute* '("config.make" "config.h")
+                   (("^.*HAVE_(AFDECnet|HWSTRIP|HWTR|SELINUX|AFBLUETOOTH)[ =]1.*$")
+                    "")))))
+           (add-after 'install 'remove-redundant-commands
+             (lambda* (#:key outputs #:allow-other-keys)
+               ;; Remove commands and man pages redundant with Inetutils.
+               (let* ((out (assoc-ref outputs "out"))
+                      (dup (append-map (cut find-files out <>)
+                                       '("^hostname"
+                                         "^(yp|nis|dns)?domainname"))))
+                 (for-each delete-file dup)
+                 #t))))
+         ;; Binaries that depend on libnet-tools.a don't declare that
+         ;; dependency, making it parallel-unsafe.
+         #:parallel-build? #f
+
+         #:tests? #f                                ; no test suite
+         #:make-flags (let ((out (assoc-ref %outputs "out")))
+                        (list "CC=gcc"
+                              (string-append "BASEDIR=" out)
+                              (string-append "INSTALLNLSDIR=" out "/share/locale")
+                              (string-append "mandir=/share/man")))))
+      (native-inputs `(("gettext" ,gettext-minimal)))
+      (synopsis "Tools for controlling the network subsystem in Linux")
+      (description
+       "This package includes the important tools for controlling the network
+subsystem of the Linux kernel.  This includes arp, ifconfig, netstat, rarp and
+route.  Additionally, this package contains utilities relating to particular
+network hardware types (plipconfig, slattach) and advanced aspects of IP
+configuration (iptunnel, ipmaddr).")
+      (license license:gpl2+))))
+
+(define-public net-tools-for-tests
+  (hidden-package (package (inherit net-tools)
     (version "1.60")
-    (home-page "http://net-tools.sourceforge.net/")
+    ;; Git depends on net-tools-for-tests via GnuTLS, so we can't use git-fetch
+    ;; here.  We should find a better workaround for this problem so that we can
+    ;; use the latest upstream source.
     (source (origin
              (method url-fetch)
              (uri (list (string-append
@@ -1258,23 +1354,17 @@ messages and are accompanied by a set of manpages.")
 
     ;; Use the big Debian patch set (the thing does not even compile out of
     ;; the box.)
+    ;; XXX The patch is not actually applied, due to a bug in the 'patch' phase
+    ;; above. However, this package variant is only used in GnuTLS's tests. It
+    ;; will be adjusted when convenient for the build farm.
+    ;; See <https://bugs.gnu.org/27811> for more information.
     (inputs `(("patch" ,(origin
                          (method url-fetch)
                          (uri
                           "http://ftp.de.debian.org/debian/pool/main/n/net-tools/net-tools_1.60-24.2.diff.gz")
                          (sha256
                           (base32
-                           "0p93lsqx23v5fv4hpbrydmfvw1ha2rgqpn2zqbs2jhxkzhjc030p"))))))
-    (native-inputs `(("gettext" ,gettext-minimal)))
-
-    (synopsis "Tools for controlling the network subsystem in Linux")
-    (description
-     "This package includes the important tools for controlling the network
-subsystem of the Linux kernel.  This includes arp, hostname, ifconfig,
-netstat, rarp and route.  Additionally, this package contains utilities
-relating to particular network hardware types (plipconfig, slattach) and
-advanced aspects of IP configuration (iptunnel, ipmaddr).")
-    (license license:gpl2+)))
+                           "0p93lsqx23v5fv4hpbrydmfvw1ha2rgqpn2zqbs2jhxkzhjc030p")))))))))
 
 (define-public libcap
   (package
@@ -1656,7 +1746,7 @@ UnionFS-FUSE additionally supports copy-on-write.")
 (define-public sshfs-fuse
   (package
     (name "sshfs-fuse")
-    (version "2.9")
+    (version "2.10")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/libfuse/sshfs/releases/"
@@ -1664,7 +1754,7 @@ UnionFS-FUSE additionally supports copy-on-write.")
                                   ".tar.gz"))
               (sha256
                (base32
-                "1pp5wsl1jx11apkv2fpp559miifqhi8ka400npy5awp9ghlf3la6"))))
+                "00fir2iykdx11g8nv5gijg0zjrp2g3ldypnv0yi6lq3h5pg5v13h"))))
     (build-system gnu-build-system)
     (inputs
      `(("fuse" ,fuse)
@@ -1825,7 +1915,10 @@ system.")
     (native-search-paths
      (list (search-path-specification
             (variable "LOADKEYS_KEYMAP_PATH")
-            (files (list "share/keymaps")))))
+            ;; Append ‘/**’ to recursively search all directories.  One can then
+            ;; run (for example) ‘loadkeys en-latin9’ instead of having to find
+            ;; and type ‘i386/colemak/en-latin9’ on a mislabelled keyboard.
+            (files (list "share/keymaps/**")))))
     (native-inputs `(("pkg-config" ,pkg-config)))
     (home-page "http://kbd-project.org/")
     (synopsis "Linux keyboard utilities and keyboard maps")
@@ -2998,21 +3091,10 @@ applications running on the Linux console.  It allows users to select items
 and copy/paste text in the console and in xterm.")
     (license license:gpl2+)))
 
-(define-public ncurses/gpm
-  (package
-    (inherit ncurses)
-    (name "ncurses-with-gpm")
-    (arguments
-        (substitute-keyword-arguments (package-arguments ncurses)
-         ((#:configure-flags cf)
-          `(cons (string-append "--with-gpm=" (assoc-ref %build-inputs "gpm") "/lib/libgpm.so.2") ,cf))))
-    (inputs
-     `(("gpm" ,gpm)))))
-
 (define-public btrfs-progs
   (package
     (name "btrfs-progs")
-    (version "4.11.1")
+    (version "4.12")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://kernel.org/linux/kernel/"
@@ -3020,10 +3102,10 @@ and copy/paste text in the console and in xterm.")
                                   "btrfs-progs-v" version ".tar.xz"))
               (sha256
                (base32
-                "0vcp9a0a35chhjhq291kvirqhd4i9w5f4zql4y5n81kbwcrxil6h"))))
+                "1kif8xw2dbyc70ygkp0wyq4x96p1mkwdv4430f99qllx9b410xwi"))))
     (build-system gnu-build-system)
     (outputs '("out"
-               "static"))      ; static versions of binaries in "out" (~16MiB!)
+               "static"))      ; static versions of the binaries in "out"
     (arguments
      '(#:phases (modify-phases %standard-phases
                  (add-after 'build 'build-static
@@ -3181,16 +3263,15 @@ from userspace.")
 (define-public ntfs-3g
   (package
     (name "ntfs-3g")
-    (version "2016.2.22")
+    (version "2017.3.23")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://tuxera.com/opensource/"
                                   "ntfs-3g_ntfsprogs-" version ".tgz"))
               (sha256
                (base32
-                "180y5y09h30ryf2vim8j30a2npwz1iv9ly5yjmh3wjdkwh2jrdyp"))
+                "1mb228p80hv97pgk3myyvgp975r9mxq56c6bdn1n24kngcfh4niy"))
               (modules '((guix build utils)))
-              (patches (search-patches "ntfs-3g-CVE-2017-0358.patch"))
               (snippet
                ;; Install under $prefix.
                '(substitute* '("src/Makefile.in" "ntfsprogs/Makefile.in")
@@ -3206,7 +3287,7 @@ from userspace.")
                                "--enable-mount-helper"
                                "--enable-posix-acls"
                                "--enable-xattr-mappings")))
-    (home-page "http://www.tuxera.com/community/open-source-ntfs-3g/")
+    (home-page "https://www.tuxera.com/community/open-source-ntfs-3g/")
     (synopsis "Read-write access to NTFS file systems")
     (description
      "NTFS-3G provides read-write access to NTFS file systems, which are
@@ -3217,7 +3298,7 @@ The package provides additional NTFS tools.")
 (define-public rdma-core
   (package
     (name "rdma-core")
-    (version "13")
+    (version "14")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/linux-rdma/rdma-core"
@@ -3225,7 +3306,7 @@ The package provides additional NTFS tools.")
                                   version ".tar.gz"))
               (sha256
                (base32
-                "15qdfqkia22vab1dh41s88vgi70yifi40ar5s4x7a456rpbhy8z5"))))
+                "0w03zd49k96bmly44qc8l0s9l671sd26k4wrilsp13xaspy048kd"))))
     (build-system cmake-build-system)
     (arguments
      '(#:tests? #f ; no tests
@@ -3766,7 +3847,7 @@ Light is the successor of lightscript.")
 (define-public tlp
   (package
     (name "tlp")
-    (version "0.9")
+    (version "1.0")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -3776,7 +3857,7 @@ Light is the successor of lightscript.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0xksm8ar6dbq0azbfz8qs9yyzqg1j333lyd5znc074rz8inj4yw8"))))
+                "1v3qpj9kp4rxwqapayd0i9419wwv4bikyrzjvqn0r9xkgnr1f9v4"))))
     (inputs `(("bash" ,bash)
               ("dbus" ,dbus)
               ("ethtool" ,ethtool)

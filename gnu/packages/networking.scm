@@ -8,8 +8,8 @@
 ;;; Copyright © 2016 John Darrington <jmd@gnu.org>
 ;;; Copyright © 2016 Nicolas Goaziou <mail@nicolasgoaziou.fr>
 ;;; Copyright © 2016 Eric Bavier <bavier@member.fsf.org>
-;;; Copyright © 2016, 2017 ng0 <ng0@libertad.pw>
-;;; Copyright © 2016 Arun Isaac <arunisaac@systemreboot.net>
+;;; Copyright © 2016, 2017 ng0 <ng0@infotropique.org>
+;;; Copyright © 2016, 2017 Arun Isaac <arunisaac@systemreboot.net>
 ;;; Copyright © 2016 Benz Schenk <benz.schenk@uzh.ch>
 ;;; Copyright © 2016, 2017 Pjotr Prins <pjotr.guix@thebird.nl>
 ;;; Copyright © 2017 Mathieu Othacehe <m.othacehe@gmail.com>
@@ -70,6 +70,7 @@
   #:use-module (gnu packages textutils)
   #:use-module (gnu packages tls)
   #:use-module (gnu packages valgrind)
+  #:use-module (gnu packages wm)
   #:use-module (gnu packages xml)
   #:use-module (ice-9 match))
 
@@ -440,7 +441,7 @@ and up to 1 Mbit/s downstream.")
 (define-public whois
   (package
     (name "whois")
-    (version "5.2.16")
+    (version "5.2.17")
     (source
      (origin
        (method url-fetch)
@@ -448,7 +449,7 @@ and up to 1 Mbit/s downstream.")
                            name "_" version ".tar.xz"))
        (sha256
         (base32
-         "0fpwac26ja0rdqsbxyjcsk8gxgixfpxk0baj3rhnpaff3jv0ilp9"))))
+         "0r4np8gaxhy9c0v795dc4dhxms9zak31vd378sb1h7jpixkqax95"))))
     (build-system gnu-build-system)
     ;; TODO: unbundle mkpasswd binary + its po files.
     (arguments
@@ -1103,7 +1104,7 @@ gone wild and are suddenly taking up your bandwidth.")
 (define-public nzbget
   (package
     (name "nzbget")
-    (version "18.1")
+    (version "19.1")
     (source
      (origin
        (method url-fetch)
@@ -1112,14 +1113,22 @@ gone wild and are suddenly taking up your bandwidth.")
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
         (base32
-         "1a8wmbhc1si1n8axzrr8ysmrd3gr643lbh6pvzmr0hnd65fixmx5"))))
+         "0y713g7gd4n5chbhr8lv7k50rxkmzysrg13sscxam3s386mmlb1r"))
+       (modules '((guix build utils)))
+       (snippet
+        ;; Reported upstream as <https://github.com/nzbget/nzbget/pull/414>.
+        '(begin
+           (substitute* "daemon/connect/TlsSocket.cpp"
+             (("gnutls_certificate-verification_status_print")
+              "gnutls_certificate_verification_status_print"))
+           #t))))
     (arguments
      `(#:configure-flags
        (list
-        (string-append "--with-libcurses-includes=" (assoc-ref
-%build-inputs "ncurses") "/include")
-        (string-append "--with-libcurses-libraries=" (assoc-ref
-%build-inputs "ncurses") "/lib")
+        (string-append "--with-libcurses-includes="
+                       (assoc-ref %build-inputs "ncurses") "/include")
+        (string-append "--with-libcurses-libraries="
+                       (assoc-ref %build-inputs "ncurses") "/lib")
         (string-append "--with-tlslib=GnuTLS"))))
     (build-system gnu-build-system)
     (inputs `(("gnutls", gnutls)
@@ -1261,6 +1270,32 @@ enabled due to license conflicts between the BSD advertising clause and the GPL.
     ;; distribution for clarification.
     (license (list license:bsd-3 license:bsd-4))))
 
+(define-public pidentd
+  (package
+    (name "pidentd")
+    (version "3.0.19")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://github.com/ptrrkssn/pidentd/archive/"
+                           "v" version ".tar.gz"))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32
+         "0y3kd1bkydqkpc1qdff24yswysamsqivvadjy0468qri5730izgc"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f)) ; No tests are included
+    (inputs
+     `(("openssl" ,openssl))) ; For the DES library
+    (home-page "https://www.lysator.liu.se/~pen/pidentd/")
+    (synopsis "Small Ident Daemon")
+    (description
+     "@dfn{Pidentd} (Peter's Ident Daemon) is a identd, which implements a
+identification server.  Pidentd looks up specific TCP/IP connections and
+returns the user name and other information about the connection.")
+    (license license:public-domain)))
+
 (define-public spiped
   (package
     (name "spiped")
@@ -1387,3 +1422,35 @@ newer and only works on Ethernet network interfaces.")
     ;; AGPL 3 with exception for linking with OpenSSL. See the 'LICENSE' file in
     ;; the source distribution for more information.
     (license license:agpl3)))
+
+(define-public bmon
+  (package
+    (name "bmon")
+    (version "4.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://github.com/tgraf/bmon/releases/download/v"
+                           version "/bmon-" version ".tar.gz"))
+       (sha256
+        (base32
+         "0ylzriv4pwh76344abzl1w219x188gshbycbna35gsyfp09c7z82"))))
+    (build-system gnu-build-system)
+    (inputs
+     `(("libconfuse" ,libconfuse)
+       ("libnl" ,libnl)
+       ("ncurses" ,ncurses)))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (synopsis "Bandwidth monitor")
+    (description "bmon is a monitoring and debugging tool to capture
+networking-related statistics and prepare them visually in a human-friendly
+way.  It features various output methods including an interactive curses user
+interface and a programmable text output for scripting.")
+    (home-page "https://github.com/tgraf/bmon")
+    ;; README.md mentions both the 2-clause BSD and expat licenses, but all
+    ;; the source files only have expat license headers. Upstream has been
+    ;; contacted for clarification: https://github.com/tgraf/bmon/issues/59
+    ;; Update the license field when upstream responds.
+    (license (list license:bsd-2
+                   license:expat))))

@@ -39,7 +39,7 @@
   #:use-module (gnu packages gawk)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages less)
-  #:use-module (gnu packages qemu)
+  #:use-module (gnu packages virtualization)
   #:use-module (gnu packages disk)
   #:use-module (gnu packages zile)
   #:use-module (gnu packages linux)
@@ -49,6 +49,7 @@
   #:use-module (gnu packages admin)
 
   #:use-module (gnu bootloader)
+  #:use-module ((gnu bootloader grub) #:select (grub-mkrescue-bootloader))
   #:use-module (gnu system shadow)
   #:use-module (gnu system pam)
   #:use-module (gnu system linux-initrd)
@@ -68,7 +69,10 @@
 
             system-qemu-image/shared-store
             system-qemu-image/shared-store-script
-            system-disk-image))
+            system-disk-image
+
+            virtual-machine
+            virtual-machine?))
 
 
 ;;; Commentary:
@@ -105,16 +109,19 @@
                                              (guile-for-build
                                               (%guile-for-build))
 
+                                             (single-file-output? #f)
                                              (make-disk-image? #f)
                                              (references-graphs #f)
                                              (memory-size 256)
                                              (disk-image-format "qcow2")
                                              (disk-image-size 'guess))
   "Evaluate EXP in a QEMU virtual machine running LINUX with INITRD (a
-derivation).  In the virtual machine, EXP has access to all its inputs from the
-store; it should put its output files in the `/xchg' directory, which is
-copied to the derivation's output when the VM terminates.  The virtual machine
-runs with MEMORY-SIZE MiB of memory.
+derivation).  The virtual machine runs with MEMORY-SIZE MiB of memory.  In the
+virtual machine, EXP has access to all its inputs from the store; it should
+put its output file(s) in the '/xchg' directory.
+
+If SINGLE-FILE-OUTPUT? is true, copy a single file from '/xchg' to OUTPUT.
+Otherwise, copy the contents of /xchg to a new directory OUTPUT.
 
 When MAKE-DISK-IMAGE? is true, then create a QEMU disk image of type
 DISK-IMAGE-FORMAT (e.g., 'qcow2' or 'raw'), of DISK-IMAGE-SIZE bytes and
@@ -164,6 +171,7 @@ made available under the /xchg CIFS share."
                                 #:linux linux #:initrd initrd
                                 #:memory-size #$memory-size
                                 #:make-disk-image? #$make-disk-image?
+                                #:single-file-output? #$single-file-output?
                                 #:disk-image-format #$disk-image-format
                                 #:disk-image-size size
                                 #:references-graphs graphs)))))
@@ -177,6 +185,8 @@ made available under the /xchg CIFS share."
 
 (define* (iso9660-image #:key
                         (name "iso9660-image")
+                        file-system-label
+                        file-system-uuid
                         (system (%current-system))
                         (qemu qemu-minimal)
                         os-drv
@@ -211,10 +221,13 @@ INPUTS is a list of inputs (as for packages)."
            (make-iso9660-image #$(bootloader-package bootloader)
                                #$bootcfg-drv
                                #$os-drv
-                               "/xchg/guixsd.iso")
+                               "/xchg/guixsd.iso"
+                               #:volume-id #$file-system-label
+                               #:volume-uuid #$file-system-uuid)
            (reboot))))
    #:system system
    #:make-disk-image? #f
+   #:single-file-output? #t
    #:references-graphs inputs))
 
 (define* (qemu-image #:key
@@ -331,11 +344,17 @@ the image."
 system described by OS.  Said image can be copied on a USB stick as is.  When
 VOLATILE? is true, the root file system is made volatile; this is useful
 to USB sticks meant to be read-only."
+  (define normalize-label
+    ;; ISO labels are all-caps (case-insensitive), but since
+    ;; 'find-partition-by-label' is case-sensitive, make it all-caps here.
+    (if (string=? "iso9660" file-system-type)
+        string-upcase
+        identity))
   (define root-label
     ;; Volume name of the root file system.  Since we don't know which device
     ;; will hold it, we use the volume name to find it (using the UUID would
     ;; be even better, but somewhat less convenient.)
-    "gnu-disk-image")
+    (normalize-label "GuixSD_image"))
 
   (define file-systems-to-keep
     (remove (lambda (fs)
@@ -351,6 +370,12 @@ to USB sticks meant to be read-only."
                                #:volatile-root? #t
                                rest)))
 
+              (bootloader (if (string=? "iso9660" file-system-type)
+                              (bootloader-configuration
+                                (inherit (operating-system-bootloader os))
+                                (bootloader grub-mkrescue-bootloader))
+                              (operating-system-bootloader os)))
+
               ;; Force our own root file system.
               (file-systems (cons (file-system
                                     (mount-point "/")
@@ -363,6 +388,8 @@ to USB sticks meant to be read-only."
                          (bootcfg  (operating-system-bootcfg os)))
       (if (string=? "iso9660" file-system-type)
           (iso9660-image #:name name
+                         #:file-system-label root-label
+                         #:file-system-uuid #f
                          #:os-drv os-drv
                          #:bootcfg-drv bootcfg
                          #:bootloader (bootloader-configuration-bootloader
@@ -564,7 +591,8 @@ with '-virtfs' options for the host file systems listed in SHARED-FS."
                                                 full-boot?
                                                 (disk-image-size
                                                  (* (if full-boot? 500 70)
-                                                    (expt 2 20))))
+                                                    (expt 2 20)))
+                                                (options '()))
   "Return a derivation that builds a script to run a virtual machine image of
 OS that shares its store with the host.  The virtual machine runs with
 MEMORY-SIZE MiB of memory.
@@ -597,7 +625,8 @@ it is mostly useful when FULL-BOOT?  is true."
               #$@(common-qemu-options image
                                       (map file-system-mapping-source
                                            (cons %store-mapping mappings)))
-              "-m " (number->string #$memory-size)))
+              "-m " (number->string #$memory-size)
+              #$@options))
 
     (define builder
       #~(call-with-output-file #$output
@@ -608,5 +637,64 @@ it is mostly useful when FULL-BOOT?  is true."
             (chmod port #o555))))
 
     (gexp->derivation "run-vm.sh" builder)))
+
+
+;;;
+;;; High-level abstraction.
+;;;
+
+(define-record-type* <virtual-machine> %virtual-machine
+  make-virtual-machine
+  virtual-machine?
+  (operating-system virtual-machine-operating-system) ;<operating-system>
+  (qemu             virtual-machine-qemu              ;<package>
+                    (default qemu))
+  (graphic?         virtual-machine-graphic?      ;Boolean
+                    (default #f))
+  (memory-size      virtual-machine-memory-size   ;integer (MiB)
+                    (default 256))
+  (port-forwardings virtual-machine-port-forwardings ;list of integer pairs
+                    (default '())))
+
+(define-syntax virtual-machine
+  (syntax-rules ()
+    "Declare a virtual machine running the specified OS, with the given
+options."
+    ((_ os)                                       ;shortcut
+     (%virtual-machine (operating-system os)))
+    ((_ fields ...)
+     (%virtual-machine fields ...))))
+
+(define (port-forwardings->qemu-options forwardings)
+  "Return the QEMU option for the given port FORWARDINGS as a string, where
+FORWARDINGS is a list of host-port/guest-port pairs."
+  (string-join
+   (map (match-lambda
+          ((host-port . guest-port)
+           (string-append "hostfwd=tcp::"
+                          (number->string host-port)
+                          "-:" (number->string guest-port))))
+        forwardings)
+   ","))
+
+(define-gexp-compiler (virtual-machine-compiler (vm <virtual-machine>)
+                                                system target)
+  ;; XXX: SYSTEM and TARGET are ignored.
+  (match vm
+    (($ <virtual-machine> os qemu graphic? memory-size ())
+     (system-qemu-image/shared-store-script os
+                                            #:qemu qemu
+                                            #:graphic? graphic?
+                                            #:memory-size memory-size))
+    (($ <virtual-machine> os qemu graphic? memory-size forwardings)
+     (let ((options
+            `("-net" ,(string-append
+                       "user,"
+                       (port-forwardings->qemu-options forwardings)))))
+       (system-qemu-image/shared-store-script os
+                                              #:qemu qemu
+                                              #:graphic? graphic?
+                                              #:memory-size memory-size
+                                              #:options options)))))
 
 ;;; vm.scm ends here

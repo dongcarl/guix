@@ -4,6 +4,8 @@
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2017 Alex Griffin <a@ajgrf.com>
 ;;; Copyright © 2017 Thomas Danckaert <post@thomasdanckaert.be>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
+;;; Copyright © 2017 Andy Wingo <wingo@igalia.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -614,14 +616,14 @@ spreadsheet documents.")
 (define-public libstaroffice
   (package
     (name "libstaroffice")
-    (version "0.0.3")
+    (version "0.0.4")
     (source
      (origin
        (method url-fetch)
        (uri (string-append "https://github.com/fosnola/libstaroffice/releases/download/"
                            version "/libstaroffice-" version ".tar.xz"))
        (sha256 (base32
-                "1ii2wi3wr5npyz9gby1bjk8r4wyflpfpc6gx7mmqkhsc9c8frpmy"))))
+                "0flh0hs31fsq1dmkhf2502lxskiy7fbj5q8gn4b4f502s228fwkf"))))
     (build-system gnu-build-system)
     (inputs
      `(("librevenge" ,librevenge)
@@ -695,19 +697,29 @@ Zoner Draw version 4 and 5.")
 (define-public hunspell
   (package
     (name "hunspell")
-    (version "1.5.4")
+    (version "1.6.1")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "https://github.com/hunspell/hunspell/archive/v"
                           version ".tar.gz"))
       (sha256 (base32
-               "0ngwk18dwd8p5a5f20h2jlgrz9wbc1k189mmmprb2zmqwfi02b45"))
+               "0j9c20sj7bgd6f77193g1ihy8w905byk2gdhdc0r9dsh7irr7x9h"))
       (file-name (string-append name "-" version ".tar.gz"))))
     (build-system gnu-build-system)
+    (native-inputs
+     `(("autoconf" ,autoconf)
+       ("automake" ,automake)
+       ("libtool" ,libtool)))
     (inputs
      `(("perl" ,perl)))
-    (home-page "http://hunspell.sourceforge.net/")
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'bootstrap
+           (lambda _
+             (zero? (system* "autoreconf" "-vfi")))))))
+    (home-page "https://hunspell.github.io/")
     (synopsis "Spell checker")
     (description "Hunspell is a spell checker and morphological analyzer
 library and program designed for languages with rich morphology and complex
@@ -887,17 +899,51 @@ and to return information on pronunciations, meanings and synonyms.")
                  (substitute* "external/libxmlsec/ExternalProject_xmlsec.mk"
                    (("./configure") "$(CONFIG_SHELL) ./configure" ))
                  #t)))
-           (add-after 'install 'bin-install
+           (add-after 'install 'bin-and-desktop-install
              ;; Create 'soffice' and 'libreoffice' symlinks to the executable
              ;; script.
              (lambda* (#:key outputs #:allow-other-keys)
-               (let* ((out (assoc-ref outputs "out"))
-                      (bin (string-append out "/bin"))
-                      (soffice (string-append
-                                out "/lib/libreoffice/program/soffice")))
-                 (mkdir bin)
-                 (symlink soffice (string-append bin "/soffice"))
-                 (symlink soffice (string-append bin "/libreoffice")))
+               (let ((out (assoc-ref outputs "out")))
+                 (define (symlink-output src dst)
+                   (mkdir-p (dirname (string-append out dst)))
+                   (symlink (string-append out src) (string-append out dst)))
+                 (define (install src dst)
+                   (let ((dst (string-append out dst)))
+                     (mkdir-p (dirname dst))
+                     (copy-file src dst)))
+                 (define (install-desktop-file app)
+                   (let ((src (string-append "/lib/libreoffice/share/xdg/"
+                                             app ".desktop"))
+                         (dst (string-append "/share/applications/libreoffice-"
+                                             app ".desktop")))
+                     (substitute* (string-append out src)
+                       (("Exec=libreoffice[0-9]+\\.[0-9]+ ")
+                        (string-append "Exec=" out "/bin/libreoffice "))
+                       (("Icon=libreoffice[0-9]+\\.[0-9]+")
+                        "Icon=libreoffice")
+                       (("LibreOffice [0-9]+\\.[0-9]+")
+                        "LibreOffice"))
+                     (symlink-output src dst)
+                     (install-file (string-append
+                                    "sysui/desktop/appstream-appdata/"
+                                    "libreoffice-" app ".appdata.xml")
+                                   (string-append out "/share/appdata"))))
+                 (symlink-output "/lib/libreoffice/program/soffice"
+                                 "/bin/soffice")
+                 (symlink-output "/lib/libreoffice/program/soffice"
+                                 "/bin/libreoffice")
+                 (install "workdir/CustomTarget/sysui/share/libreoffice/openoffice.keys"
+                          "/share/mime-info/libreoffice.keys")
+                 (install "workdir/CustomTarget/sysui/share/libreoffice/openoffice.mime"
+                          "/share/mime-info/libreoffice.mime")
+                 (install
+                  "workdir/CustomTarget/sysui/share/libreoffice/openoffice.org.xml"
+                  "/share/mime/packages/libreoffice.xml")
+                 (for-each install-desktop-file
+                           '("base" "calc" "draw" "impress" "writer"))
+                 (mkdir-p (string-append out "/share/icons"))
+                 (copy-recursively "sysui/desktop/icons/hicolor"
+                                   (string-append out "/share/icons/")))
                #t)))
        #:configure-flags
         (list

@@ -15,7 +15,7 @@
 ;;; Copyright © 2016 Lukas Gradl <lgradl@openmailbox.org>
 ;;; Copyright © 2016 Alex Kost <alezost@gmail.com>
 ;;; Copyright © 2016 Troy Sankey <sankeytms@gmail.com>
-;;; Copyright © 2016, 2017 ng0 <ng0@no-reply.infotropique.org>
+;;; Copyright © 2016, 2017 ng0 <ng0@infotropique.org>
 ;;; Copyright © 2016 Clément Lassieur <clement@lassieur.org>
 ;;; Copyright © 2016, 2017 Arun Isaac <arunisaac@systemreboot.net>
 ;;; Copyright © 2016 John Darrington <jmd@gnu.org>
@@ -265,7 +265,7 @@ operating systems.")
   (package
     (inherit mutt)
     (name "neomutt")
-    (version "20170609")
+    (version "20170714")
     (source
      (origin
        (method url-fetch)
@@ -273,7 +273,7 @@ operating systems.")
                            "/archive/" name "-" version ".tar.gz"))
        (sha256
         (base32
-         "1kdhnhdlv84v6brhqgh8g0h6cpcbwfc59b4g09zkkgqc4fnggapy"))))
+         "10x3sxai773n0gfqpi904ci1qvngymcbc2didswrm92wz4h8km20"))))
     (inputs
      `(("cyrus-sasl" ,cyrus-sasl)
        ("gdbm" ,gdbm)
@@ -416,7 +416,7 @@ and corrections.  It is based on a Bayesian filter.")
 (define-public offlineimap
   (package
     (name "offlineimap")
-    (version "7.1.1")
+    (version "7.1.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/OfflineIMAP/offlineimap/"
@@ -424,7 +424,7 @@ and corrections.  It is based on a Bayesian filter.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "00xpxh0pxcvv3mjgb3vq3x51v498dhqcaixyb3a4srmfgskzh956"))))
+                "0rnw7gpx3cp4irja5143haszgv4xhndc8wivhg8r0gpp6ig460vj"))))
     (build-system python-build-system)
     (native-inputs
      `(("asciidoc" ,asciidoc)))
@@ -667,14 +667,14 @@ invoking @command{notifymuch} from the post-new hook.")
 (define-public notmuch
   (package
     (name "notmuch")
-    (version "0.24.2")
+    (version "0.25")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://notmuchmail.org/releases/notmuch-"
                                   version ".tar.gz"))
               (sha256
                (base32
-                "0lfchvapk11qazdgsxj42igp9mpp83zbd0h1jj6r3ifmhikajxma"))))
+                "02z6d87ip1hkipz8d7w0sfklg8dd5fd5vlgp768640ixg0gqvlk5"))))
     (build-system gnu-build-system)
     (arguments
      '(#:make-flags (list "V=1") ; Verbose test output.
@@ -805,7 +805,7 @@ and search library.")
 (define-public getmail
   (package
     (name "getmail")
-    (version "4.52.0")
+    (version "5.1")
     (source
      (origin
        (method url-fetch)
@@ -813,7 +813,7 @@ and search library.")
                            name "-" version ".tar.gz"))
        (sha256
         (base32
-         "0pzplrlxwbxydvfw4kkwn60l40hk1h5sxawaa6pi0k75c220k4ni"))))
+         "0zh220vx10wi6x61qi0mjayjxgvllk9f6vd4hjrgzha1xbjj0vix"))))
     (build-system python-build-system)
     (arguments
      `(#:tests? #f ; no tests
@@ -930,6 +930,11 @@ compresses it.")
     (arguments
       '(#:configure-flags
         '("--enable-gnutls" "--enable-pgpmime-plugin" "--enable-enchant")
+        #:make-flags
+        ;; Disable updating icon cache since it's done by the profile hook.
+        ;; Conflict with other packages in the profile would be inevitable
+        ;; otherwise.
+        '("gtk_update_icon_cache=true")
         #:phases (modify-phases %standard-phases
                    (add-before 'build 'patch-mime
                      (lambda* (#:key inputs #:allow-other-keys)
@@ -2228,8 +2233,8 @@ operators and scripters.")
        ;; There are two versions: the plain continuation of Alpine without extra
        ;; patches and the version which adds extra fixes. Every distro uses
        ;; the patched version, and so do we to not break expectations.
-       ;; http://patches.freeiz.com/alpine/readme/README.patches
-       (uri (string-append "http://patches.freeiz.com/alpine/patches/alpine-"
+       ;; http://alpine.freeiz.com/alpine/readme/README.patches
+       (uri (string-append "http://alpine.freeiz.com/alpine/patches/alpine-"
                            version "/alpine-" version ".tar.xz"))
        (sha256
         (base32
@@ -2271,7 +2276,7 @@ operators and scripters.")
        ("aspell" ,aspell)
        ("tcl" ,tcl)
        ("linux-pam" ,linux-pam)))
-    (home-page "http://patches.freeiz.com/alpine/")
+    (home-page "http://alpine.freeiz.com/alpine/")
     (synopsis "Alternatively Licensed Program for Internet News and Email")
     (description
      "Alpine is a text-based mail and news client.  Alpine includes several

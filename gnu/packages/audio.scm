@@ -1136,7 +1136,7 @@ patches that can be used with softsynths such as Timidity and WildMidi.")
 (define-public guitarix
   (package
     (name "guitarix")
-    (version "0.35.3")
+    (version "0.35.5")
     (source (origin
              (method url-fetch)
              (uri (string-append
@@ -1144,7 +1144,7 @@ patches that can be used with softsynths such as Timidity and WildMidi.")
                    version ".tar.xz"))
              (sha256
               (base32
-               "0pvw4ijkq6lcn45vrif9b4mqmgzi0qg1dp5b33kb5zan6n1aci4j"))))
+               "00pfb6qa3jfa6qaql7isnb8srfdfmk362ygslh7y0qkm36qasmh4"))))
     (build-system waf-build-system)
     (arguments
      `(#:tests? #f ; no "check" target
@@ -1196,9 +1196,7 @@ auto-wah.")
     (arguments
      (substitute-keyword-arguments (package-arguments guitarix)
        ((#:configure-flags flags)
-        `(cons "--lv2-only" ,flags))))
-    (inputs
-     (alist-delete "webkitgtk/gtk+-2" (package-inputs guitarix)))))
+        `(cons "--lv2-only" ,flags))))))
 
 (define-public rakarrack
   (package
@@ -2768,7 +2766,8 @@ machine-readable ASCII format.")
     (description "shntool is a multi-purpose WAVE data processing and reporting
 utility.  File formats are abstracted from its core, so it can process any file
 that contains WAVE data, compressed or not---provided there exists a format
-module to handle that particular file type.")
+module to handle that particular file type.  It can also generate CUE files, and
+use them split WAVE data into multiple files.")
     (home-page "http://etree.org/shnutils/shntool/")
     ;; 'install-sh' bears the x11 license
     (license (list license:gpl2+ license:x11))))

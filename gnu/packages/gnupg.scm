@@ -228,14 +228,14 @@ compatible to GNU Pth.")
 (define-public gnupg
   (package
     (name "gnupg")
-    (version "2.1.21")
+    (version "2.1.23")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://gnupg/gnupg/gnupg-" version
                                   ".tar.bz2"))
               (sha256
                (base32
-                "1p97limv29p01y79mgnzpwixa50lv53wgdl3ymk9idkmpaldisks"))))
+                "0xqd5nm4j3w9lwk35vg57gl2i8bfkmx7d24i44gkbscm2lwpci59"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("pkg-config" ,pkg-config)))
@@ -254,8 +254,7 @@ compatible to GNU Pth.")
        ("sqlite" ,sqlite)
        ("zlib" ,zlib)))
    (arguments
-    `(#:configure-flags '("--enable-gpg2-is-gpg"
-                          ;; Otherwise, the test suite looks for the `gpg`
+    `(#:configure-flags '(;; Otherwise, the test suite looks for the `gpg`
                           ;; executable in its installation directory in
                           ;; /gnu/store before it has been installed.
                           "--enable-gnupg-builddir-envvar")
@@ -355,14 +354,14 @@ libskba (working with X.509 certificates and CMS data).")
 
 (define-public gnupg-1
   (package (inherit gnupg)
-    (version "1.4.21")
+    (version "1.4.22")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://gnupg/gnupg/gnupg-" version
                                   ".tar.bz2"))
               (sha256
                (base32
-                "0xi2mshq8f6zbarb5f61c9w2qzwrdbjm4q8fqsrwlzc51h8a6ivb"))))
+                "1d1hz4szh1kvwhsw7w2zxa6q5ndrk3qy6hj289l1b8k3xi5s554m"))))
     (native-inputs '())
     (inputs
      `(("zlib" ,zlib)

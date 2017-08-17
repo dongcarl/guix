@@ -630,7 +630,7 @@ Sega Master System/Mark III, Sega Genesis/Mega Drive, BBC Micro
 (define-public lilypond
   (package
     (name "lilypond")
-    (version "2.19.58")
+    (version "2.19.63")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -639,7 +639,7 @@ Sega Master System/Mark III, Sega Genesis/Mega Drive, BBC Micro
                     name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0wjapb3if6qqdmr57z20hidx7czhl023cjimr01i8yf7k41fakh7"))))
+                "0hwv7m1lzyhjiyxqhqfdrrrpx475jhiwckrnxbjbv3ynhyzkngw0"))))
     (build-system gnu-build-system)
     (arguments
      `(#:tests? #f ; out-test/collated-files.html fails
@@ -652,6 +652,15 @@ Sega Master System/Mark III, Sega Genesis/Mega Drive, BBC Micro
                             "/share/fonts/opentype/"))
        #:phases
        (modify-phases %standard-phases
+         (add-after 'unpack 'use-texlive-union
+           (lambda _
+             ;; FIXME: fonts are not found and have to be generated in HOME.
+             (setenv "HOME" "/tmp")
+             ;; The test for the "lh" package fails, even though it is among
+             ;; the inputs.
+             (substitute* "configure"
+               (("TEX_FIKPARM=.*") "TEX_FIKPARM=found\n"))
+             #t))
          (add-after 'unpack 'fix-path-references
           (lambda _
             (substitute* "scm/backend-library.scm"
@@ -693,7 +702,10 @@ Sega Master System/Mark III, Sega Genesis/Mega Drive, BBC Micro
        ("gettext" ,gettext-minimal)
        ("imagemagick" ,imagemagick)
        ("netpbm" ,netpbm) ;for pngtopnm
-       ("texlive" ,texlive) ;metafont and metapost
+       ("texlive" ,(texlive-union (list texlive-metapost
+                                        texlive-generic-epsf
+                                        texlive-latex-lh
+                                        texlive-latex-cyrillic)))
        ("texinfo" ,texinfo)
        ("texi2html" ,texi2html)
        ("rsync" ,rsync)
@@ -1887,14 +1899,14 @@ computer's keyboard.")
 (define-public qtractor
   (package
     (name "qtractor")
-    (version "0.8.2")
+    (version "0.8.3")
     (source (origin
               (method url-fetch)
               (uri (string-append "http://downloads.sourceforge.net/qtractor/"
                                   "qtractor-" version ".tar.gz"))
               (sha256
                (base32
-                "0sp7r9n926ggdn285l4xzvw558jz1440n7kn2f1qs6w6h6l0f1q3"))))
+                "0ggqp2pz6r0pvapbbil51fh5185rn0i9kgzm9ff8r8y1135zllk8"))))
     (build-system gnu-build-system)
     (arguments `(#:tests? #f)) ; no "check" target
     (inputs
@@ -2089,13 +2101,13 @@ event-based scripts for scrobbling, notifications, etc.")
 (define-public python-mutagen
   (package
     (name "python-mutagen")
-    (version "1.36")
+    (version "1.38")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "mutagen" version))
               (sha256
                (base32
-                "1kabb9b81hgvpd3wcznww549vss12b1xlvpnxg1r6n4c7gikgvnp"))))
+                "0rl7sxn1rcjl48fwga3dqf9f6pzspsny4ngxyf6pp337mrq0z693"))))
     (build-system python-build-system)
     (native-inputs
      `(("python-pytest" ,python-pytest)))
@@ -2252,15 +2264,16 @@ of tools for manipulating and accessing your music.")
 (define-public milkytracker
   (package
     (name "milkytracker")
-    (version "1.0.0")
+    (version "1.01.00")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/milkytracker/"
-                                  "MilkyTracker/archive/v" version ".tar.gz"))
+                                  "MilkyTracker/archive/v"
+                                  version ".tar.gz"))
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1p1jd4h274jvcvl05l01v9bj19zhq4sjag92v1zawyi93ib85abz"))
+                "1dvnddsnn9c83lz4dlm0cfjpc0m524amfkbalxbswdy0qc8cj1wv"))
               (modules '((guix build utils)))
               ;; Remove non-FSDG compliant sample songs.
               (snippet
@@ -2331,6 +2344,78 @@ create high quality music without the requirements of specialized, expensive
 equipment, and with a unique \"finger feel\" that is difficult to replicate in
 part.  The player is based on a highly modified version of the ModPlug engine,
 with a number of bugfixes and changes to improve IT playback.")
+    (license license:gpl2+)))
+
+(define-public sooperlooper
+  (package
+    (name "sooperlooper")
+    (version "1.7.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://essej.net/sooperlooper/sooperlooper-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0n2gdxw1fx8nxxnpzf4sj0kp6k6zi1yq59cbz6qqzcnsnpnvszbs"))
+              (patches (search-patches "sooperlooper-build-with-wx-30.patch"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:make-flags (list "CXXFLAGS=-std=gnu++11")
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'add-sigc++-includes
+           (lambda* (#:key inputs #:allow-other-keys)
+             (let ((sig (assoc-ref inputs "libsigc++"))
+                   (xml (assoc-ref inputs "libxml2"))
+                   (cwd (getcwd)))
+               (setenv "CPATH"
+                       (string-append sig "/include/sigc++-2.0:"
+                                      sig "/lib/sigc++-2.0/include:"
+                                      xml "/include/libxml2/:"
+                                      cwd "/libs/pbd:"
+                                      cwd "/libs/midi++")))
+             (substitute* '("src/control_osc.hpp"
+                            "src/gui/app_frame.hpp"
+                            "src/gui/config_panel.hpp"
+                            "src/gui/keys_panel.hpp"
+                            "src/gui/latency_panel.hpp"
+                            "src/gui/main_panel.hpp"
+                            "src/gui/midi_bind_panel.hpp"
+                            "src/gui/prefs_dialog.hpp")
+               (("sigc\\+\\+/object.h")
+                "sigc++/sigc++.h"))
+             (substitute* '("src/engine.cpp"
+                            "src/gui/latency_panel.cpp"
+                            "src/gui/looper_panel.cpp"
+                            "src/gui/main_panel.cpp")
+               (("(\\(| )bind " _ pre)
+                (string-append pre "sigc::bind ")))
+             #t))
+         (add-after 'unpack 'fix-xpm-warnings
+           (lambda _
+             (substitute* (find-files "." "\\.xpm$")
+               (("static char") "static const char"))
+             #t)))))
+    (inputs
+     `(("jack" ,jack-1)
+       ("alsa-lib" ,alsa-lib)
+       ("wxwidgets" ,wxwidgets-gtk2)
+       ("libsndfile" ,libsndfile)
+       ("libsamplerate" ,libsamplerate)
+       ("liblo" ,liblo)
+       ("rubberband" ,rubberband)
+       ("libxml2" ,libxml2)
+       ("libsigc++" ,libsigc++)
+       ("ncurses" ,ncurses)))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (home-page "http://essej.net/sooperlooper/")
+    (synopsis "Live looping sampler")
+    (description
+     "SooperLooper is a live looping sampler capable of immediate loop
+recording, overdubbing, multiplying, reversing and more. It allows for
+multiple simultaneous multi-channel loops limited only by your computer's
+available memory.")
     (license license:gpl2+)))
 
 (define-public moc
@@ -3086,3 +3171,37 @@ MuseScore can also play back scores through the built-in sequencer and SoundFont
 sample library.")
     (home-page "https://musescore.org")
     (license license:gpl2)))
+
+(define-public dssi
+  (package
+    (name "dssi")
+    (version "1.1.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "mirror://sourceforge/dssi/dssi/" version
+                    "/dssi-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0kl1hzhb7cykzkrqcqgq1dk4xcgrcxv0jja251aq4z4l783jpj7j"))))
+    (build-system gnu-build-system)
+    (inputs
+     `(("alsa-lib" ,alsa-lib)
+       ("jack-2" ,jack-2)
+       ("ladspa" ,ladspa)
+       ("libsamplerate" ,libsamplerate)
+       ("libsndfile" ,libsndfile)
+       ("liblo" ,liblo)))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (synopsis "Audio plugin API for soft synths and effects")
+    (description "DSSI is a plugin API for software instruments with user
+interfaces, permitting them to be hosted in-process by audio applications.
+It is intended to be simple, GUI-toolkit-agnostic, and slightly biased
+towards familiarity with MIDI.  The DSSI distribution package contains
+a JACK/ALSA-sequencer reference host and some plugins as well as the
+specification and header.")
+    (home-page "http://dssi.sourceforge.net/")
+    ;; The DSSI interface is LGPL2.1+, some tests and examples are GPL2+.
+    ;; The vast majority of examples are in the public domain.
+    (license (list license:lgpl2.1+ license:gpl2+))))

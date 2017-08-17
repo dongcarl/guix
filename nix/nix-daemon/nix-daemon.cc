@@ -436,7 +436,15 @@ static void performOp(bool trusted, unsigned int clientVersion,
         bool sign = readInt(from) == 1;
         startWork();
         TunnelSink sink(to);
-        store->exportPath(path, sign, sink);
+	try {
+	    store->exportPath(path, sign, sink);
+	}
+	catch (Error &e) {
+	    /* Flush SINK beforehand or its destructor will rightfully trigger
+	       an assertion failure.  */
+	    sink.flush();
+	    throw e;
+	}
         sink.flush();
         stopWork();
         writeInt(1, to);
@@ -887,13 +895,11 @@ static void acceptConnection(int fdSocket)
 
 	    if (remoteAddr.ss_family == AF_INET) {
 		struct sockaddr_in *addr = (struct sockaddr_in *) &remoteAddr;
-		struct in_addr inaddr = { addr->sin_addr };
-		result = inet_ntop(AF_INET, &inaddr,
+		result = inet_ntop(AF_INET, &addr->sin_addr,
 				   address_str, sizeof address_str);
 	    } else if (remoteAddr.ss_family == AF_INET6) {
 		struct sockaddr_in6 *addr = (struct sockaddr_in6 *) &remoteAddr;
-		struct in6_addr inaddr = { addr->sin6_addr };
-		result = inet_ntop(AF_INET6, &inaddr,
+		result = inet_ntop(AF_INET6, &addr->sin6_addr,
 				   address_str, sizeof address_str);
 	    } else {
 		result = NULL;

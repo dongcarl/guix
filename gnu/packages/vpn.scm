@@ -209,21 +209,21 @@ private network between hosts on the internet.")
 (define-public sshuttle
   (package
     (name "sshuttle")
-    (version "0.78.1")
+    (version "0.78.3")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri name version))
        (sha256
         (base32
-         "0g1dpqigz02vafzh84z5990lnj9d95raknav0xmf0va7rr41d9q3"))))
+         "12xyq5h77b57cnkljdk8qyjxzys512b73019s20x6ck5brj1m8wa"))))
     (build-system python-build-system)
     (native-inputs
-     `(("python-pytest-runner" ,python-pytest-runner)
-       ("python-setuptools-scm" ,python-setuptools-scm)
+     `(("python-setuptools-scm" ,python-setuptools-scm)
        ;; For tests only.
        ("python-mock" ,python-mock)
-       ("python-pytest" ,python-pytest)))
+       ("python-pytest" ,python-pytest)
+       ("python-pytest-runner" ,python-pytest-runner)))
     (home-page "https://github.com/sshuttle/sshuttle")
     (synopsis "VPN that transparently forwards connections over SSH")
     (description "sshuttle creates an encrypted virtual private network (VPN)
@@ -239,14 +239,14 @@ DNS domain name queries.")
 (define-public sshoot
   (package
     (name "sshoot")
-    (version "1.2.5")
+    (version "1.2.6")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri name version))
        (sha256
         (base32
-         "0a92lk8790dpp9j64vb6p4sazax0x3nby01lnfll7mxs1hx6n27q"))))
+         "1ccgh0hjyxrwkgy3hnxz3hgbjbs0lmfs25d5l5jam0xbpcpj63h0"))))
     (build-system python-build-system)
     (arguments
      '(#:phases
@@ -265,7 +265,7 @@ DNS domain name queries.")
      `(("python-fixtures" ,python-fixtures)
        ("python-pbr" ,python-pbr)
        ("python-testtools" ,python-testtools)))
-    (home-page "https://bitbucket.org/ack/sshoot")
+    (home-page "https://github.com/albertodonato/sshoot")
     (synopsis "sshuttle VPN session manager")
     (description "sshoot provides a command-line interface to manage multiple
 @command{sshuttle} virtual private networks.  It supports flexible profiles

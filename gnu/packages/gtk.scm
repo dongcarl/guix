@@ -8,7 +8,7 @@
 ;;; Copyright © 2015 Sou Bunnbu <iyzsong@gmail.com>
 ;;; Copyright © 2015 Andy Wingo <wingo@igalia.com>
 ;;; Copyright © 2015 David Hashe <david.hashe@dhashe.com>
-;;; Coypright © 2015, 2016 Ricardo Wurmus <rekado@elephly.net>
+;;; Coypright © 2015, 2016, 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 Fabian Harfert <fhmgufs@web.de>
 ;;; Copyright © 2016 Kei Kebreau <kei@openmailbox.org>
@@ -1285,8 +1285,13 @@ information.")
      `(#:parallel-tests? #f
        #:phases
        (modify-phases %standard-phases
-         (add-before
-             'configure 'fix-docbook
+         (add-before 'build 'set-HOME
+           (lambda _
+             ;; FIXME: dblatex with texlive-union does not find the built
+             ;; metafonts, so it tries to generate them in HOME.
+             (setenv "HOME" "/tmp")
+             #t))
+         (add-before 'configure 'fix-docbook
            (lambda* (#:key inputs #:allow-other-keys)
              (substitute* "configure"
                ;; The configure check is overzealous about making sure that
@@ -1350,7 +1355,7 @@ can also be used to document application code.")
     (inputs
      ;; Don't propagate GTK+ to reduce "profile pollution".
      `(("gtk+" ,gtk+-2))) ; required by gtk-engines-2.pc
-    (home-page "http://live.gnome.org/GnomeArt")
+    (home-page "https://live.gnome.org/GnomeArt")
     (synopsis "Theming engines for GTK+ 2.x")
     (description
      "This package contains the standard GTK+ 2.x theming engines including
@@ -1380,7 +1385,7 @@ Redmond95 and ThinIce.")
        ("intltool" ,intltool)))
     (propagated-inputs
      `(("gtk+" ,gtk+-2)))
-    (home-page "http://live.gnome.org/GnomeArt")
+    (home-page "https://live.gnome.org/GnomeArt")
     (synopsis "Cairo-based theming engine for GTK+ 2.x")
     (description
      "Murrine is a cairo-based GTK+ theming engine.  It is named after the

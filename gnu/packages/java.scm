@@ -1543,7 +1543,7 @@ IcedTea build harness.")
       (license license:gpl2+))))
 
 (define-public icedtea-8
-  (let* ((version "3.4.0")
+  (let* ((version "3.5.0")
          (drop (lambda (name hash)
                  (origin
                    (method url-fetch)
@@ -1552,7 +1552,7 @@ IcedTea build harness.")
                          "/icedtea8/" version "/" name ".tar.xz"))
                    (sha256 (base32 hash))))))
     (package (inherit icedtea-7)
-      (version "3.4.0")
+      (version "3.5.0")
       (source (origin
                 (method url-fetch)
                 (uri (string-append
@@ -1560,7 +1560,7 @@ IcedTea build harness.")
                       version ".tar.xz"))
                 (sha256
                  (base32
-                  "16if055973y6yw7n5gczp8iksvc31cy4p5by9lkbniadqj4z665m"))
+                  "1dfa7ing61i73m6wfx2kx59q44npqdiy7cd66xmslyy0xh09xa4s"))
                 (modules '((guix build utils)))
                 (snippet
                  '(begin
@@ -1632,34 +1632,34 @@ IcedTea build harness.")
        `(("jdk" ,icedtea-7 "jdk")
          ("openjdk-src"
           ,(drop "openjdk"
-                 "0va5i3zr8y8ncv914rz914jda9d88gq0viww3smdqnln8n78rszi"))
+                 "0di7gmyis1p6rpksmff1q21ck85i51sqcl9awqyvg7xiwggq0wsm"))
          ("aarch32-drop"
           ,(drop "aarch32"
                  "0cway5a5hcfyh4pzl9zz5xr7lil4gsliy6r5iqbaasd2d9alvqiq"))
          ("corba-drop"
           ,(drop "corba"
-                 "1l9zr97a3kq00bj4i8wcdsjlz3xlfldxd8zhkcxikinwd5n0n8a7"))
+                 "1xk64bsdxfc66g61d8k6xrhqj8rc56vzrlxx6s23gkr45604bl8x"))
          ("jaxp-drop"
           ,(drop "jaxp"
-                 "0lqxrsr3xlpwm2na6f2rpl7znrz34dkb9dg3zjmympyjy4kqljn7"))
+                 "1iw9xa4s5kxijdqpf0ih4x6g0lw142yy11vrzfmz6n1y4b0ic7iw"))
          ("jaxws-drop"
           ,(drop "jaxws"
-                 "1b3chckk10dzrpa7cswmcf1jvryaiwkj8lihfqjr5j7l668jwr4h"))
+                 "14p2l4j985wh5cdd4hfmm18gb5wmry73yiysdx9pg3aqpkw9qms7"))
          ("jdk-drop"
           ,(drop "jdk"
-                 "15lq0k2jv2x26x6vqkbljdcxk35i3b60pcsw3j1sdfmlk1xy6wgc"))
+                 "1qwmb80vicn7jd801f3j23lyil7327ks54d3s87czwv8h108m40r"))
          ("langtools-drop"
           ,(drop "langtools"
-                 "17xkb8ahkg04ri0bp5wblcp1a2lp8j7c83ic5zdbggvgm339k5s8"))
+                 "175pi2privhcvn9sbam5mhhgcvicfqbgldiw25fi5g80fqkkrza9"))
          ("hotspot-drop"
           ,(drop "hotspot"
-                 "0xpx8ykaq0ki6r0dl3dzca2xgp1p82z8mvsxcs2931ib667ncgcp"))
+                 "1qdyn02p4ssl3p7z9aadhzl9qdam2q7pvwddz2jkyvajcrxb0mpi"))
          ("nashorn-drop"
           ,(drop "nashorn"
-                 "1bnn4731lhlvg8axy4mjxgvh646yl22hp52wipx8cfca4vkn2f1z"))
+                 "0kzmpf5b9kwhrvnwn7m20q3dzz8s82jjvbac84606x3ff97xk5gr"))
          ("shenandoah-drop"
           ,(drop "shenandoah"
-                 "0fpxl8zlii1hpm777r875ys2cr5ih3gb6p1nm9jfa6krjrccrxv1"))
+                 "0kjc5m5jj2bzyy1vj1s59khv5xjfnkxy18z0g4bdb1kb3g21c5wi"))
          ,@(fold alist-delete (package-native-inputs icedtea-7)
                  '("jdk" "openjdk-src" "corba-drop" "jaxp-drop" "jaxws-drop"
                    "jdk-drop" "langtools-drop" "hotspot-drop")))))))
@@ -1867,6 +1867,41 @@ designs.")
                      license:bsd-3
                      license:asl2.0
                      license:cpl1.0)))))
+
+(define-public java-classpathx-servletapi
+  (package
+    (name "java-classpathx-servletapi")
+    (version "3.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://gnu/classpathx/servletapi/"
+                                  "servletapi-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0y9489pk4as9q6x300sk3ycc0psqfxcd4b0xvbmf3rhgli8q1kx3"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f ; there is no test target
+       #:build-target "compile"
+       ;; NOTE: This package does not build with Java 8 because of a type
+       ;; mismatch in
+       ;; "source/javax/servlet/jsp/el/ImplicitObjectELResolver.java".  It
+       ;; defines the return value of ScopeMap's "remove" method to be of type
+       ;; "Object", whereas Map's "remove" method returns boolean.
+       #:make-flags
+       (list "-Dbuild.compiler=javac1.7"
+             (string-append "-Ddist=" (assoc-ref %outputs "out")))
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (lambda* (#:key make-flags #:allow-other-keys)
+             (zero? (apply system* `("ant" "dist" ,@make-flags))))))))
+    (home-page "https://www.gnu.org/software/classpathx/")
+    (synopsis "Java servlet API implementation")
+    (description "This is the GNU servlet API distribution, part of the
+ClasspathX project.  It provides implementations of version 3.0 of the servlet
+API and version 2.1 of the Java ServerPages API.")
+    (license license:gpl3+)))
 
 (define-public java-swt
   (package
@@ -4086,6 +4121,73 @@ for your architecture which is provided by the jsvc package.
 This is a part of the Apache Commons Project.")
     (license license:asl2.0)))
 
+(define-public java-javaewah
+  (package
+    (name "java-javaewah")
+    (version "1.1.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/lemire/javaewah/"
+                                  "archive/JavaEWAH-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1n7j1r1h24wlhwv9zdcj6yqjrhma2ixwyzm15l5vrv6yqjs6753b"))))
+    (build-system ant-build-system)
+    (arguments `(#:jar-name "javaewah.jar"))
+    (inputs
+     `(("java-junit" ,java-junit)
+       ("java-hamcrest-core" ,java-hamcrest-core)))
+    (home-page "https://github.com/lemire/javaewah")
+    (synopsis "Compressed alternative to the Java @code{BitSet} class")
+    (description "This is a word-aligned compressed variant of the Java
+@code{Bitset} class.  It provides both a 64-bit and a 32-bit RLE-like
+compression scheme.  It can be used to implement bitmap indexes.
+
+The goal of word-aligned compression is not to achieve the best compression,
+but rather to improve query processing time. Hence, JavaEWAH tries to save CPU
+cycles, maybe at the expense of storage.  However, the EWAH scheme is always
+more efficient storage-wise than an uncompressed bitmap (as implemented in the
+@code{BitSet} class by Sun).")
+    ;; GPL2.0 derivates are explicitly allowed.
+    (license license:asl2.0)))
+
+(define-public java-slf4j-api
+  (package
+    (name "java-slf4j-api")
+    (version "1.7.25")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://www.slf4j.org/dist/slf4j-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "13j51sgzmhhdrfa74gkal5zpip7r1440dh7zsi2c8bpb2zs1v8kb"))
+              (modules '((guix build utils)))
+              ;; Delete bundled jars.
+              (snippet
+               '(begin
+                  (for-each delete-file (find-files "." "\\.jar$"))
+                  #t))))
+    (build-system ant-build-system)
+    (arguments
+     ;; FIXME: org.slf4j.NoBindingTest fails with the ominous "This code
+     ;; should have never made it into slf4j-api.jar".
+     `(#:tests? #f
+       #:jar-name "slf4j-api.jar"
+       #:source-dir "slf4j-api/src/main"
+       #:test-dir "slf4j-api/src/test"))
+    (inputs
+     `(("java-junit" ,java-junit)
+       ("java-hamcrest-core" ,java-hamcrest-core)))
+    (home-page "https://www.slf4j.org/")
+    (synopsis "Simple logging facade for Java")
+    (description "The Simple Logging Facade for Java (SLF4J) serves as a
+simple facade or abstraction for various logging
+frameworks (e.g. @code{java.util.logging}, @code{logback}, @code{log4j})
+allowing the end user to plug in the desired logging framework at deployment
+time.")
+    (license license:expat)))
+
 (define-public antlr2
   (package
     (name "antlr2")
@@ -4570,3 +4672,28 @@ generate classes, directly in binary form.  The provided common
 transformations and analysis algorithms allow to easily assemble custom
 complex transformations and code analysis tools.")
     (license license:bsd-3)))
+
+(define-public java-commons-cli-1.2
+  ;; This is a bootstrap dependency for Maven2.
+  (package
+    (inherit java-commons-cli)
+    (version "1.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/cli/source/"
+                                  "commons-cli-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "0rvfgzgv2pc1m091dfj3ih9ddsjjppr1f1wf0qmc3bk6b1kwv2dm"))))
+    (arguments
+     `(#:jar-name "commons-cli.jar"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'fix-build-xml
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "build.xml"
+               (("dir=\"\\$\\{test.home\\}/java\"")
+                "dir=\"${test.home}\""))
+             #t)))))
+    (native-inputs
+     `(("java-junit" ,java-junit)))))

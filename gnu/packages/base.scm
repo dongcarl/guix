@@ -933,6 +933,7 @@ GLIBC/HURD for a Hurd host"
                                        "glibc-versioned-locpath.patch"
                                        "glibc-o-largefile.patch"
                                        "glibc-vectorized-strcspn-guards.patch"
+                                       "glibc-CVE-2015-5180.patch"
                                        "glibc-CVE-2017-1000366-pt1.patch"
                                        "glibc-CVE-2017-1000366-pt2.patch"
                                        "glibc-CVE-2017-1000366-pt3.patch"))))))
@@ -952,6 +953,10 @@ GLIBC/HURD for a Hurd host"
                                        "glibc-versioned-locpath.patch"
                                        "glibc-o-largefile.patch"
                                        "glibc-vectorized-strcspn-guards.patch"
+                                       "glibc-CVE-2015-5180.patch"
+                                       "glibc-CVE-2016-3075.patch"
+                                       "glibc-CVE-2016-3706.patch"
+                                       "glibc-CVE-2016-4429.patch"
                                        "glibc-CVE-2017-1000366-pt1.patch"
                                        "glibc-CVE-2017-1000366-pt2.patch"
                                        "glibc-CVE-2017-1000366-pt3.patch"))))))
@@ -969,6 +974,11 @@ GLIBC/HURD for a Hurd host"
                 "0j49682pm2nh4qbdw35bas82p1pgfnz4d2l7iwfyzvrvj0318wzb"))
               (patches (search-patches "glibc-ldd-x86_64.patch"
                                        "glibc-vectorized-strcspn-guards.patch"
+                                       "glibc-CVE-2015-5180.patch"
+                                       "glibc-CVE-2015-7547.patch"
+                                       "glibc-CVE-2016-3075.patch"
+                                       "glibc-CVE-2016-3706.patch"
+                                       "glibc-CVE-2016-4429.patch"
                                        "glibc-CVE-2017-1000366-pt1.patch"
                                        "glibc-CVE-2017-1000366-pt2.patch"
                                        "glibc-CVE-2017-1000366-pt3.patch"))))
@@ -978,22 +988,10 @@ GLIBC/HURD for a Hurd host"
          `(modify-phases ,phases
             (add-before 'configure 'fix-pwd
               (lambda _
-                ;; Use `pwd' instead of `/bin/pwd' for glibc-2.21
+                ;; Use `pwd' instead of `/bin/pwd' for glibc-2.22.
                 (substitute* "configure"
                   (("/bin/pwd") "pwd"))
                 #t))))))))
-
-(define-public glibc-2.21
-  (package
-    (inherit glibc-2.22)
-    (version "2.21")
-    (source (origin
-              (inherit (package-source glibc-2.22))
-              (uri (string-append "mirror://gnu/glibc/glibc-"
-                                  version ".tar.xz"))
-              (sha256
-               (base32
-                "1f135546j34s9bfkydmx2nhh9vwxlx60jldi80zmsnln6wj3dsxf"))))))
 
 (define-public glibc-locales
   (package

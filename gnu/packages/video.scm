@@ -6,7 +6,7 @@
 ;;; Copyright © 2015, 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2015 Andy Patterson <ajpatter@uwaterloo.ca>
 ;;; Copyright © 2015 Ricardo Wurmus <rekado@elephly.net>
-;;; Copyright © 2015, 2016 Alex Vong <alexvong1995@gmail.com>
+;;; Copyright © 2015, 2016, 2017 Alex Vong <alexvong1995@gmail.com>
 ;;; Copyright © 2016, 2017 Alex Griffin <a@ajgrf.com>
 ;;; Copyright © 2016 Kei Kebreau <kei@openmailbox.org>
 ;;; Copyright © 2016 Dmitry Nikolaev <cameltheman@gmail.com>
@@ -580,14 +580,14 @@ standards (MPEG-2, MPEG-4 ASP/H.263, MPEG-4 AVC/H.264, and VC-1/VMW3).")
 (define-public ffmpeg
   (package
     (name "ffmpeg")
-    (version "3.3.2")
+    (version "3.3.3")
     (source (origin
              (method url-fetch)
              (uri (string-append "https://ffmpeg.org/releases/ffmpeg-"
                                  version ".tar.xz"))
              (sha256
               (base32
-               "11974vcfsy8w0i6f4lfwqmg80xkfybqw7vw6zzrcn5i6ncddx60r"))))
+               "07is8msrhxr1dk6vgwa192k2pl2a0in1h9w8f9cknlvbvhn01afj"))))
     (build-system gnu-build-system)
     (inputs
      `(("fontconfig" ,fontconfig)
@@ -980,7 +980,7 @@ SVCD, DVD, 3ivx, DivX 3/4/5, WMV and H.264 movies.")
 (define-public mpv
   (package
     (name "mpv")
-    (version "0.25.0")
+    (version "0.26.0")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -988,7 +988,7 @@ SVCD, DVD, 3ivx, DivX 3/4/5, WMV and H.264 movies.")
                     ".tar.gz"))
               (sha256
                (base32
-                "1khb7c4fdj1aak46lwyb3lq14w5jpxzws0zp6bdc87ljsvx3yhh7"))
+                "0ihvnwrp24jjf43k1hvy8n8w4ipl4z7apjppd4i0y9jzilsyzwys"))
               (file-name (string-append name "-" version ".tar.gz"))))
     (build-system waf-build-system)
     (native-inputs
@@ -1055,7 +1055,7 @@ projects while introducing many more.")
 (define-public gnome-mpv
   (package
     (name "gnome-mpv")
-    (version "0.11")
+    (version "0.12")
     (source
      (origin
        (method url-fetch)
@@ -1064,7 +1064,7 @@ projects while introducing many more.")
                            ".tar.xz"))
        (sha256
         (base32
-         "1hn3mpsxbrwf2m0nz4vzji4i6i896y8kqjb9kijqpk04cnrs3fgz"))))
+         "0dcnz9vlf791v8d15j7hpymv87h6nb15alww6xjq0zpal5hi44kc"))))
     (native-inputs
      `(("intltool" ,intltool)
        ("pkg-config" ,pkg-config)))
@@ -1121,7 +1121,7 @@ access to mpv's powerful playback capabilities.")
 (define-public youtube-dl
   (package
     (name "youtube-dl")
-    (version "2017.06.23")
+    (version "2017.08.13")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://yt-dl.org/downloads/"
@@ -1129,7 +1129,7 @@ access to mpv's powerful playback capabilities.")
                                   version ".tar.gz"))
               (sha256
                (base32
-                "09x11k69imfx6j2dj3p8bckk8f59q276hy65q5qr8qc41s80j8b3"))))
+                "1parn0xda7mp1phcj19axldifgh6mcwia6wdi3m20kidc9m4wb11"))))
     (build-system python-build-system)
     (arguments
      ;; The problem here is that the directory for the man page and completion
@@ -1238,15 +1238,16 @@ other site that youtube-dl supports.")
 (define-public you-get
   (package
     (name "you-get")
-    (version "0.4.715")
+    (version "0.4.803")
     (source (origin
               (method url-fetch)
               (uri (string-append
-                    "https://github.com/soimort/you-get/releases/download/v"
-                    version "/you-get-" version ".tar.gz"))
+                    "https://github.com/soimort/you-get/archive/v"
+                    version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "043122hfh56fbbszp1kwd1f65asgyn60j1ijday93hf2dkhvbrnh"))))
+                "1rjy809x67dadzvj3midkhcda2kp6rqmbj6rbhjd5f16rvqgn7jp"))))
     (build-system python-build-system)
     (arguments
      ;; no tests
@@ -1614,7 +1615,8 @@ manipulation.  It aims to be a modern rewrite of Avisynth, supporting
 multithreading, generalized colorspaces, per frame properties, and videos with
 format changes.")
     ;; src/core/cpufeatures only allows x86, ARM or PPC
-    (supported-systems (delete "mips64el-linux" %supported-systems))
+    (supported-systems (fold delete %supported-systems
+                             '("mips64el-linux" "aarch64-linux")))
     ;; As seen from the source files.
     (license license:lgpl2.1+)))
 
@@ -1887,6 +1889,44 @@ your graphical desktop and encodes it as a video.  This is a useful tool for
 making @dfn{screencasts}.")
     (license license:gpl2+)))
 
+(define-public simplescreenrecorder
+  (package
+    (name "simplescreenrecorder")
+    (version "0.3.8")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://github.com/MaartenBaert/ssr/archive/"
+                           version ".tar.gz"))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32
+         "0v8w35n8w772s08w7k0icynqdsdakbrcanbgx6j847bfqfsg21gg"))))
+    (build-system gnu-build-system)
+    ;; Although libx11, libxfixes, libxext are listed as build dependencies in
+    ;; README.md, the program builds and functions properly without them.
+    ;; As a result, they are omitted. Please add them back if problems appear.
+    (inputs
+     `(("alsa-lib" ,alsa-lib)
+       ("ffmpeg" ,ffmpeg)
+       ("glu" ,glu)
+       ("jack" ,jack-1)
+       ("libxi" ,libxi)
+       ("pulseaudio" ,pulseaudio)
+       ("qt" ,qt-4))) ; README.md: using Qt 5 causes some stability issues
+    (native-inputs `(("pkg-config" ,pkg-config)))
+    ;; Using HTTPS causes part of the page to be displayed improperly.
+    (home-page "http://www.maartenbaert.be/simplescreenrecorder/")
+    (synopsis "Screen recorder")
+    (description "SimpleScreenRecorder is an easy to use screen recorder with
+a graphical user interface.  It supports recording the entire screen, or a
+part of it, and allows encoding in many different codecs and file formats.
+Other features include a live preview and live streaming.")
+    (license (list license:gpl3+ ; most files
+                   license:zlib ; glinject/elfhacks.*
+                   license:isc ; glinject/*
+                   license:x11)))) ; build-aux/install-sh
+
 (define-public libsmpeg
   (package
     (name "libsmpeg")
@@ -1931,7 +1971,7 @@ and MPEG system streams.")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "ftp://ftp.videolan.org/pub/videolan/libbdplus/"
+       (uri (string-append "https://ftp.videolan.org/pub/videolan/libbdplus/"
                            version "/" name "-" version ".tar.bz2"))
        (sha256
         (base32 "02n87lysqn4kg2qk7d1ffrp96c44zkdlxdj0n16hbgrlrpiwlcd6"))))
@@ -1951,7 +1991,7 @@ specifications.")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "ftp://ftp.videolan.org/pub/videolan/libaacs/"
+       (uri (string-append "https://ftp.videolan.org/pub/videolan/libaacs/"
                            version "/" name "-" version ".tar.bz2"))
        (sha256
         (base32 "1kms92i0c7i1yl659kqjf19lm8172pnpik5lsxp19xphr74vvq27"))))
@@ -2107,7 +2147,7 @@ of modern, widely supported codecs.")
 (define-public openh264
   (package
     (name "openh264")
-    (version "1.6.0")
+    (version "1.7.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/cisco/"
@@ -2115,7 +2155,7 @@ of modern, widely supported codecs.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1ix2fhk62i4q4kbnkl0gfk4x53vxqavsn0pck1pashr566zhglv5"))))
+                "0gv571bqkxk7ic64dmavs1q8nr7p59mcf4ibqp4lc070gn6w61ww"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("nasm" ,nasm)

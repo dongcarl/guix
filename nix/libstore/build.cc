@@ -2009,10 +2009,10 @@ void DerivationGoal::startBuilder()
 	char stack[32 * 1024];
 	int flags = CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWIPC | CLONE_NEWUTS | SIGCHLD;
 	if (!fixedOutput) flags |= CLONE_NEWNET;
-
 	/* Ensure proper alignment on the stack.  On aarch64, it has to be 16
 	   bytes.  */
-	pid = clone(childEntry, (char *)(((uintptr_t)stack + 16) & ~0xf),
+	pid = clone(childEntry,
+		    (char *)(((uintptr_t)stack + sizeof(stack) - 8) & ~(uintptr_t)0xf),
 		    flags, this);
 	if (pid == -1)
 	    throw SysError("cloning builder process");

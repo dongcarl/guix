@@ -480,6 +480,36 @@ more than bzip2, which makes it well suited for software distribution and data
 archiving.  Lzip is a clean implementation of the LZMA algorithm.")
     (license license:gpl3+)))
 
+(define-public lziprecover
+  (package
+    (name "lziprecover")
+    (version "1.19")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://savannah/lzip/" name "/"
+                                  name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0z5fbkm0qprypjf7kxkqganniibj0zml13zvfkrchnjafcmmzyld"))))
+    (build-system gnu-build-system)
+    (home-page "http://www.nongnu.org/lzip/lziprecover.html")
+    (synopsis "Recover and decompress data from damaged lzip files")
+    (description
+     "Lziprecover is a data recovery tool and decompressor for files in the lzip
+compressed data format (.lz).  It can test the integrity of lzip files, extract
+data from damaged ones, and repair most files with small errors (up to one
+single-byte error per member) entirely.
+
+Lziprecover is not a replacement for regular backups, but a last line of defence
+when even the backups are corrupt.  It can recover files by merging the good
+parts of two or more damaged copies, such as can be easily produced by running
+@command{ddrescue} on a failing device.
+
+This package also includes @command{unzcrash}, a tool to test the robustness of
+decompressors when faced with corrupted input.")
+    (license (list license:bsd-2        ; arg_parser.{cc,h}
+                   license:gpl2+))))    ; everything else
+
 (define-public sharutils
   (package
     (name "sharutils")
@@ -712,19 +742,20 @@ time for compression ratio.")
 (define-public python-lz4
   (package
     (name "python-lz4")
-    (version "0.8.2")
+    (version "0.10.1")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri "lz4" version))
        (sha256
         (base32
-         "1irad4sq4hdr30fr53smvv3zzk4rddcf9b4jx19w8s9xsxhr1x3b"))))
+         "0ghv1xbaq693kgww1x9c22bplz479ls9szjsaa4ig778ls834hm0"))))
     (build-system python-build-system)
     (native-inputs
-     `(("python-nose" ,python-nose)))
+     `(("python-nose" ,python-nose)
+       ("python-setuptools-scm" ,python-setuptools-scm)))
     (home-page "https://github.com/python-lz4/python-lz4")
-    (synopsis "LZ4 Bindings for Python")
+    (synopsis "LZ4 bindings for Python")
     (description
      "This package provides python bindings for the lz4 compression library
 by Yann Collet.  The project contains bindings for the LZ4 block format and
@@ -1183,16 +1214,16 @@ or junctions, and always follows hard links.")
        ("unshield-avigomanager11b22.zip"
         ,(origin
            (method url-fetch)
-           (uri (string-append "https://www.dropbox.com/s/8r4b6752swe3nhu/\"
-unshield-avigomanager11b22.zip?dl=1"))
+           (uri (string-append "https://www.dropbox.com/s/8r4b6752swe3nhu/"
+                               "unshield-avigomanager11b22.zip?dl=1"))
            (sha256
             (base32 "0fwq7lih04if68wpwpsk5wjqyvh32db76a41sq6gbx4dn1lc3ddn"))
            (file-name "unshield-avigomanager11b22.zip")))
        ("unshield-the-feeble-files-spanish.zip"
         ,(origin
            (method url-fetch)
-           (uri (string-append "https://www.dropbox.com/s/1ng0z9kfxc7eb1e/\"
-unshield-the-feeble-files-spanish.zip?dl=1"))
+           (uri (string-append "https://www.dropbox.com/s/1ng0z9kfxc7eb1e/"
+                               "unshield-the-feeble-files-spanish.zip?dl=1"))
            (sha256
             (base32 "1k5cw6vnpja8yjlnhx5124xrw9i8s1l539hfdqqrqz3l5gn0bnyd"))
            (file-name "unshield-the-feeble-files-spanish.zip")))))
@@ -1257,7 +1288,7 @@ RAR archives.")
 (define-public zstd
   (package
     (name "zstd")
-    (version "1.2.0")
+    (version "1.3.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/facebook/zstd/archive/v"
@@ -1265,7 +1296,7 @@ RAR archives.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1yyb8z03z9rw74k1d9dygcqxhx76717xq29agz57d0k3lf9lazja"))
+                "0j5kf0phx4w4b5x7aqwc10lxi9ix7rxhxk0df37cpdrqni1sdnqg"))
               (modules '((guix build utils)))
               (snippet
                ;; Remove non-free source files.

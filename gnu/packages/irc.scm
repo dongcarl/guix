@@ -66,6 +66,7 @@
         (method url-fetch)
         (uri (string-append "http://quassel-irc.org/pub/quassel-"
                             version ".tar.bz2"))
+        (patches (search-patches "quassel-fix-tls-check.patch"))
         (sha256
          (base32
           "0ka456fb8ha3w7g74xlzfg6w4azxjjxgrhl4aqpbwg3lnd6fbr4k"))))
@@ -102,7 +103,7 @@ irssi, but graphical.")
 (define-public irssi
   (package
     (name "irssi")
-    (version "1.0.3")
+    (version "1.0.4")
     (source (origin
              (method url-fetch)
              (uri (string-append "https://github.com/irssi/irssi/"
@@ -110,7 +111,7 @@ irssi, but graphical.")
                                  version ".tar.xz"))
              (sha256
               (base32
-               "10gmmxk5jgyigarks177nyvzb0lsfxcm00015p2cirybgllj10l3"))))
+               "1jl6p431rv4iixk48wn607m4s0mcy3wgasfwrhz22y71mzdhfp5q"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
@@ -300,14 +301,14 @@ using a mouse.  It is customizable and extensible with plugins and scripts.")
 (define-public limnoria
   (package
     (name "limnoria")
-    (version "2017.03.30")
+    (version "2017.08.03")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri "limnoria" version))
        (sha256
         (base32
-         "1q0y6iglg1cbhimgjz3afws51as3shy6rd61dck7jfm25y8pi6g8"))))
+         "1513a01ckzdn5qjjs2jrp3lyryx92h3j5mzc3si0vd7ayqmxhrjz"))))
     (build-system python-build-system)
     (inputs
      `(("python-pytz" ,python-pytz)

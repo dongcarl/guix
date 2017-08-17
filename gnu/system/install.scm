@@ -345,7 +345,7 @@ Use Alt-F2 for documentation.
      ;; the appropriate one.
      (cons* (file-system
               (mount-point "/")
-              (device "gnu-disk-image")
+              (device "GuixSD_image")
               (title 'label)
               (type "ext4"))
 
@@ -386,7 +386,6 @@ Use Alt-F2 for documentation.
      (base-pam-services #:allow-empty-passwords? #t))
 
     (packages (cons* (canonical-package glibc) ;for 'tzselect' & co.
-                     shadow                    ;'passwd', for easy SSH access
                      parted gptfdisk ddrescue
                      grub                  ;mostly so xrefs to its manual work
                      cryptsetup

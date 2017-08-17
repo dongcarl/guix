@@ -6,7 +6,7 @@
 ;;; Copyright © 2015 Eric Dvorsak <eric@dvorsak.fr>
 ;;; Copyright © 2016 Mathieu Lirzin <mthl@gnu.org>
 ;;; Copyright © 2015 Cyrill Schenkel <cyrill.schenkel@gmail.com>
-;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
+;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 ng0 <ng0@we.make.ritual.n0.is>
 ;;; Copyright © 2016 Alex Kost <alezost@gmail.com>
 ;;; Copyright © 2016 David Craven <david@craven.ch>
@@ -2705,6 +2705,53 @@ framebuffer device.")
     (license license:x11)))
 
 
+(define-public xf86-video-freedreno
+  (let ((commit "ccba8f89995de7d5e1b216e580b789c4cda05035"))
+    (package
+      (name "xf86-video-freedreno")
+      (version (string-append "1.4.0-1-" (string-take commit 7)))
+      (source
+       (origin
+         ;; there's no current tarball
+         (method git-fetch)
+         (uri (git-reference
+               (url (string-append "https://anongit.freedesktop.org/git/xorg/"
+                                   "driver/xf86-video-freedreno.git"))
+               (commit commit)))
+         (sha256
+          (base32
+           "0bl9m1agi793lcddv94j8afzw1xc9w810q91mbq0n3dscbbcr9nh"))
+         (file-name (string-append name "-" version))))
+      (build-system gnu-build-system)
+      (inputs
+       `(("libdrm" ,libdrm)
+         ("mesa" ,mesa)
+         ("udev" ,eudev)
+         ("xorg-server" ,xorg-server)))
+      (native-inputs
+       `(("pkg-config" ,pkg-config)
+         ("autoconf" ,autoconf)
+         ("automake" ,automake)
+         ("libtool" ,libtool)))
+       ;; This driver is only supported on ARM systems.
+      (supported-systems '("armhf-linux" "aarch64-linux"))
+      (arguments
+       `(#:configure-flags
+         (list (string-append "--with-xorg-conf-dir="
+                              (assoc-ref %outputs "out")
+                              "/share/X11/xorg.conf.d"))
+         #:phases (modify-phases %standard-phases
+                    (add-after 'unpack 'bootstrap
+                      (lambda _
+                        (zero? (system* "autoreconf" "-vfi")))))))
+      (home-page "https://www.x.org/wiki/")
+      (synopsis "Adreno video driver for X server")
+      (description
+       "xf86-video-freedreno is a 2D graphics driver for the Xorg X server.
+It supports a variety of Adreno graphics chipsets.")
+      (license license:x11))))
+
+
 (define-public xf86-video-geode
   (package
     (name "xf86-video-geode")
@@ -2817,10 +2864,12 @@ X server.")
 
 
 (define-public xf86-video-intel
-  (let ((commit "6babcf15dd605ef40de53f5c34f95b7fd195edbe"))
+  (let ((commit "2100efa105e8c9615eda867d39471d78e500b1bb")
+        (revision "7"))
     (package
       (name "xf86-video-intel")
-      (version (string-append "2.99.917-6-" (string-take commit 7)))
+      (version (string-append "2.99.917-" revision "-"
+                              (string-take commit 7)))
       (source
        (origin
          ;; there's no current tarball
@@ -2830,7 +2879,7 @@ X server.")
                (commit commit)))
          (sha256
           (base32
-           "055v4z26r00h3mxsd084n3aq8b5h0h3jkv52xss76zgbsq3n2354"))
+           "15fg844msmixsvlxcd5wm2awmns652sxcxj2wmp6819lr32lc4ir"))
          (file-name (string-append name "-" version))))
       (build-system gnu-build-system)
       (inputs `(("mesa" ,mesa)
@@ -5000,7 +5049,10 @@ over Xlib, including:
               name "-" version ".tar.bz2"))
         (sha256
          (base32
-          "162s1v901djr57gxmmk4airk8hiwcz79dqyz72972x1lw1k82yk7"))))
+          "162s1v901djr57gxmmk4airk8hiwcz79dqyz72972x1lw1k82yk7"))
+        (patches
+         (search-patches "xorg-server-CVE-2017-10971.patch"
+                         "xorg-server-CVE-2017-10972.patch"))))
     (build-system gnu-build-system)
     (propagated-inputs
       `(("dri2proto" ,dri2proto)
@@ -5635,14 +5687,14 @@ to answer a question.  Xmessage can also exit after a specified time.")
 (define-public xterm
   (package
     (name "xterm")
-    (version "322")
+    (version "330")
     (source (origin
               (method url-fetch)
               (uri (string-append "ftp://ftp.invisible-island.net/xterm/"
                                   "xterm-" version ".tgz"))
               (sha256
                (base32
-                "1mh9s5g3fs64iimnl7axk0isb5306dyshisxlv5gr8vn7ysl3nws"))))
+                "1psnfmqd23v9gxj8a98nzrgvymrk0p1whwqi92gy15bbkzrgkvks"))))
     (build-system gnu-build-system)
     (arguments
      '(#:configure-flags '("--enable-wide-chars" "--enable-256-color"
@@ -5800,7 +5852,7 @@ basic eye-candy effects.")
 (define-public xpra
   (package
     (name "xpra")
-    (version "2.0.2")
+    (version "2.0.3")
     (source
      (origin
        (method url-fetch)
@@ -5808,7 +5860,7 @@ basic eye-candy effects.")
                            version ".tar.xz"))
        (sha256
         (base32
-         "09hzgbsj9v5qyh41rbz968ipi7016jk66b60vm6piryna9kbnha3"))))
+         "1f2mkbgjslfivh5xq5xbab1cn6jjyc1d104f692f3s0dnhq7dafa"))))
     (build-system python-build-system)
     (inputs `(("ffmpeg", ffmpeg)
               ("flac", flac)

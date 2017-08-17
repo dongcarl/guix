@@ -3,7 +3,7 @@
 ;;; Copyright © 2014, 2015 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2014, 2015, 2016, 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2015 Andreas Enge <andreas@enge.fr>
-;;; Copyright © 2015, 2016 Efraim Flashner <efraim@flashner.co.il>
+;;; Copyright © 2015, 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 Carlos Sánchez de La Lama <csanchezdll@gmail.com>
 ;;;
 ;;; This file is part of GNU Guix.
@@ -340,6 +340,7 @@ where the OS part is overloaded to denote a specific ABI---into GCC
 for several languages, including C, C++, Objective-C, Fortran, Java, Ada, and
 Go.  It also includes runtime support libraries for these languages.")
       (license gpl3+)
+      (supported-systems (delete "aarch64-linux" %supported-systems))
       (home-page "https://gcc.gnu.org/"))))
 
 (define-public gcc-4.8
@@ -352,7 +353,8 @@ Go.  It also includes runtime support libraries for these languages.")
               (sha256
                (base32
                 "08yggr18v373a1ihj0rg2vd6psnic42b518xcgp3r9k81xz1xyr2"))
-              (patches (search-patches "gcc-arm-link-spec-fix.patch"))))))
+              (patches (search-patches "gcc-arm-link-spec-fix.patch"))))
+    (supported-systems %supported-systems)))
 
 (define-public gcc-4.9
   (package (inherit gcc-4.7)
@@ -366,7 +368,8 @@ Go.  It also includes runtime support libraries for these languages.")
                 "14l06m7nvcvb0igkbip58x59w3nq6315k6jcz3wr9ch1rn9d44bc"))
               (patches (search-patches "gcc-arm-bug-71399.patch"
                                        "gcc-libvtv-runpath.patch"))))
-    (native-inputs `(("texinfo" ,texinfo)))))
+    (native-inputs `(("texinfo" ,texinfo)))
+    (supported-systems %supported-systems)))
 
 (define-public gcc-5
   ;; Note: GCC >= 5 ships with .info files but 'make install' fails to install
@@ -389,27 +392,27 @@ Go.  It also includes runtime support libraries for these languages.")
 (define-public gcc-6
   (package
     (inherit gcc-5)
-    (version "6.3.0")
+    (version "6.4.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://gnu/gcc/gcc-"
-                                  version "/gcc-" version ".tar.bz2"))
+                                  version "/gcc-" version ".tar.xz"))
               (sha256
                (base32
-                "17xjz30jb65hcf714vn9gcxvrrji8j20xm7n33qg1ywhyzryfsph"))
+                "1m0lr7938lw5d773dkvwld90hjlcq2282517d1gwvrfzmwgg42w5"))
               (patches (search-patches "gcc-strmov-store-file-names.patch"
                                        "gcc-5.0-libvtv-runpath.patch"))))))
 (define-public gcc-7
   (package
     (inherit gcc-6)
-    (version "7.1.0")
+    (version "7.2.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://gnu/gcc/gcc-"
-                                  version "/gcc-" version ".tar.bz2"))
+                                  version "/gcc-" version ".tar.xz"))
               (sha256
                (base32
-                "05xwps0ci7wgxh50askpa2r9p8518qxdgh6ad7pnyk7n6p13d0ca"))
+                "16j7i0888j2f1yp9l0nhji6cq65dy6y4nwy8868a8njbzzwavxqw"))
               (patches (search-patches "gcc-strmov-store-file-names.patch"
                                        "gcc-5.0-libvtv-runpath.patch"))))))
 

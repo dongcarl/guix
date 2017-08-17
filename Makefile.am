@@ -66,6 +66,7 @@ MODULES =					\
   guix/gnu-maintenance.scm			\
   guix/upstream.scm				\
   guix/licenses.scm				\
+  guix/git.scm					\
   guix/graph.scm				\
   guix/cache.scm				\
   guix/cve.scm					\
@@ -78,6 +79,7 @@ MODULES =					\
   guix/build-system/dub.scm			\
   guix/build-system/emacs.scm			\
   guix/build-system/font.scm			\
+  guix/build-system/minify.scm			\
   guix/build-system/asdf.scm			\
   guix/build-system/glib-or-gtk.scm		\
   guix/build-system/gnu.scm			\
@@ -104,6 +106,7 @@ MODULES =					\
   guix/build/cmake-build-system.scm		\
   guix/build/dub-build-system.scm		\
   guix/build/emacs-build-system.scm		\
+  guix/build/minify-build-system.scm		\
   guix/build/font-build-system.scm		\
   guix/build/asdf-build-system.scm		\
   guix/build/git.scm				\
@@ -171,6 +174,7 @@ MODULES =					\
   guix/scripts/import/texlive.scm  		\
   guix/scripts/environment.scm			\
   guix/scripts/publish.scm			\
+  guix/scripts/weather.scm			\
   guix/scripts/edit.scm				\
   guix/scripts/size.scm				\
   guix/scripts/graph.scm			\
@@ -217,13 +221,6 @@ MODULES +=					\
 
 endif HAVE_GUILE_SSH
 
-if HAVE_GUILE_GIT
-
-MODULES +=					\
-  guix/git.scm
-
-endif HAVE_GUILE_GIT
-
 if BUILD_DAEMON_OFFLOAD
 
 MODULES +=					\
@@ -237,8 +234,8 @@ dist_noinst_DATA = guix/tests.scm guix/tests/http.scm
 # Auxiliary files for packages.
 AUX_FILES =						\
   gnu/packages/aux-files/emacs/guix-emacs.el		\
-  gnu/packages/aux-files/linux-libre/4.11-i686.conf	\
-  gnu/packages/aux-files/linux-libre/4.11-x86_64.conf	\
+  gnu/packages/aux-files/linux-libre/4.12-i686.conf	\
+  gnu/packages/aux-files/linux-libre/4.12-x86_64.conf	\
   gnu/packages/aux-files/linux-libre/4.9-i686.conf	\
   gnu/packages/aux-files/linux-libre/4.9-x86_64.conf	\
   gnu/packages/aux-files/linux-libre/4.4-i686.conf	\
