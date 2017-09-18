@@ -42,7 +42,7 @@
 (define-public hwloc
   (package
     (name "hwloc")
-    (version "1.11.7")
+    (version "1.11.8")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://www.open-mpi.org/software/hwloc/v"
@@ -50,7 +50,7 @@
                                   "/downloads/hwloc-" version ".tar.bz2"))
               (sha256
                (base32
-                "0acph1mf7588hfx8ds26ncr6nw5fd9x92adm11fwin7f93i10sdb"))))
+                "0karxv4r1r8sa7ki5aamlxdvyvz0bvzq4gdhq0yi5nc4a0k11vzc"))))
     (build-system gnu-build-system)
     (outputs '("out"           ;'lstopo' & co., depends on Cairo, libx11, etc.
                "lib"           ;small closure
@@ -122,29 +122,46 @@ bind processes, and much more.")
        (base32
         "142s1vny9gllkq336yafxayjgcirj2jv0ddabj879jgya7hyr2d0"))))
     (build-system gnu-build-system)
-    (outputs '("out" "static"))
     (inputs
      `(("hwloc" ,hwloc "lib")
        ("gfortran" ,gfortran)
+       ("libfabric" ,libfabric)
+       ("rdma-core" ,rdma-core)
        ("valgrind" ,valgrind)))
     (native-inputs
      `(("pkg-config" ,pkg-config)
        ("perl" ,perl)))
     (arguments
-     `(#:configure-flags `("--enable-static"
-
-                           "--enable-mpi-thread-multiple"
-                           "--enable-builtin-atomics"
-
-                           "--enable-mpi-ext=all"
-                           "--with-devel-headers"
+     `(#:configure-flags `("--enable-mpi-ext=affinity" ;cr doesn't work
                            "--enable-memchecker"
                            "--with-sge"
+
+                           ;; VampirTrace is obsoleted by scorep and disabling
+                           ;; it reduces the closure size considerably.
+                           "--disable-vt"
+
                            ,(string-append "--with-valgrind="
                                            (assoc-ref %build-inputs "valgrind"))
                            ,(string-append "--with-hwloc="
                                            (assoc-ref %build-inputs "hwloc")))
        #:phases (modify-phases %standard-phases
+                  (add-before 'build 'remove-absolute
+                    (lambda _
+                      ;; Remove compiler absolute file names (OPAL_FC_ABSOLUTE
+                      ;; etc.) to reduce the closure size.  See
+                      ;; <https://lists.gnu.org/archive/html/guix-devel/2017-07/msg00388.html>
+                      ;; and
+                      ;; <https://www.mail-archive.com/users@lists.open-mpi.org//msg31397.html>.
+                      (substitute* '("orte/tools/orte-info/param.c"
+                                     "oshmem/tools/oshmem_info/param.c"
+                                     "ompi/tools/ompi_info/param.c")
+                        (("_ABSOLUTE") ""))
+                      ;; Avoid valgrind (which pulls in gdb etc.).
+                      (substitute*
+                          '("./ompi/mca/io/romio/src/io_romio_component.c")
+                        (("MCA_io_romio_COMPLETE_CONFIGURE_FLAGS")
+                         "\"[elided to reduce closure]\""))
+                      #t))
                   (add-before 'build 'scrub-timestamps ;reproducibility
                     (lambda _
                       (substitute* '("ompi/tools/ompi_info/param.c"
@@ -156,20 +173,6 @@ bind processes, and much more.")
                     (lambda* (#:key outputs #:allow-other-keys)
                       (let ((out (assoc-ref outputs "out")))
                         (for-each delete-file (find-files out "config.log"))
-                        #t)))
-                  (add-after 'install 'move-static-libraries
-                    (lambda* (#:key outputs #:allow-other-keys)
-                      ;; Move 19 MiB of static libraries to 'static'.
-                      (let* ((out    (assoc-ref outputs "out"))
-                             (static (assoc-ref outputs "static"))
-                             (lib    (string-append out "/lib"))
-                             (slib   (string-append static "/lib")))
-                        (mkdir-p slib)
-                        (for-each (lambda (file)
-                                    (rename-file
-                                     file
-                                     (string-append slib "/" (basename file))))
-                                  (find-files lib "\\.a$"))
                         #t))))))
     (home-page "http://www.open-mpi.org")
     (synopsis "MPI-3 implementation")
@@ -182,3 +185,17 @@ best MPI library available.  Open MPI offers advantages for system and
 software vendors, application developers and computer science researchers.")
     ;; See file://LICENSE
     (license bsd-2)))
+
+(define-public openmpi-thread-multiple
+  (package
+    (inherit openmpi)
+    (name "openmpi-thread-multiple")
+    (arguments
+     (substitute-keyword-arguments (package-arguments openmpi)
+       ((#:configure-flags flags)
+        `(cons "--enable-mpi-thread-multiple" ,flags))))
+    (description " This version of Open@tie{}MPI has an implementation of
+@code{MPI_Init_thread} that provides @code{MPI_THREAD_MULTIPLE}.  This won't
+work correctly with all transports (such as @code{openib}), and the
+performance is generally worse than the vanilla @code{openmpi} package, which
+only provides @code{MPI_THREAD_FUNNELED}.")))

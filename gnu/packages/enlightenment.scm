@@ -59,7 +59,7 @@
 (define-public efl
   (package
     (name "efl")
-    (version "1.20.2")
+    (version "1.20.3")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -67,7 +67,7 @@
                     version ".tar.xz"))
               (sha256
                (base32
-                "0zll6k4xbbdsxqg53g8jddgv889g5m1xh20i03iz5a52y2bcnh55"))))
+                "148i8awjdrqzd0xqfc6q4qvhhs46jl15nx7n2nii7lrwzx502wqj"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("pkg-config" ,pkg-config)))
@@ -149,6 +149,16 @@
                            "--enable-drm")
        #:phases
        (modify-phases %standard-phases
+         ;; If we don't hardcode the location of libcurl.so then we
+         ;; have to wrap the outputs of efl's dependencies in curl.
+         (add-after 'unpack 'hardcode-libcurl-location
+           (lambda* (#:key inputs #:allow-other-keys)
+             (let* ((curl (assoc-ref inputs "curl"))
+                    (lib  (string-append curl "/lib/")))
+               (substitute* "src/lib/ecore_con/ecore_con_url_curl.c"
+                 (("libcurl.so.?" libcurl) ; libcurl.so.[45]
+                  (string-append lib libcurl)))
+               #t)))
          (add-after 'unpack 'set-home-directory
            ;; FATAL: Cannot create run dir '/homeless-shelter/.run' - errno=2
            (lambda _ (setenv "HOME" "/tmp") #t)))))
@@ -165,7 +175,7 @@ removable devices or support for multimedia.")
 (define-public terminology
   (package
     (name "terminology")
-    (version "1.0.0")
+    (version "1.1.1")
     (source (origin
               (method url-fetch)
               (uri
@@ -173,7 +183,23 @@ removable devices or support for multimedia.")
                               "terminology/terminology-" version ".tar.xz"))
               (sha256
                (base32
-                "1x4j2q4qqj10ckbka0zaq2r2zm66ff1x791kp8slv1ff7fw45vdz"))))
+                "05ncxvzb9rzkyjvd95hzn8lswqdwr8cix6rd54nqn9559jibh4ns"))
+              (modules '((guix build utils)))
+              ;; Remove the bundled fonts.
+              ;; TODO: Remove bundled lz4.
+              (snippet
+               '(begin
+                  (delete-file-recursively "data/fonts")
+                  (substitute* '("data/Makefile.in" "data/Makefile.am")
+                    (("fonts") ""))
+                  (substitute* "configure"
+                    (("data/fonts/Makefile") "")
+                    (("\\\"data/fonts/Makefile") "# \"data/fonts/Makefile"))
+                  (substitute* '("data/themes/Makefile.in"
+                                 "data/themes/Makefile.am"
+                                 "data/themes/nyanology/Makefile.in"
+                                 "data/themes/nyanology/Makefile.am")
+                    (("-fd \\$\\(top_srcdir\\)/data/fonts") ""))))))
     (build-system gnu-build-system)
     (arguments
      '(#:phases
@@ -182,7 +208,8 @@ removable devices or support for multimedia.")
            ;; FATAL: Cannot create run dir '/homeless-shelter/.run' - errno=2
            (lambda _ (setenv "HOME" "/tmp") #t)))))
     (native-inputs
-     `(("pkg-config" ,pkg-config)))
+     `(("gettext" ,gettext-minimal)
+       ("pkg-config" ,pkg-config)))
     (inputs
      `(("efl" ,efl)))
     (home-page "https://www.enlightenment.org/about-terminology")
@@ -228,7 +255,7 @@ Libraries with some extra bells and whistles.")
 (define-public enlightenment
   (package
     (name "enlightenment")
-    (version "0.21.8")
+    (version "0.21.9")
     (source (origin
               (method url-fetch)
               (uri
@@ -236,7 +263,7 @@ Libraries with some extra bells and whistles.")
                               name "/" name "-" version ".tar.xz"))
               (sha256
                (base32
-                "0cjjiip12hd8bfjl9ccl3vzl81pxh1wpymxk2yvrzf6ap5girhps"))))
+                "0w5f3707hyfc20i6xqh4jlr5p2yhy1z794061mjsz2rp4w00qmpb"))))
     (build-system gnu-build-system)
     (arguments
      `(#:configure-flags '("--enable-mount-eeze")

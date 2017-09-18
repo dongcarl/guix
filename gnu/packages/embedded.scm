@@ -299,7 +299,7 @@ languages are C and C++.")
       (source (origin
                 (method git-fetch)
                 (uri (git-reference
-                      (url "git://git.zapb.de/libjaylink.git")
+                      (url "https://git.zapb.de/libjaylink.git")
                       (commit commit)))
                 (file-name (string-append name "-" version "-checkout"))
                 (sha256
@@ -316,7 +316,7 @@ languages are C and C++.")
       (arguments
        `(#:phases
          (modify-phases %standard-phases
-           (add-before 'configure 'autoreconf
+           (add-after 'unpack 'autoreconf
              (lambda _
                (zero? (system* "autoreconf" "-vfi")))))))
       (home-page "http://repo.or.cz/w/libjaylink.git")
@@ -365,7 +365,7 @@ language.")
       (source (origin
                 (method git-fetch)
                 (uri (git-reference
-                      (url "git://git.code.sf.net/p/openocd/code.git")
+                      (url "https://git.code.sf.net/p/openocd/code.git")
                       (commit commit)))
                 (sha256
                  (base32
@@ -400,7 +400,7 @@ language.")
                         "presto" "openjtag")))
          #:phases
          (modify-phases %standard-phases
-           (add-before 'configure 'autoreconf
+           (add-after 'unpack 'autoreconf
              (lambda _
                (zero? (system* "autoreconf" "-vfi")))))))
       (home-page "http://openocd.org")
@@ -447,7 +447,7 @@ with a layered architecture of JTAG interface and TAP support.")
          ,@(package-arguments xbinutils)))
       (native-inputs
        `(("bison" ,bison)
-         ("flex" ,flex-2.6.1) ; needed because of yywrap error
+         ("flex" ,flex)
          ("texinfo" ,texinfo)
          ("dejagnu" ,dejagnu)
          ,@(package-native-inputs xbinutils))))))
@@ -828,7 +828,7 @@ simulator.")
                  (base32
                   "14b3h2ji740s8zq5vwm4qdcxs4aa4wxi6wb9di3bv1h39x14nyr9"))))
          ("texinfo" ,texinfo)
-         ("flex" ,flex-2.6.1) ; A bug in flex prevents building with flex-2.6.3.
+         ("flex" ,flex)
          ("bison" ,bison)
          ("guile-1.8" ,guile-1.8)
          ("which" ,base:which)))

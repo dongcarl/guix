@@ -8,7 +8,7 @@
 ;;; Copyright © 2015 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2015, 2016, 2017 Alex Vong <alexvong1995@gmail.com>
 ;;; Copyright © 2016, 2017 Alex Griffin <a@ajgrf.com>
-;;; Copyright © 2016 Kei Kebreau <kei@openmailbox.org>
+;;; Copyright © 2016 Kei Kebreau <kkebreau@posteo.net>
 ;;; Copyright © 2016 Dmitry Nikolaev <cameltheman@gmail.com>
 ;;; Copyright © 2016 Andy Patterson <ajpatter@uwaterloo.ca>
 ;;; Copyright © 2016, 2017 ng0 <contact.ng0@cryptolab.net>
@@ -580,14 +580,14 @@ standards (MPEG-2, MPEG-4 ASP/H.263, MPEG-4 AVC/H.264, and VC-1/VMW3).")
 (define-public ffmpeg
   (package
     (name "ffmpeg")
-    (version "3.3.3")
+    (version "3.3.4")
     (source (origin
              (method url-fetch)
              (uri (string-append "https://ffmpeg.org/releases/ffmpeg-"
                                  version ".tar.xz"))
              (sha256
               (base32
-               "07is8msrhxr1dk6vgwa192k2pl2a0in1h9w8f9cknlvbvhn01afj"))))
+               "0mx9dvad3lkyhvsrblf280x2bz6dxajya1ylnspbdzldj0dpxfcq"))))
     (build-system gnu-build-system)
     (inputs
      `(("fontconfig" ,fontconfig)
@@ -749,14 +749,14 @@ audio/video codec library.")
 (define-public ffmpeg-2.8
   (package
     (inherit ffmpeg)
-    (version "2.8.12")
+    (version "2.8.13")
     (source (origin
              (method url-fetch)
              (uri (string-append "https://ffmpeg.org/releases/ffmpeg-"
                                  version ".tar.xz"))
              (sha256
               (base32
-               "1gc32akvdms3rywphnap94lqqici8l5898a09ir1ad5rif5g24v2"))))
+               "0hyqr391pika4vgynv90bacz11wdpqcqfgj5h7g5jrmgvz6hgj68"))))
     (arguments
      (substitute-keyword-arguments (package-arguments ffmpeg)
        ((#:configure-flags flags)
@@ -780,10 +780,7 @@ audio/video codec library.")
                "1a22b913p2227ljz89c4fgjlyln5gcz8z58w32r0wh4srnnd60y4"))))
     (build-system gnu-build-system)
     (native-inputs
-     `(("autoconf" ,autoconf)
-       ("automake" ,automake)
-       ("git" ,git) ; needed for a test
-       ("libtool" ,libtool)
+     `(("git" ,git) ; needed for a test
        ("pkg-config" ,pkg-config)))
     ;; FIXME: Add optional inputs once available.
     (inputs
@@ -819,9 +816,8 @@ audio/video codec library.")
        ("perl" ,perl)
        ("pulseaudio" ,pulseaudio)
        ("python" ,python-wrapper)
-       ("qt" ,qt) ; FIXME: reenable modular qt after update - requires building
-       ;("qtbase" ,qtbase) with -std=gnu++11.
-       ;("qtx11extras" ,qtx11extras)
+       ("qtbase" ,qtbase)
+       ("qtx11extras" ,qtx11extras)
        ("sdl" ,sdl)
        ("sdl-image" ,sdl-image)
        ("speex" ,speex)
@@ -829,33 +825,27 @@ audio/video codec library.")
        ("xcb-util-keysyms" ,xcb-util-keysyms)))
     (arguments
      `(#:configure-flags
-       `(;; Gross workaround for <https://trac.videolan.org/vlc/ticket/16907>.
-         ;; In our case, this led to a test failure:
-         ;;   test_libvlc_equalizer: libvlc/equalizer.c:122: test_equalizer: Assertion `isnan(libvlc_audio_equalizer_get_amp_at_index (equalizer, u_bands))' failed.
-         "ac_cv_c_fast_math=no"
-
+       `("CXXFLAGS=-std=gnu++11"
          ,(string-append "LDFLAGS=-Wl,-rpath -Wl,"
                          (assoc-ref %build-inputs "ffmpeg")
                          "/lib"))                 ;needed for the tests
 
        #:phases
        (modify-phases %standard-phases
-         (add-before 'configure 'bootstrap
-           (lambda _ (zero? (system* "sh" "bootstrap"))))
-         (add-before 'bootstrap 'fix-livemedia-utils-prefix
+         (add-after 'unpack 'patch-source
            (lambda* (#:key inputs #:allow-other-keys)
              (let ((livemedia-utils (assoc-ref inputs "livemedia-utils")))
-               (substitute* "configure.ac"
+               (substitute* "configure"
                  (("LIVE555_PREFIX=\\$\\{LIVE555_PREFIX-\"/usr\"\\}")
                   (string-append "LIVE555_PREFIX=" livemedia-utils)))
+               ;; Some of the tests require using the display to test out VLC,
+               ;; which fails in our sandboxed build system
+               (substitute* "test/run_vlc.sh"
+                 (("./vlc --ignore-config") "echo"))
+               ;; XXX Likely not needed for >2.2.6.
+               (substitute* "modules/gui/qt4/components/interface_widgets.cpp"
+                 (("<qx11info_x11.h>") "<QtX11Extras/qx11info_x11.h>"))
                #t)))
-         (add-before 'configure 'remove-visual-tests
-           ;; Some of the tests require using the display to test out VLC,
-           ;; which fails in our sandboxed build system
-           (lambda _
-             (substitute* "test/run_vlc.sh"
-                          (("./vlc --ignore-config") "echo"))
-             #t))
          (add-after 'install 'regenerate-plugin-cache
            (lambda* (#:key outputs #:allow-other-keys)
              ;; The 'install-exec-hook' rule in the top-level Makefile.am
@@ -980,7 +970,7 @@ SVCD, DVD, 3ivx, DivX 3/4/5, WMV and H.264 movies.")
 (define-public mpv
   (package
     (name "mpv")
-    (version "0.26.0")
+    (version "0.27.0")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -988,7 +978,7 @@ SVCD, DVD, 3ivx, DivX 3/4/5, WMV and H.264 movies.")
                     ".tar.gz"))
               (sha256
                (base32
-                "0ihvnwrp24jjf43k1hvy8n8w4ipl4z7apjppd4i0y9jzilsyzwys"))
+                "1754371fkva8aqxgbm50jxyvij7mnysq0538bf6zghbmigqqn79l"))
               (file-name (string-append name "-" version ".tar.gz"))))
     (build-system waf-build-system)
     (native-inputs
@@ -1121,7 +1111,7 @@ access to mpv's powerful playback capabilities.")
 (define-public youtube-dl
   (package
     (name "youtube-dl")
-    (version "2017.08.13")
+    (version "2017.09.11")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://yt-dl.org/downloads/"
@@ -1129,7 +1119,7 @@ access to mpv's powerful playback capabilities.")
                                   version ".tar.gz"))
               (sha256
                (base32
-                "1parn0xda7mp1phcj19axldifgh6mcwia6wdi3m20kidc9m4wb11"))))
+                "0ai193skl2ml247p1jwpxnhwng1s4263mw1fra725a5rgkfyyvcb"))))
     (build-system python-build-system)
     (arguments
      ;; The problem here is that the directory for the man page and completion
@@ -1438,7 +1428,7 @@ device without having to bother about the decryption.")
     (source (origin
               (method url-fetch)
               (uri (string-append
-                    "http://dthompson.us/releases/srt2vtt/srt2vtt-"
+                    "https://files.dthompson.us/srt2vtt/srt2vtt-"
                     version ".tar.gz"))
               (sha256
                (base32
@@ -2260,12 +2250,13 @@ practically any type of media.")
        #:phases
        ;; build scripts not in root of archive
        (modify-phases %standard-phases
-         (add-before 'configure 'pre-configure
+         (add-after 'unpack 'change-to-build-dir
            (lambda _
-             (chdir "Project/GNU/Library")))
-         (add-before 'configure 'autogen
+             (chdir "Project/GNU/Library")
+             #t))
+         (add-after 'change-to-build-dir 'autogen
            (lambda _
-             (zero? (system* "./autogen.sh")))))))
+             (zero? (system* "sh" "autogen.sh")))))))
     (home-page "https://mediaarea.net/en/MediaInfo")
     (synopsis "Library for retrieving media metadata")
     (description "MediaInfo is a library used for retrieving technical
@@ -2321,9 +2312,9 @@ MPEG-2, MPEG-4, DVD (VOB)...
          (add-before 'configure 'pre-configure
            (lambda _
              (chdir "Project/GNU/CLI")))
-         (add-before 'configure 'autogen
+         (add-after 'unpack 'autogen
            (lambda _
-             (zero? (system* "./autogen.sh")))))))
+             (zero? (system* "sh" "autogen.sh")))))))
     (home-page "https://mediaarea.net/en/MediaInfo")
     (synopsis "Utility for reading media metadata")
     (description "MediaInfo is a utility used for retrieving technical

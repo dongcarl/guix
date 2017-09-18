@@ -287,7 +287,7 @@ rasterisation.")
 (define-public libdrm
   (package
     (name "libdrm")
-    (version "2.4.80")
+    (version "2.4.81")
     (source
       (origin
         (method url-fetch)
@@ -297,7 +297,7 @@ rasterisation.")
                ".tar.bz2"))
         (sha256
          (base32
-          "1wa9cnzf60xwx67zq9ay48xr3j3sn1z80q77jpbzmkg906b52am8"))
+          "1bhimr6za2ddisrvrv1qqd7c2a59s7jc954sjycq2w68b8cmrh4c"))
         (patches (search-patches "libdrm-symbol-check.patch"))))
     (build-system gnu-build-system)
     (inputs
@@ -451,7 +451,7 @@ of the screen selected by mouse.")
 (define-public slop
   (package
     (name "slop")
-    (version "7.3.48")
+    (version "7.3.49")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -460,7 +460,7 @@ of the screen selected by mouse.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "14igmf6a6vwx75gjnj10497n04klc35dvq87id8g9jn9rd3m6n25"))))
+                "0gxi174vi13ldjaf776s2jcdyy379lnwwml29nk1bkzj5d5gpghm"))))
     (build-system cmake-build-system)
     (arguments
      '(#:tests? #f)) ; no "check" target
@@ -484,7 +484,7 @@ selection's dimensions to stdout.")
 (define-public maim
   (package
     (name "maim")
-    (version "5.4.66")
+    (version "5.4.68")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -493,7 +493,7 @@ selection's dimensions to stdout.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "077aww1fab3ihzxdybxpdh0h3d7fbgpvsm9q92byfb2ig32viyfa"))))
+                "0f54s7csrxjd5r9anqqa92diwmzdplpws3llmbr6g3c0l6bp8815"))))
     (build-system cmake-build-system)
     (arguments
      '(#:tests? #f))            ; no "check" target

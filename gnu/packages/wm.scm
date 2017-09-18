@@ -73,7 +73,7 @@
 (define-public libconfuse
   (package
     (name "libconfuse")
-    (version "3.2")
+    (version "3.2.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/martinh/libconfuse/"
@@ -81,7 +81,7 @@
                                   "/confuse-" version ".tar.xz"))
               (sha256
                (base32
-                "0j2fg93w22apjfqnkak8k8m395n2l7hhm9xnjx0k2v82js3bnsm4"))))
+                "0pnjmlj9i0alp407qd7c0vq83sz7gpsjrbdgpcn4xvzjp9r35ii3"))))
     (build-system gnu-build-system)
     (home-page "https://github.com/martinh/libconfuse")
     (synopsis "Configuration file parser library")
@@ -168,14 +168,14 @@ commands would.")
 (define-public i3-wm
   (package
     (name "i3-wm")
-    (version "4.13")
+    (version "4.14")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://i3wm.org/downloads/i3-"
                                   version ".tar.bz2"))
               (sha256
                (base32
-                "12ngz32swh9n85xy0cz1lq16aqi9ys5hq19v589q9a97wn1k3hcl"))))
+                "1mm5jazwv4dz3k8vl1lfrcw86agpws5k9lmav1ly51qvmzivsfmf"))))
     (build-system gnu-build-system)
     (arguments
      `(#:make-flags
@@ -225,14 +225,14 @@ developers.")
 (define-public perl-anyevent-i3
   (package
     (name "perl-anyevent-i3")
-    (version "0.16")
+    (version "0.17")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://cpan/authors/id/M/MS/MSTPLBG/"
                                   "AnyEvent-I3-" version ".tar.gz"))
               (sha256
                (base32
-                "1qwva5vmmn929l6k9wzhp4h80ad4qm4m1g2dyv4nlas624003hig"))))
+                "0qvd9bq16jyy7v3ma82qcnvz9j503bw0mh7h55gkjf7ir62ck0jk"))))
     (build-system perl-build-system)
     (propagated-inputs
      `(("perl-anyevent" ,perl-anyevent)

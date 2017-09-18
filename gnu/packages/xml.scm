@@ -16,6 +16,7 @@
 ;;; Copyright © 2016, 2017 Marius Bakke <mbakke@fastmail.com>
 ;;; Copyright © 2017 Adriano Peluso <catonano@gmail.com>
 ;;; Copyright © 2017 Gregor Giesen <giesen@zaehlwerk.net>
+;;; Copyright © 2017 Alex Vong <alexvong1995@gmail.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -55,17 +56,15 @@
 (define-public expat
   (package
     (name "expat")
-    (version "2.2.0")
+    (version "2.2.1")
     (replacement expat-2.2.2)
     (source (origin
              (method url-fetch)
              (uri (string-append "mirror://sourceforge/expat/expat/"
                                  version "/expat-" version ".tar.bz2"))
-             (patches
-               (search-patches "expat-CVE-2016-0718-fix-regression.patch"))
              (sha256
               (base32
-               "1zq4lnwjlw8s9mmachwfvfjf2x3lk24jm41746ykhdcvs7r0zrfr"))))
+               "11c8jy1wvllvlk7xdc5cm8hdhg0hvs8j0aqy6s702an8wkdcls0q"))))
     (build-system gnu-build-system)
     (home-page "http://www.libexpat.org/")
     (synopsis "Stream-oriented XML parser library written in C")
@@ -112,6 +111,7 @@ hierarchical form with variable field lengths.")
   (package
     (name "libxml2")
     (version "2.9.4")
+    (replacement libxml2/fixed)
     (source (origin
              (method url-fetch)
              (uri (string-append "ftp://xmlsoft.org/libxml2/libxml2-"
@@ -139,6 +139,20 @@ hierarchical form with variable field lengths.")
      "Libxml2 is the XML C parser and toolkit developed for the Gnome
 project (but it is usable outside of the Gnome platform).")
     (license license:x11)))
+
+(define libxml2/fixed
+  (package
+    (inherit libxml2)
+    (source
+     (origin
+       (inherit (package-source libxml2))
+       (patches
+        (append (origin-patches (package-source libxml2))
+        (search-patches "libxml2-CVE-2017-0663.patch"
+                        "libxml2-CVE-2017-7375.patch"
+                        "libxml2-CVE-2017-7376.patch"
+                        "libxml2-CVE-2017-9047+CVE-2017-9048.patch"
+                        "libxml2-CVE-2017-9049+CVE-2017-9050.patch")))))))
 
 (define-public python-libxml2
   (package (inherit libxml2)
@@ -229,18 +243,30 @@ the @code{Graph} class and write it out in a specific file format.")
 (define-public perl-xml-atom
   (package
     (name "perl-xml-atom")
-    (version "0.41")
+    (version "0.42")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://cpan/authors/id/M/MI/MIYAGAWA/"
                                   "XML-Atom-" version ".tar.gz"))
               (sha256
                (base32
-                "17lnkb9ymrhk2z642bhj5i2bv3q1da3kpp2lvsl0yhqshk3wdjj8"))))
+                "1wa8kfy1w4mg7kzxim4whyprkn48a2il6fap0b947zywknw4c6y6"))))
     (build-system perl-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'set-perl-search-path
+           (lambda _
+             (setenv "PERL5LIB"
+                     (string-append (getcwd) ":"
+                                    (getenv "PERL5LIB")))
+             #t)))))
     (native-inputs
      `(("perl-datetime" ,perl-datetime)
        ;; TODO package: perl-datetime-format-atom
+       ("perl-html-tagset" ,perl-html-tagset)
+       ("perl-module-build-tiny" ,perl-module-build-tiny)
+       ("perl-module-install" ,perl-module-install)
        ("perl-xml-xpath" ,perl-xml-xpath)))
     (inputs
      `(("perl-class-data-inheritable" ,perl-class-data-inheritable)
@@ -436,7 +462,7 @@ libxslt library.")
 (define-public perl-xml-namespacesupport
   (package
     (name "perl-xml-namespacesupport")
-    (version "1.11")
+    (version "1.12")
     (source
      (origin
        (method url-fetch)
@@ -444,7 +470,7 @@ libxslt library.")
                            "XML-NamespaceSupport-" version ".tar.gz"))
        (sha256
         (base32
-         "1sklgcldl3w6gn706vx1cgz6pm4y5lfgsjxnfqyk20pilgq530bd"))))
+         "1vz5pbi4lm5fhq2slrs2hlp6bnk29863abgjlcx43l4dky2rbsa7"))))
     (build-system perl-build-system)
     (home-page "http://search.cpan.org/dist/XML-NamespaceSupport")
     (synopsis "XML namespace support class")
@@ -841,13 +867,13 @@ parsing/saving.")
 (define-public python-pyxb
   (package
     (name "python-pyxb")
-    (version "1.2.5")
+    (version "1.2.6")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "PyXB" version))
               (sha256
                (base32
-                "0rzzwibfqa28gxgcxx4cybx1qcg0g6fand06ykj3gz7z5kp653sf"))))
+                "1d17pyixbfvjyi2lb0cfp0ch8wwdf44mmg3r5pwqhyyqs66z601a"))))
     (build-system python-build-system)
     (home-page "http://pyxb.sourceforge.net/")
     (synopsis "Python XML Schema Bindings")

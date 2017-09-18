@@ -3,6 +3,7 @@
 ;;; Copyright © 2014 Andreas Enge <andreas@enge.fr>
 ;;; Copyright © 2012 Nikita Karetnikov <nikita@karetnikov.org>
 ;;; Copyright © 2014, 2015, 2017 Mark H Weaver <mhw@netris.org>
+;;; Copyright © 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -112,8 +113,7 @@
 
 (define file-boot0
   (package-with-bootstrap-guile
-   (package-with-explicit-inputs (package
-                                   (inherit file)
+   (package-with-explicit-inputs (package/inherit file
                                    (name "file-boot0"))
                                  `(("make" ,gnu-make-boot0)
                                    ,@%bootstrap-inputs)
@@ -140,7 +140,7 @@
 
 (define binutils-boot0
   (package-with-bootstrap-guile
-   (package (inherit binutils)
+   (package/inherit binutils
      (name "binutils-cross-boot0")
      (arguments
       `(#:guile ,%bootstrap-guile
@@ -509,14 +509,7 @@ the bootstrap environment."
      (propagated-inputs `(("kernel-headers" ,(kernel-headers-boot0))))
      (native-inputs
       `(("texinfo" ,texinfo-boot0)
-        ("perl" ,perl-boot0)
-        ;; Apply this patch only on i686 to avoid a full rebuild.
-        ;; TODO: Remove in the next update cycle.
-        ,@(if (string-prefix? "i686" (or (%current-target-system)
-                                         (%current-system)))
-              `(("glibc-memchr-overflow-i686.patch"
-                 ,(search-patch "glibc-memchr-overflow-i686.patch")))
-              '())))
+        ("perl" ,perl-boot0)))
      (inputs
       `(;; The boot inputs.  That includes the bootstrap libc.  We don't want
         ;; it in $CPATH, hence the 'pre-configure' phase above.
@@ -675,7 +668,7 @@ exec ~a/bin/~a-~a -B~a/lib -Wl,-dynamic-linker -Wl,~a/~a \"$@\"~%"
 
 (define binutils-final
   (package-with-bootstrap-guile
-   (package (inherit binutils)
+   (package/inherit binutils
      (arguments
       `(#:guile ,%bootstrap-guile
         #:implicit-inputs? #f
@@ -806,13 +799,14 @@ exec ~a/bin/~a-~a -B~a/lib -Wl,-dynamic-linker -Wl,~a/~a \"$@\"~%"
 
 (define bash-final
   ;; Link with `-static-libgcc' to make sure we don't retain a reference
-  ;; to the bootstrap GCC.
+  ;; to the bootstrap GCC.  Use "bash-minimal" to avoid an extra dependency
+  ;; on Readline and ncurses.
   (let ((bash (package
-                (inherit bash)
+                (inherit bash-minimal)
                 (arguments
                  `(#:disallowed-references
                    ,(assoc-ref %boot3-inputs "coreutils&co")
-                   ,@(package-arguments bash))))))
+                   ,@(package-arguments bash-minimal))))))
     (package-with-bootstrap-guile
      (package-with-explicit-inputs (static-libgcc-package bash)
                                    %boot3-inputs
@@ -828,7 +822,7 @@ exec ~a/bin/~a-~a -B~a/lib -Wl,-dynamic-linker -Wl,~a/~a \"$@\"~%"
   ;; This package must be public because other modules refer to it.  However,
   ;; mark it as hidden so that 'fold-packages' ignores it.
   (package-with-bootstrap-guile
-   (package-with-explicit-inputs (hidden-package guile-2.0/fixed)
+   (package-with-explicit-inputs (hidden-package guile-2.2/fixed)
                                  %boot4-inputs
                                  (current-source-location)
                                  #:guile %bootstrap-guile)))
@@ -849,12 +843,10 @@ exec ~a/bin/~a-~a -B~a/lib -Wl,-dynamic-linker -Wl,~a/~a \"$@\"~%"
 
 (define-public ld-wrapper
   ;; The final 'ld' wrapper, which uses the final Guile and Binutils.
-  (package (inherit ld-wrapper-boot3)
-    (name "ld-wrapper")
-    (inputs `(("guile" ,guile-final)
-              ("bash"  ,bash-final)
-              ,@(fold alist-delete (package-inputs ld-wrapper-boot3)
-                      '("guile" "bash"))))))
+  (make-ld-wrapper "ld-wrapper"
+                   #:binutils binutils-final
+                   #:guile guile-final
+                   #:bash bash-final))
 
 (define %boot5-inputs
   ;; Now with UTF-8 locales.  Remember that the bootstrap binaries were built
@@ -947,7 +939,7 @@ exec ~a/bin/~a-~a -B~a/lib -Wl,-dynamic-linker -Wl,~a/~a \"$@\"~%"
 the implicit inputs of 'gnu-build-system', return that one, otherwise return
 PACKAGE.
 
-The goal is to avoid duplication in cases like GUILE-FINAL vs. GUILE-2.0,
+The goal is to avoid duplication in cases like GUILE-FINAL vs. GUILE-2.2,
 COREUTILS-FINAL vs. COREUTILS, etc."
       ;; XXX: This doesn't handle dependencies of the final inputs, such as
       ;; libunistring, GMP, etc.

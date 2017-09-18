@@ -1,6 +1,7 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2017 Arun Isaac <arunisaac@systemreboot.net>
 ;;; Copyright © 2017 Ricardo Wurmus <rekado@elephly.net>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -22,13 +23,52 @@
   #:use-module (gnu packages)
   #:use-module (gnu packages base)
   #:use-module (gnu packages compression)
-  #:use-module (gnu packages fonts)
   #:use-module (gnu packages lisp)
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix git-download)
   #:use-module (guix build-system trivial)
   #:use-module (guix build-system minify))
+
+(define-public font-mathjax
+  (package
+    (name "font-mathjax")
+    (version "2.7.2")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "https://github.com/mathjax/MathJax/archive/"
+             version ".tar.gz"))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32
+         "1r72di4pg4i6pfhcskkxqmf1158m81ki6a7lbw6nz4zh7xw23hy4"))))
+    (build-system trivial-build-system)
+    (arguments
+     `(#:modules ((guix build utils))
+       #:builder
+       (begin
+         (use-modules (guix build utils)
+                      (ice-9 match))
+         (set-path-environment-variable
+          "PATH" '("bin") (map (match-lambda
+                                 ((_ . input)
+                                  input))
+                               %build-inputs))
+         (let ((install-directory (string-append %output "/share/fonts/mathjax")))
+           (mkdir-p install-directory)
+           (zero? (system* "tar" "-C" install-directory "-xvf"
+                           (assoc-ref %build-inputs "source")
+                           ,(string-append "MathJax-" version "/fonts")
+                           "--strip" "2"))))))
+    (native-inputs
+     `(("gzip" ,gzip)
+       ("tar" ,tar)))
+    (home-page "https://www.mathjax.org/")
+    (synopsis "Fonts for MathJax")
+    (description "This package contains the fonts required for MathJax.")
+    (license license:asl2.0)))
 
 (define-public js-mathjax
   (package
@@ -53,7 +93,9 @@
          (setenv "LANG" "en_US.UTF-8")
          (let ((install-directory (string-append %output "/share/javascript/mathjax")))
            (system* "tar" "xvf" (assoc-ref %build-inputs "source")
-                    "MathJax-2.7.1/unpacked" "--strip" "2")
+                    ,(string-append "MathJax-" (package-version font-mathjax)
+                                    "/unpacked")
+                    "--strip" "2")
            (mkdir-p install-directory)
            (symlink (string-append (assoc-ref %build-inputs "font-mathjax")
                                    "/share/fonts/mathjax")

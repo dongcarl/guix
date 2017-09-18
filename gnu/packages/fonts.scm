@@ -49,7 +49,6 @@
   #:use-module (gnu packages base)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages fontutils)
-  #:use-module (gnu packages golang)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
@@ -561,7 +560,7 @@ languages, plus Greek and Cyrillic.")
 (define-public font-gnu-unifont
   (package
     (name "font-gnu-unifont")
-    (version "10.0.05")
+    (version "10.0.06")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -569,7 +568,7 @@ languages, plus Greek and Cyrillic.")
                     version ".tar.gz"))
               (sha256
                (base32
-                "07sajc32l2knnz6gmd81zxjhcxq8xr6r2kf42wig56vj05s3d1cb"))))
+                "0z8lglzwbkmya0gmhxd9m1x3nsd7flfsbsh0qy34dzqqdwjpyy2p"))))
     (build-system gnu-build-system)
     (outputs '("out" ; TrueType version
                "pcf" ; PCF (bitmap) version
@@ -987,7 +986,7 @@ programming.  Iosevka is completely generated from its source code.")
 Holmes type foundry, released under the same license as the Go programming
 language.  It includes a set of proportional, sans-serif fonts, and a set of
 monospace, slab-serif fonts.")
-      (license (package-license go-1.4)))))
+      (license license:bsd-3))))
 
 (define-public font-google-material-design-icons
   (package
@@ -1012,45 +1011,6 @@ and minimal forms the universal concepts used commonly throughout a UI.
 Ensuring readability and clarity at both large and small sizes, these icons
 have been optimized for beautiful display on all common platforms and display
 resolutions.")
-    (license license:asl2.0)))
-
-(define-public font-mathjax
-  (package
-    (name "font-mathjax")
-    (version "2.7.1")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append
-             "https://github.com/mathjax/MathJax/archive/"
-             version ".tar.gz"))
-       (file-name (string-append name "-" version ".tar.gz"))
-       (sha256
-        (base32
-         "0sbib5lk0jrvbq6s72ag6ss3wjlz5wnk07ddxij1kp96yg3c1d1b"))))
-    (build-system trivial-build-system)
-    (arguments
-     `(#:modules ((guix build utils))
-       #:builder
-       (begin
-         (use-modules (guix build utils)
-                      (ice-9 match))
-         (set-path-environment-variable
-          "PATH" '("bin") (map (match-lambda
-                                 ((_ . input)
-                                  input))
-                               %build-inputs))
-         (let ((install-directory (string-append %output "/share/fonts/mathjax")))
-           (mkdir-p install-directory)
-           (zero? (system* "tar" "-C" install-directory "-xvf"
-                           (assoc-ref %build-inputs "source")
-                           "MathJax-2.7.1/fonts" "--strip" "2"))))))
-    (native-inputs
-     `(("gzip" ,gzip)
-       ("tar" ,tar)))
-    (home-page "https://www.mathjax.org/")
-    (synopsis "Fonts for MathJax")
-    (description "This package contains the fonts required for MathJax.")
     (license license:asl2.0)))
 
 (define-public font-open-dyslexic

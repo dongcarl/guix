@@ -4,7 +4,7 @@
 ;;; Copyright © 2014, 2015 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2015 Taylan Ulrich Bayırlı/Kammer <taylanbayirli@gmail.com>
 ;;; Copyright © 2015, 2016 Eric Bavier <bavier@member.fsf.org>
-;;; Copyright © 2015, 2016 Ricardo Wurmus <rekado@elephly.net>
+;;; Copyright © 2015, 2016, 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2015, 2017 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2015 Jeff Mickey <j@codemac.net>
 ;;; Copyright © 2015, 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
@@ -12,7 +12,7 @@
 ;;; Copyright © 2016 Danny Milosavljevic <dannym@scratchpost.org>
 ;;; Copyright © 2016, 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2016 David Craven <david@craven.ch>
-;;; Copyright © 2016 Kei Kebreau <kei@openmailbox.org>
+;;; Copyright © 2016 Kei Kebreau <kkebreau@posteo.net>
 ;;; Copyright © 2016 Marius Bakke <mbakke@fastmail.com>
 ;;; Copyright © 2017 ng0 <contact.ng0@cryptolab.net>
 ;;; Copyright © 2017 Manolis Fragkiskos Ragkousis <manolis837@gmail.com>
@@ -114,7 +114,7 @@ in compression.")
        (modify-phases %standard-phases
          (add-after 'unpack 'enter-source
            (lambda _ (chdir "contrib/minizip") #t))
-         (add-before 'configure 'autoreconf
+         (add-after 'enter-source 'autoreconf
            (lambda _
              (zero? (system* "autoreconf" "-vif")))))))
     (native-inputs
@@ -212,84 +212,78 @@ file; as a result, it is often used in conjunction with \"tar\", resulting in
    (home-page "https://www.gnu.org/software/gzip/")))
 
 (define-public bzip2
-  (let ((build-shared-lib
-         ;; Build a shared library.
-         '(lambda* (#:key inputs #:allow-other-keys)
-            (patch-makefile-SHELL "Makefile-libbz2_so")
-            (zero? (system* "make" "-f" "Makefile-libbz2_so"))))
-        (install-shared-lib
-         '(lambda* (#:key outputs #:allow-other-keys)
-            (let* ((out    (assoc-ref outputs "out"))
-                   (libdir (string-append out "/lib")))
-              (for-each (lambda (file)
-                          (let ((base (basename file)))
-                            (format #t "installing `~a' to `~a'~%"
-                                    base libdir)
-                            (copy-file file
-                                       (string-append libdir "/" base))))
-                        (find-files "." "^libbz2\\.so")))))
-        (set-cross-environment
-         '(lambda* (#:key target #:allow-other-keys)
-            (substitute* (find-files "." "Makefile")
-              (("CC=.*$")
-               (string-append "CC = " target "-gcc\n"))
-              (("AR=.*$")
-               (string-append "AR = " target "-ar\n"))
-              (("RANLIB=.*$")
-               (string-append "RANLIB = " target "-ranlib\n"))
-              (("^all:(.*)test" _ prerequisites)
-               ;; Remove 'all' -> 'test' dependency.
-               (string-append "all:" prerequisites "\n"))))))
-    (package
-      (name "bzip2")
-      (version "1.0.6")
-      (source (origin
-               (method url-fetch)
-               (uri (string-append "http://www.bzip.org/" version "/bzip2-"
-                                   version ".tar.gz"))
-               (sha256
-                (base32
-                 "1kfrc7f0ja9fdn6j1y6yir6li818npy6217hvr3wzmnmzhs8z152"))))
-      (build-system gnu-build-system)
-      (arguments
-       `(#:modules ((guix build gnu-build-system)
-                    (guix build utils)
-                    (srfi srfi-1))
-         #:phases
-         ,(if (%current-target-system)
+  (package
+    (name "bzip2")
+    (version "1.0.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://www.bzip.org/" version "/bzip2-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1kfrc7f0ja9fdn6j1y6yir6li818npy6217hvr3wzmnmzhs8z152"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:modules ((guix build gnu-build-system)
+                  (guix build utils)
+                  (srfi srfi-1))
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'configure
+           (lambda* (#:key target #:allow-other-keys)
+             (if ,(%current-target-system)
+                 ;; Cross-compilation: use the cross tools.
+                 (substitute* (find-files "." "Makefile")
+                   (("CC=.*$")
+                    (string-append "CC = " target "-gcc\n"))
+                   (("AR=.*$")
+                    (string-append "AR = " target "-ar\n"))
+                   (("RANLIB=.*$")
+                    (string-append "RANLIB = " target "-ranlib\n"))
+                   (("^all:(.*)test" _ prerequisites)
+                    ;; Remove 'all' -> 'test' dependency.
+                    (string-append "all:" prerequisites "\n")))
+                 #t)))
+         (add-before 'build 'build-shared-lib
+           (lambda* (#:key inputs #:allow-other-keys)
+             (patch-makefile-SHELL "Makefile-libbz2_so")
+             (zero? (system* "make" "-f" "Makefile-libbz2_so"))))
+         (add-after 'install 'install-shared-lib
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out    (assoc-ref outputs "out"))
+                    (libdir (string-append out "/lib")))
+               (for-each (lambda (file)
+                           (let ((base (basename file)))
+                             (format #t "installing `~a' to `~a'~%"
+                                     base libdir)
+                             (copy-file file
+                                        (string-append libdir "/" base))))
+                         (find-files "." "^libbz2\\.so")))
+             #t))
+         (add-after 'install-shared-lib 'patch-scripts
+           (lambda* (#:key outputs inputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out")))
+               (substitute* (string-append out "/bin/bzdiff")
+                 (("/bin/rm") "rm")))
+             #t)))
 
-              ;; Cross-compilation: use the cross tools.
-              `(alist-cons-before
-                'build 'build-shared-lib ,build-shared-lib
-                (alist-cons-after
-                 'install 'install-shared-lib ,install-shared-lib
-                 (alist-replace 'configure ,set-cross-environment
-                                %standard-phases)))
+       #:make-flags (list (string-append "PREFIX="
+                                         (assoc-ref %outputs "out")))
 
-              ;; Native compilation: build the shared library.
-              `(alist-cons-before
-                'build 'build-shared-lib ,build-shared-lib
-                (alist-cons-after
-                 'install 'install-shared-lib ,install-shared-lib
-                 (alist-delete 'configure %standard-phases))))
-
-         #:make-flags (list (string-append "PREFIX="
-                                           (assoc-ref %outputs "out")))
-
-         ;; Don't attempt to run the tests when cross-compiling.
-         ,@(if (%current-target-system)
-               '(#:tests? #f)
-               '())))
-      (synopsis "High-quality data compression program")
-      (description
-       "bzip2 is a freely available, patent free (see below), high-quality data
+       ;; Don't attempt to run the tests when cross-compiling.
+       ,@(if (%current-target-system)
+             '(#:tests? #f)
+             '())))
+    (synopsis "High-quality data compression program")
+    (description
+     "bzip2 is a freely available, patent free (see below), high-quality data
 compressor.  It typically compresses files to within 10% to 15% of the best
 available techniques (the PPM family of statistical compressors), whilst
 being around twice as fast at compression and six times faster at
 decompression.")
-      (license (license:non-copyleft "file://LICENSE"
-                                  "See LICENSE in the distribution."))
-      (home-page "http://www.bzip.org/"))))
+    (license (license:non-copyleft "file://LICENSE"
+                                   "See LICENSE in the distribution."))
+    (home-page "http://www.bzip.org/")))
 
 (define-public lbzip2
   (package
@@ -462,14 +456,14 @@ some compression ratio).")
 (define-public lzip
   (package
     (name "lzip")
-    (version "1.16")
+    (version "1.18")
     (source (origin
              (method url-fetch)
              (uri (string-append "mirror://savannah/lzip/lzip-"
                                  version ".tar.gz"))
              (sha256
               (base32
-               "0l9724rw1l3hg2ldr3n7ihqich4m9nc6y7l302bvdj4jmxdw530j"))))
+               "1p8lvc22sv3damld9ng8y6i8z2dvvpsbi9v7yhr5bc2a20m8iya7"))))
     (build-system gnu-build-system)
     (home-page "http://www.nongnu.org/lzip/lzip.html")
     (synopsis "Lossless data compressor based on the LZMA algorithm")
@@ -612,14 +606,14 @@ sfArk file format to the uncompressed sf2 format.")
 (define-public libmspack
   (package
     (name "libmspack")
-    (version "0.5")
+    (version "0.6")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "http://www.cabextract.org.uk/libmspack/libmspack-"
                           version "alpha.tar.gz"))
       (sha256
-       (base32 "04413hynb7zizxnkgy9riik3612dwirkpr6fcjrnfl2za9sz4rw9"))))
+       (base32 "08gr2pcinas6bdqz3k0286g5cnksmcx813skmdwyca6bmj1fxnqy"))))
     (build-system gnu-build-system)
     (home-page "http://www.cabextract.org.uk/libmspack/")
     (synopsis "Compression tools for some formats used by Microsoft")
@@ -708,16 +702,15 @@ writing of compressed data created with the zlib and bzip2 libraries.")
 (define-public lz4
   (package
     (name "lz4")
-    (version "1.7.5")
+    (version "1.8.0")
     (source
      (origin
        (method url-fetch)
        (uri (string-append "https://github.com/lz4/lz4/archive/"
                            "v" version ".tar.gz"))
-       (patches (search-patches "lz4-fix-test-failures.patch"))
        (sha256
         (base32
-         "0zkykqqjfa1q3ji0qmb1ml3l9063qqfh99agyj3cnb02cg6wm401"))
+         "1xnckwwah74gl98gylf1b00vk4km1d8sgd8865h07ccvgbm8591c"))
        (file-name (string-append name "-" version ".tar.gz"))))
     (build-system gnu-build-system)
     (native-inputs `(("valgrind" ,valgrind)))   ; for tests
@@ -728,14 +721,14 @@ writing of compressed data created with the zlib and bzip2 libraries.")
                           (string-append "PREFIX=" (assoc-ref %outputs "out")))
        #:phases (modify-phases %standard-phases
                   (delete 'configure))))        ; no configure script
-    (home-page "https://github.com/lz4/lz4")
+    (home-page "http://www.lz4.org")
     (synopsis "Compression algorithm focused on speed")
     (description "LZ4 is a lossless compression algorithm, providing
 compression speed at 400 MB/s per core (0.16 Bytes/cycle).  It also features an
 extremely fast decoder, with speed in multiple GB/s per core (0.71 Bytes/cycle).
 A high compression derivative, called LZ4_HC, is also provided.  It trades CPU
 time for compression ratio.")
-    ;; The libraries (lz4, lz4hc, and xxhash are BSD licenced. The command
+    ;; The libraries (lz4, lz4hc, and xxhash) are BSD licenced. The command
     ;; line interface programs (lz4, fullbench, fuzzer, datagen) are GPL2+.
     (license (list license:bsd-2 license:gpl2+))))
 
@@ -764,6 +757,28 @@ the LZ4 frame format.")
 
 (define-public python2-lz4
   (package-with-python2 python-lz4))
+
+(define-public python-lzstring
+  (package
+    (name "python-lzstring")
+    (version "1.0.3")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "lzstring" version))
+       (sha256
+        (base32
+         "1d3ck454y41mii0gcjabpmp2skb7n0f9zk232gycqdv8z2jxakfm"))))
+    (build-system python-build-system)
+    (propagated-inputs
+     `(("python-future" ,python-future)))
+    (home-page "https://github.com/gkovacs/lz-string-python")
+    (synopsis "String compression")
+    (description "Lz-string is a string compressor library for Python.")
+    (license license:expat)))
+
+(define-public python2-lzstring
+  (package-with-python2 python-lzstring))
 
 (define-public squashfs-tools
   (package
@@ -961,7 +976,7 @@ respectively, based on the reference implementation from Google.")
        (modify-phases %standard-phases
          (add-after 'unpack 'enter-build-directory
            (lambda _ (chdir "xdelta3")))
-         (add-before 'configure 'autoconf
+         (add-after 'enter-build-directory 'autoconf
            (lambda _ (zero? (system* "autoreconf" "-vfi")))))))
     (home-page "http://xdelta.com")
     (synopsis "Delta encoder for binary files")
@@ -1288,7 +1303,7 @@ RAR archives.")
 (define-public zstd
   (package
     (name "zstd")
-    (version "1.3.0")
+    (version "1.3.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/facebook/zstd/archive/v"
@@ -1296,7 +1311,7 @@ RAR archives.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0j5kf0phx4w4b5x7aqwc10lxi9ix7rxhxk0df37cpdrqni1sdnqg"))
+                "1imddqjhczira626nf3nqmjwj3wb37xcfcwgkjydv2k6fpfbjbri"))
               (modules '((guix build utils)))
               (snippet
                ;; Remove non-free source files.
@@ -1527,21 +1542,24 @@ manipulate, read, and write Zip archive files.")
 (define-public libzip
   (package
     (name "libzip")
-    (version "1.2.0")
+    (version "1.3.0")
     (source (origin
               (method url-fetch)
               (uri (string-append
-                    "https://nih.at/libzip/libzip-" version ".tar.gz"))
+                    "https://nih.at/libzip/libzip-" version ".tar.xz"))
               (sha256
                (base32
-                "17vxj2ffsxwh8lkc6801ppmwj15jp8q58rin76znxfbx88789ybc"))))
+                "0wykw0q9dwdzx0gssi2dpgckx9ggr2spzc1amjnff6wi6kz6x4xa"))))
     (arguments
-     `(#:phases
+     '(#:phases
        (modify-phases %standard-phases
-         (add-before 'configure 'patch-perl
+         (add-after 'build 'remove-failing-tests
+           ;; These tests are known to fail on 32-bit architectures.
+           ;; see thread: https://nih.at/listarchive/libzip-discuss/msg00713.html
            (lambda _
-             (substitute* "regress/runtest.in"
-               (("/usr/bin/env perl") (which "perl"))))))))
+             (substitute* "regress/Makefile"
+               (("encryption-nonrandom") "#encryption-nonrandom"))
+             #t)))))
     (native-inputs
      `(("perl" ,perl)))
     (inputs

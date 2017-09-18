@@ -186,14 +186,14 @@ and support for SSL3 and TLS.")
 (define-public gnurl
   (package
    (name "gnurl")
-   (version "7.55.0")
+   (version "7.55.1-3")
    (source (origin
             (method url-fetch)
             (uri (string-append "https://gnunet.org/sites/default/files/"
                                 name "-" version ".tar.bz2"))
             (sha256
              (base32
-              "0i9bik76rbyag3mbxbk8j383iaxs5v7lmjkn4v36ascl6bdks6vn"))))
+              "1p2qdh44hgsxjlzh4d3n51xr66cg2z517vpr818flvcrmpq2vxpq"))))
    (build-system gnu-build-system)
    (outputs '("out"
               "doc"))                             ; 1.5 MiB of man3 pages
@@ -234,10 +234,10 @@ and support for SSL3 and TLS.")
               (rename-file (string-append out "/share/man/man3")
                            (string-append doc "/share/man/man3"))
               #t)))
-        (add-before 'configure 'autoconf
+        (add-after 'unpack 'autoconf
           ;; Clear artifacts left (shebangs) from release preparation.
           (lambda _
-            (zero? (system* "./buildconf"))))
+            (zero? (system* "sh" "buildconf"))))
         (replace 'check
           (lambda _
             ;; It is unclear why test1026 fails, however the content of it
@@ -336,7 +336,7 @@ kinds of basic applications for the foundation of a GNU internet.")
       (source (origin
                 (method git-fetch)
                 (uri (git-reference
-                      (url "git://git.sv.gnu.org/guix/gnunet.git")
+                      (url "https://git.savannah.gnu.org/git/guix/gnunet.git/")
                       (commit commit)))
                 (file-name (string-append name "-" version "-checkout"))
                 (sha256
@@ -345,7 +345,7 @@ kinds of basic applications for the foundation of a GNU internet.")
       (build-system gnu-build-system)
       (arguments
        '(#:phases (modify-phases %standard-phases
-                    (add-before 'configure 'bootstrap
+                    (add-after 'unpack 'bootstrap
                       (lambda _
                         (zero? (system* "autoreconf" "-vfi")))))))
       (native-inputs `(("pkg-config" ,pkg-config)

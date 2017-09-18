@@ -101,6 +101,7 @@
   #:use-module (gnu packages xorg)
   #:use-module (gnu packages groff)
   #:use-module (gnu packages selinux)
+  #:use-module (gnu packages swig)
   #:use-module (guix build-system cmake)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system python)
@@ -124,6 +125,7 @@
           ((string-prefix? "arm" arch) "arm")
           ((string-prefix? "aarch64" arch) "arm64")
           ((string-prefix? "alpha" arch) "alpha")
+          ((string-prefix? "powerpc" arch) "powerpc") ;including "powerpc64le"
           (else arch))))
 
 (define-public (system->defconfig system)
@@ -131,6 +133,7 @@
 defconfig.  Return the appropiate make target if applicable, otherwise return
 \"defconfig\"."
   (cond ((string-prefix? "powerpc-" system) "pmac32_defconfig")
+        ((string-prefix? "powerpc64le-" system) "ppc64_defconfig")
         (else "defconfig")))
 
 (define (linux-libre-urls version)
@@ -364,8 +367,8 @@ It has been modified to remove all non-free binary blobs.")
 
 (define %intel-compatible-systems '("x86_64-linux" "i686-linux"))
 
-(define %linux-libre-version "4.12.8")
-(define %linux-libre-hash "1p4ah15qs94id2yj6lhp6abdycvgp7lvn3ccsfs7f6n34hdij0cm")
+(define %linux-libre-version "4.13.2")
+(define %linux-libre-hash "166yy7nah2h2ffxqgb92nfwrvihna3kvdx4ryppf34gmybmmfw36")
 
 (define-public linux-libre
   (make-linux-libre %linux-libre-version
@@ -374,14 +377,14 @@ It has been modified to remove all non-free binary blobs.")
                     #:configuration-file kernel-config))
 
 (define-public linux-libre-4.9
-  (make-linux-libre "4.9.44"
-                    "0a92bsb5d0pyhyn5ypc8ashwxixhivdadvikcpv31376j842fmj2"
+  (make-linux-libre "4.9.50"
+                    "1igjb2qr4znvz9p5ix18lbiv8bkfgn7lprn92gdyff4g4r4kzh72"
                     %intel-compatible-systems
                     #:configuration-file kernel-config))
 
 (define-public linux-libre-4.4
-  (make-linux-libre "4.4.83"
-                    "1fv3j0w0v82aa9s9n4a4qyrxc5bpq2ag9riawlabx57a380x1n62"
+  (make-linux-libre "4.4.88"
+                    "0ds5jxh8p7f8yk55i1xbvz0xmgp4nc7g1xka23c4mcbal2v9v5b2"
                     %intel-compatible-systems
                     #:configuration-file kernel-config))
 
@@ -389,7 +392,17 @@ It has been modified to remove all non-free binary blobs.")
   (make-linux-libre "4.1.43"
                     "0ycqmvczj7lm7czilnwpyp14n2lzilyx7m43rsq1qdm2m5rp4q2w"
                     %intel-compatible-systems
-                    #:configuration-file kernel-config))
+                    #:configuration-file kernel-config
+                    #:patches
+                    (list %boot-logo-patch
+                          (origin
+                            (method url-fetch)
+                            (uri "\
+https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable-rc.git/patch/?id=4a01092a5fa819397484fe2b50e9518356858156")
+                            (file-name "linux-libre-4.4-CVE-2017-1000251.patch")
+                            (sha256
+                             (base32
+                              "0zmkw9zvzpwy2ihiyfrw6mrf8qzv77cm23lxadr20qvzqlc1xzb3"))))))
 
 (define-public linux-libre-arm-generic
   (make-linux-libre %linux-libre-version
@@ -498,7 +511,7 @@ providing the system administrator with some help in common tasks.")
 (define-public util-linux
   (package
     (name "util-linux")
-    (version "2.29.2")
+    (version "2.30")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://kernel.org/linux/utils/"
@@ -506,7 +519,7 @@ providing the system administrator with some help in common tasks.")
                                   name "-" version ".tar.xz"))
               (sha256
                (base32
-                "1qz81w8vzrmy8xn9yx7ls4amkbgwx6vr62pl6kv9g7r0g3ba9kmc"))
+                "13d0ax8bcapga8phj2nclx86w57ddqxbr98ajibpzjq6d7zs8262"))
               (patches (search-patches "util-linux-tests.patch"))
               (modules '((guix build utils)))
               (snippet
@@ -667,7 +680,7 @@ slabtop, and skill.")
     (build-system gnu-build-system)
     (inputs
      `(("libusb" ,libusb)
-       ("eudev" ,eudev-with-hwdb)))
+       ("eudev" ,eudev)))
     (native-inputs
      `(("pkg-config" ,pkg-config)))
     (home-page "http://www.linux-usb.org/")
@@ -858,14 +871,14 @@ Zerofree requires the file system to be unmounted or mounted read-only.")
 (define-public strace
   (package
     (name "strace")
-    (version "4.18")
+    (version "4.19")
     (source (origin
              (method url-fetch)
              (uri (string-append "mirror://sourceforge/strace/strace/" version
                                  "/strace-" version ".tar.xz"))
              (sha256
               (base32
-               "026agy9nq238nx3ynhmi8h3vx96yra4xacfsm2ybs9k23ry8ibc9"))))
+               "10bjh2mrkvx41fk60b2iqv5b5k4r7a3qdsx04iyg904jqb3fp4vw"))))
     (build-system gnu-build-system)
     (arguments
      '(#:phases
@@ -910,7 +923,7 @@ intercept and print the system calls executed by the program.")
 (define-public alsa-lib
   (package
     (name "alsa-lib")
-    (version "1.1.3")
+    (version "1.1.4.1")
     (source (origin
              (method url-fetch)
              (uri (string-append
@@ -918,7 +931,7 @@ intercept and print the system calls executed by the program.")
                    version ".tar.bz2"))
              (sha256
               (base32
-               "174n2psp0328xcy2f1ayls67598bxli6q9cf00d2qnac3012aa3i"))))
+               "0xjvi381105gldhv0z872a0x58sghznyx19j45lw5iyi2h68gfwi"))))
     (build-system gnu-build-system)
     (home-page "https://www.alsa-project.org/")
     (synopsis "The Advanced Linux Sound Architecture libraries")
@@ -1129,7 +1142,7 @@ that the Ethernet protocol is much simpler than the IP protocol.")
 (define-public iproute
   (package
     (name "iproute2")
-    (version "4.12.0")
+    (version "4.13.0")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -1137,7 +1150,7 @@ that the Ethernet protocol is much simpler than the IP protocol.")
                     version ".tar.xz"))
               (sha256
                (base32
-                "0zdxdsxyaazl85xhwskvsmpyzwf5qp21cvjsi1lw3xnrc914q2if"))))
+                "0l2w84cwr54gaw3cbxijf614l76hx8mgcz57v81rwl68z3nq3yww"))))
     (build-system gnu-build-system)
     (arguments
      `(#:tests? #f                                ; no test suite
@@ -1170,23 +1183,14 @@ that the Ethernet protocol is much simpler than the IP protocol.")
     (synopsis
      "Utilities for controlling TCP/IP networking and traffic in Linux")
     (description
-     "Iproute2 is a collection of utilities for controlling TCP/IP
-networking and traffic with the Linux kernel.
+     "Iproute2 is a collection of utilities for controlling TCP/IP networking
+and traffic with the Linux kernel.  The most important of these are
+@command{ip}, which configures IPv4 and IPv6, and @command{tc} for traffic
+control.
 
 Most network configuration manuals still refer to ifconfig and route as the
 primary network configuration tools, but ifconfig is known to behave
-inadequately in modern network environments.  They should be deprecated, but
-most distros still include them.  Most network configuration systems make use
-of ifconfig and thus provide a limited feature set.  The /etc/net project aims
-to support most modern network technologies, as it doesn't use ifconfig and
-allows a system administrator to make use of all iproute2 features, including
-traffic control.
-
-iproute2 is usually shipped in a package called iproute or iproute2 and
-consists of several tools, of which the most important are @command{ip} and
-@command{tc}.  @command{ip} controls IPv4 and IPv6 configuration and
-@command{tc} stands for traffic control.  Both tools print detailed usage
-messages and are accompanied by a set of manpages.")
+inadequately in modern network environments, and both should be deprecated.")
     (license license:gpl2+)))
 
 ;; There are two packages for net-tools. The first, net-tools, is more recent
@@ -1209,14 +1213,14 @@ messages and are accompanied by a set of manpages.")
       (name "net-tools")
       (version (string-append "1.60-" revision "." (string-take commit 7)))
       (source (origin
-               (method git-fetch)
-               (uri (git-reference
-                      (url "https://git.code.sf.net/p/net-tools/code")
-                      (commit commit)))
-               (file-name (string-append name "-" version "-checkout"))
+               (method url-fetch)
+               (uri (string-append "https://sourceforge.net/code-snapshots/git/"
+                                   "n/ne/net-tools/code.git/net-tools-code-"
+                                   commit ".zip"))
+               (file-name (string-append name "-" version ".zip"))
                (sha256
                 (base32
-                 "189mdjfbd7j7j0jysy34nqn5byy9g5f6ylip1sikk7kz08vjml4s"))))
+                 "0hz9fda9d78spp774b6rr5xaxav7cm4h0qcpxf70rvdbrf6qx7vy"))))
       (home-page "http://net-tools.sourceforge.net/")
       (build-system gnu-build-system)
       (arguments
@@ -1263,7 +1267,8 @@ messages and are accompanied by a set of manpages.")
                               (string-append "BASEDIR=" out)
                               (string-append "INSTALLNLSDIR=" out "/share/locale")
                               (string-append "mandir=/share/man")))))
-      (native-inputs `(("gettext" ,gettext-minimal)))
+      (native-inputs `(("gettext" ,gettext-minimal)
+                       ("unzip" ,unzip)))
       (synopsis "Tools for controlling the network subsystem in Linux")
       (description
        "This package includes the important tools for controlling the network
@@ -1351,6 +1356,15 @@ configuration (iptunnel, ipmaddr).")
                             (string-append "BASEDIR=" out)
                             (string-append "INSTALLNLSDIR=" out "/share/locale")
                             (string-append "mandir=/share/man")))))
+
+    ;; We added unzip to the net-tools package's native-inputs when
+    ;; switching its source from a Git checkout to a zip archive.  We
+    ;; need to specify the native-inputs here to keep unzip out of the
+    ;; build of net-tools-for-tests, so that we don't have to rebuild
+    ;; many packages on the master branch.  We can make
+    ;; net-tools-for-tests inherit directly from net-tools in the next
+    ;; core-updates cycle.
+    (native-inputs `(("gettext" ,gettext-minimal)))
 
     ;; Use the big Debian patch set (the thing does not even compile out of
     ;; the box.)
@@ -1464,7 +1478,52 @@ transparently through a bridge.")
                (base32
                 "1r3lw3hjvqxi5zqyq2w1qadm3gisd9nlf71dkl4yplacmssnhm3h"))))
     (build-system gnu-build-system)
-    (native-inputs `(("flex" ,flex) ("bison" ,bison)))
+    (native-inputs
+     `(("bison" ,bison)
+       ("flex" ,flex)
+       ("pkg-config" ,pkg-config)
+       ("swig" ,swig)
+       ("libnl3-doc"
+        ,(origin
+           (method url-fetch)
+           (uri (string-append
+                 "https://github.com/thom311/libnl/releases/download/libnl"
+                 (string-join (string-split version #\.) "_")
+                 "/libnl-doc-" version ".tar.gz"))
+           (sha256
+            (base32 "0srab805yj8wb13l64qjyp3mdbqapxg5vk46v3zlhhzpmxqw8j7r"))))))
+    (inputs
+     `(("python-2" ,python-2)
+       ("python-3" ,python-3)))
+    (outputs '("out" "doc" "python2" "python3"))
+    (arguments
+     `(#:modules ((guix build gnu-build-system)
+                  (guix build utils)
+                  (srfi srfi-1))
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'install 'install-python
+           (lambda* (#:key outputs #:allow-other-keys)
+             (define (python-inst python)
+               (let ((ldflags (format #f "LDFLAGS=-Wl,-rpath=~a/lib"
+                                      (assoc-ref %outputs "out")))
+                     (pyout (assoc-ref %outputs python)))
+                 (and
+                  (zero? (system (format #f "~a ~a setup.py build"
+                                         ldflags python pyout)))
+                  (zero?
+                   (system (format #f "~a ~a setup.py install --prefix=~a"
+                                   ldflags python pyout)))
+                  (zero? (system* python "setup.py" "clean")))))
+             (with-directory-excursion "./python"
+               (every python-inst '("python2" "python3")))))
+         (add-after 'install 'install-doc
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let ((dest (string-append (assoc-ref outputs "doc")
+                                        "/share/doc/libnl")))
+               (mkdir-p dest)
+               (zero? (system* "tar" "xf" (assoc-ref inputs "libnl3-doc")
+                               "--strip-components=1" "-C" dest))))))))
     (home-page "http://www.infradead.org/~tgr/libnl/")
     (synopsis "NetLink protocol library suite")
     (description
@@ -1996,7 +2055,7 @@ from the module-init-tools project.")
   ;; The post-systemd fork, maintained by Gentoo.
   (package
     (name "eudev")
-    (version "3.2.1")
+    (version "3.2.2")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -2004,10 +2063,18 @@ from the module-init-tools project.")
                     version ".tar.gz"))
               (sha256
                (base32
-                "06gyyl90n85x8i7lfhns514y1kg1ians13l467admyzy3kjxkqsp"))
-              (patches (search-patches "eudev-rules-directory.patch"
-                                       "eudev-conflicting-declaration.patch"))))
+                "0qqgbgpm5wdllk0s04pf80nwc8pr93xazwri1bylm1f15zn5ck1y"))
+              (patches (search-patches "eudev-rules-directory.patch"))))
     (build-system gnu-build-system)
+    (arguments
+     '(#:phases (modify-phases %standard-phases
+                  (add-after 'install 'build-hwdb
+                    (lambda* (#:key outputs #:allow-other-keys)
+                      ;; Build OUT/etc/udev/hwdb.bin.  This allows 'lsusb' and
+                      ;; similar tools to display product names.
+                      (let ((out (assoc-ref outputs "out")))
+                        (zero? (system* (string-append out "/bin/udevadm")
+                                        "hwdb" "--update"))))))))
     (native-inputs
      `(("pkg-config" ,pkg-config)
        ("perl" ,perl)
@@ -2026,19 +2093,7 @@ time.")
     (license license:gpl2+)))
 
 (define-public eudev-with-hwdb
-  ;; TODO: Merge with 'eudev'.
-  (package
-    (inherit eudev)
-    (name "eudev-with-hwdb")
-    (arguments
-     '(#:phases (modify-phases %standard-phases
-                  (add-after 'install 'build-hwdb
-                    (lambda* (#:key outputs #:allow-other-keys)
-                      ;; Build OUT/etc/udev/hwdb.bin.  This allows 'lsusb' and
-                      ;; similar tools to display product names.
-                      (let ((out (assoc-ref outputs "out")))
-                        (zero? (system* (string-append out "/bin/udevadm")
-                                        "hwdb" "--update"))))))))))
+  (deprecated-package "eudev-with-hwdb" eudev))
 
 (define-public lvm2
   (package
@@ -2968,6 +3023,7 @@ Bluetooth audio output devices like headphones or loudspeakers.")
   (package
     (name "bluez")
     (version "5.45")
+    (replacement bluez/fixed)
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -2978,7 +3034,7 @@ Bluetooth audio output devices like headphones or loudspeakers.")
                 "1sb4aflgyrl7apricjipa8wx95qm69yja0lmn2f19g560c3v1b2c"))))
     (build-system gnu-build-system)
     (arguments
-     '(#:configure-flags
+     `(#:configure-flags
        (let ((out (assoc-ref %outputs "out")))
          (list "--sysconfdir=/etc"
                "--localstatedir=/var"
@@ -3007,7 +3063,12 @@ Bluetooth audio output devices like headphones or loudspeakers.")
                   (string-append out "/lib/udev/hid2hci --method"))
                  (("/sbin/udevadm")
                   (string-append (assoc-ref inputs "eudev") "/bin/udevadm")))
-               #t))))))
+               #t))))
+
+       ;; FIXME: Skip one test that segfaults on ARM.
+       ,@(if (string=? (%current-system) "armhf-linux")
+             '(#:make-flags '("XFAIL_TESTS=unit/test-gatt"))
+             '())))
     (native-inputs
      `(("pkg-config" ,pkg-config)
        ("gettext" ,gettext-minimal)))
@@ -3023,6 +3084,20 @@ Bluetooth audio output devices like headphones or loudspeakers.")
      "BlueZ provides support for the core Bluetooth layers and protocols.  It
 is flexible, efficient and uses a modular implementation.")
     (license license:gpl2+)))
+
+(define bluez/fixed
+  (package
+    (inherit bluez)
+    (version "5.45")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "mirror://kernel.org/linux/bluetooth/bluez-"
+                    version ".tar.xz"))
+              (sha256
+               (base32
+                "1sb4aflgyrl7apricjipa8wx95qm69yja0lmn2f19g560c3v1b2c"))
+              (patches (search-patches "bluez-CVE-2017-1000250.patch"))))))
 
 (define-public fuse-exfat
   (package
@@ -3063,10 +3138,12 @@ write access to exFAT devices.")
     (build-system gnu-build-system)
     (arguments
      '(#:phases (modify-phases %standard-phases
-                  (add-before 'configure 'bootstrap
+                  (add-after 'unpack 'bootstrap
                     (lambda _
                       ;; The tarball was not generated with 'make dist' so we
                       ;; need to bootstrap things ourselves.
+                      (substitute* "autogen.sh"
+                        (("/bin/sh") (which "sh")))
                       (and (zero? (system* "./autogen.sh"))
                            (begin
                              (patch-makefile-SHELL "Makefile.include.in")
@@ -3094,7 +3171,7 @@ and copy/paste text in the console and in xterm.")
 (define-public btrfs-progs
   (package
     (name "btrfs-progs")
-    (version "4.12")
+    (version "4.13")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://kernel.org/linux/kernel/"
@@ -3102,7 +3179,7 @@ and copy/paste text in the console and in xterm.")
                                   "btrfs-progs-v" version ".tar.xz"))
               (sha256
                (base32
-                "1kif8xw2dbyc70ygkp0wyq4x96p1mkwdv4430f99qllx9b410xwi"))))
+                "17m67jm29phfvkmd72lxb1z9nymn9a9pqnja8zfb1mvflsqwbz3m"))))
     (build-system gnu-build-system)
     (outputs '("out"
                "static"))      ; static versions of the binaries in "out"
@@ -3133,6 +3210,7 @@ and copy/paste text in the console and in xterm.")
                      ("libxml2" ,libxml2)
                      ("docbook-xsl" ,docbook-xsl)
                      ;; For tests.
+                     ("acl" ,acl)
                      ("which" ,which)))
     (home-page "https://btrfs.wiki.kernel.org/")
     (synopsis "Create and manage btrfs copy-on-write file systems")
@@ -3172,6 +3250,42 @@ repair and easy administration.")
     (description "This package provides the statically-linked @command{btrfs}
 from the btrfs-progs package.  It is meant to be used in initrds.")
     (license (package-license btrfs-progs))))
+
+(define-public f2fs-tools
+  (package
+    (name "f2fs-tools")
+    (version "1.8.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "https://git.kernel.org/cgit/linux/kernel/git/jaegeuk"
+                    "/f2fs-tools.git/snapshot/" name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1bir9ladb58ijlcvrjrq1fb1xv5ys50zdjaq0yzliib0apsyrnyl"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'bootstrap
+           (lambda _
+             (zero? (system* "autoreconf" "-vif")))))))
+    (native-inputs
+     `(("autoconf" ,autoconf)
+       ("automake" ,automake)
+       ("libtool" ,libtool)
+       ("pkg-config" ,pkg-config)))
+    (inputs
+     `(("libuuid" ,util-linux)))
+    (home-page "https://f2fs.wiki.kernel.org/")
+    (synopsis "Userland tools for f2fs")
+    (description
+     "F2FS, the Flash-Friendly File System, is a modern file system
+designed to be fast and durable on flash devices such as solid-state
+disks and SD cards.  This package provides the userland utilities.")
+    ;; The formatting utility, libf2fs and include/f2fs_fs.h is dual
+    ;; GPL2/LGPL2.1, everything else is GPL2 only. See 'COPYING'.
+    (license (list license:gpl2 license:lgpl2.1))))
 
 (define-public freefall
   (package
@@ -4260,3 +4374,34 @@ tool, to understand the type of environment a process runs in, and for
 comparing system environments.")
    (home-page "http://github.com/jamesodhunt/procenv/")
    (license license:gpl3+)))
+
+(define-public libfabric
+  (package
+    (name "libfabric")
+    (version "1.4.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri
+        (string-append "https://github.com/ofiwg/libfabric/releases/download/v"
+                       version "/libfabric-" version ".tar.bz2"))
+       (sha256
+        (base32 "19l2m1frna1l765z4j7wl8hp4rb9wrh0hy5496685hd183hmy5pv"))))
+    (build-system gnu-build-system)
+    (inputs `(("rdma-core" ,rdma-core)
+              ;; TODO: add psm, psm(2).
+              ("libnl" ,libnl)))
+    (home-page "https://ofiwg.github.io/libfabric/")
+    (synopsis "Open Fabric Interfaces")
+    (description
+     "OpenFabrics Interfaces (OFI) is a framework focused on exporting fabric
+communication services to applications.  OFI is best described as a collection
+of libraries and applications used to export fabric services.  The key
+components of OFI are: application interfaces, provider libraries, kernel
+services, daemons, and test applications.
+
+Libfabric is a core component of OFI.  It is the library that defines and
+exports the user-space API of OFI, and is typically the only software that
+applications deal with directly.  It works in conjunction with provider
+libraries, which are often integrated directly into libfabric.")
+    (license (list license:bsd-2 license:gpl2)))) ;dual

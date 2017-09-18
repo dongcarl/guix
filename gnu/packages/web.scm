@@ -19,7 +19,7 @@
 ;;; Copyright © 2016 Bake Timmons <b3timmons@speedymail.org>
 ;;; Copyright © 2017 Thomas Danckaert <post@thomasdanckaert.be>
 ;;; Copyright © 2017 Marius Bakke <mbakke@fastmail.com>
-;;; Copyright © 2017 Kei Kebreau <kei@openmailbox.org>
+;;; Copyright © 2017 Kei Kebreau <kkebreau@posteo.net>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -73,11 +73,14 @@
   #:use-module (gnu packages gnuzilla)
   #:use-module (gnu packages gperf)
   #:use-module (gnu packages gtk)
+  #:use-module (gnu packages java)
   #:use-module (gnu packages javascript)
   #:use-module (gnu packages image)
+  #:use-module (gnu packages imagemagick)
   #:use-module (gnu packages libidn)
   #:use-module (gnu packages libunistring)
   #:use-module (gnu packages lua)
+  #:use-module (gnu packages markup)
   #:use-module (gnu packages ncurses)
   #:use-module (gnu packages base)
   #:use-module (gnu packages perl)
@@ -91,7 +94,8 @@
   #:use-module (gnu packages texinfo)
   #:use-module (gnu packages textutils)
   #:use-module (gnu packages tls)
-  #:use-module (gnu packages statistics))
+  #:use-module (gnu packages statistics)
+  #:use-module (gnu packages version-control))
 
 (define-public httpd
   (package
@@ -156,10 +160,12 @@ and its related documentation.")
                (("/bin/sh") (which "sh")))
              #t))
          (replace 'configure
+           ;; The configure script is hand-written, not from GNU autotools.
            (lambda* (#:key outputs #:allow-other-keys)
              (let ((flags
                     (list (string-append "--prefix=" (assoc-ref outputs "out"))
                           "--with-http_ssl_module"
+                          "--with-http_v2_module"
                           "--with-pcre-jit"
                           "--with-debug"
                           ;; Even when not cross-building, we pass the
@@ -184,6 +190,12 @@ and its related documentation.")
                (format #t "environment variable `CC' set to `gcc'~%")
                (format #t "configure flags: ~s~%" flags)
                (zero? (apply system* "./configure" flags)))))
+         (add-after 'install 'install-man-page
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (man (string-append out "/share/man")))
+               (install-file "objs/nginx.8" (string-append man "/man8"))
+               #t)))
          (add-after 'install 'fix-root-dirs
            (lambda* (#:key outputs #:allow-other-keys)
              ;; 'make install' puts things in strange places, so we need to
@@ -305,6 +317,42 @@ servers that may need it).")
 such as high performance, preforking, signal support, superdaemon awareness,
 and UNIX socket support.")
     (license l:perl-license)))
+
+(define-public icedtea-web
+  (package
+    (name "icedtea-web")
+    (version "1.6.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "http://icedtea.wildebeest.org/download/source/"
+                    name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "004kwrngyxxlrlzby4vzxjr0xcyngcdc9dfgnvi61ffnjr006ryf"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:configure-flags
+       (list  "--disable-plugin"         ;NPAPI plugins are obsolete nowadays.
+             (string-append "BIN_BASH=" (assoc-ref %build-inputs "bash")
+                            "/bin/bash")
+             (string-append "--with-jdk-home=" (assoc-ref %build-inputs "jdk")))))
+    (outputs '("out" "doc"))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)
+       ("zip" ,zip)))
+    (inputs
+     `(("gtk+" ,gtk+)
+       ("jdk" ,icedtea "jdk")))
+    (home-page "http://icedtea.classpath.org/wiki/IcedTea-Web")
+    (synopsis "Java Web Start")
+    (description
+     "IcedTea-Web is an implementation of the @dfn{Java Network Launching
+Protocol}, also known as Java Web Start.  This package provides tools and
+libraries for working with JNLP applets.")
+    ;; The program is mainly GPL2+, with some individual files under LGPL2.1+
+    ;; or dual licenses.
+    (license l:gpl2+)))
 
 (define-public jansson
   (package
@@ -509,7 +557,7 @@ parser written in ANSI C and a small validating JSON generator.")
               ;; things from Git.
               (method git-fetch)
               (uri (git-reference
-                    (url "git://git.libwebsockets.org/libwebsockets")
+                    (url "https://github.com/warmcat/libwebsockets.git")
                     (commit (string-append "v" version
                                            "-chrome37-firefox30"))))
               (sha256
@@ -1024,6 +1072,13 @@ to perl-code, for faster generation of access_log lines.")
         (base32
          "02afhlrdq5hh5g8b32fa79fqq5i76qzwfqqvfi9zi57h31szl536"))))
     (build-system perl-build-system)
+    (arguments
+     '(#:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'set-env
+           ;; Fix the build with Perl 5.26.0. Try removing this phase for later
+           ;; versions of perl-authen-sasl.
+           (lambda _ (setenv "PERL_USE_UNSAFE_INC" "1") #t)))))
     (propagated-inputs
      `(("perl-digest-hmac" ,perl-digest-hmac)
        ("perl-gssapi" ,perl-gssapi)))
@@ -1047,7 +1102,8 @@ to perl-code, for faster generation of access_log lines.")
          "0j1rrld13cjk7ks92b5hv3xw4rfm2lvmksb4rlzd8mx0a0wj0rc5"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-http-request-ascgi" ,perl-http-request-ascgi)))
+     `(("perl-http-request-ascgi" ,perl-http-request-ascgi)
+       ("perl-module-install" ,perl-module-install)))
     (propagated-inputs
      `(("perl-catalyst-runtime" ,perl-catalyst-runtime)
        ("perl-data-visitor" ,perl-data-visitor)
@@ -1071,7 +1127,8 @@ action, which will forward to the first available view.")
                 "1mpa64p61f3dp24xnhdraswch4sqj5vyv1iivcvvh5h0xi0haiy0"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-test-requires" ,perl-test-requires)))
+     `(("perl-test-requires" ,perl-test-requires)
+       ("perl-module-install" ,perl-module-install)))
     (propagated-inputs
      `(("perl-catalyst-runtime" ,perl-catalyst-runtime)
        ("perl-class-inspector" ,perl-class-inspector)
@@ -1113,6 +1170,7 @@ regular method.")
        ("perl-catalyst-plugin-session-state-cookie"
         ,perl-catalyst-plugin-session-state-cookie)
        ("perl-dbd-sqlite" ,perl-dbd-sqlite)
+       ("perl-module-install" ,perl-module-install)
        ("perl-test-www-mechanize-catalyst" ,perl-test-www-mechanize-catalyst)))
     (propagated-inputs
      `(("perl-catalyst-runtime" ,perl-catalyst-runtime)
@@ -1142,6 +1200,8 @@ DBIx::Class.")
         (base32
          "0wfj4vnn2cvk6jh62amwlg050p37fcwdgrn9amcz24z6w4qgjqvz"))))
     (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     (propagated-inputs
      `(("perl-catalyst-runtime" ,perl-catalyst-runtime)
        ("perl-moose" ,perl-moose)))
@@ -1240,6 +1300,7 @@ when the dispatch type is first seen in your application.")
   (build-system perl-build-system)
   (native-inputs
    `(("perl-dbd-sqlite" ,perl-dbd-sqlite)
+     ("perl-module-install" ,perl-module-install)
      ("perl-test-exception" ,perl-test-exception)
      ("perl-test-requires" ,perl-test-requires)))
   (propagated-inputs
@@ -1308,6 +1369,8 @@ for you.  It will work even with Catalyst debug logging turned off.")
         (base32
          "0v6hb4r1wv3djrnqvnjcn3xx1scgqzx8nyjdg9lfc1ybvamrl0rn"))))
     (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     (propagated-inputs
      `(("perl-catalyst-plugin-session" ,perl-catalyst-plugin-session)
        ("perl-catalyst-runtime" ,perl-catalyst-runtime)
@@ -1343,7 +1406,8 @@ system authorises them to do).")
          "0l83lkwmq0lngwh8b1rv3r719pn8w1gdbyhjqm74rnd0wbjl8h7f"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-test-exception" ,perl-test-exception)))
+     `(("perl-module-install" ,perl-module-install)
+       ("perl-test-exception" ,perl-test-exception)))
     (propagated-inputs
      `(("perl-catalyst-plugin-authentication"
         ,perl-catalyst-plugin-authentication)
@@ -1396,7 +1460,8 @@ Catalyst.")
          "19j7p4v7mbx6wrmpvmrnd974apx7hdl2s095ga3b9zcbdrl77h5q"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-path-class" ,perl-path-class)))
+     `(("perl-path-class" ,perl-path-class)
+       ("perl-module-install" ,perl-module-install)))
     (propagated-inputs
      `(("perl-catalyst-runtime" ,perl-catalyst-runtime)
        ("perl-config-any" ,perl-config-any)
@@ -1423,7 +1488,8 @@ formats.")
          "171vi9xcl775scjaw4fcfdmqvz0rb1nr0xxg2gb3ng6bjzpslhgv"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-test-deep" ,perl-test-deep)
+     `(("perl-module-install" ,perl-module-install)
+       ("perl-test-deep" ,perl-test-deep)
        ("perl-test-exception" ,perl-test-exception)))
     (propagated-inputs
      `(("perl-catalyst-runtime" ,perl-catalyst-runtime)
@@ -1454,6 +1520,8 @@ management in web applications together: the state, and the store.")
         (base32
          "1rvxbfnpf9x2pc2zgpazlcgdlr2dijmxgmcs0m5nazs0w6xikssb"))))
     (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     (propagated-inputs
      `(("perl-catalyst-plugin-session" ,perl-catalyst-plugin-session)
        ("perl-catalyst-runtime" ,perl-catalyst-runtime)
@@ -1512,6 +1580,8 @@ memory interprocess cache.  It is based on Cache::FastMmap.")
         (base32
          "1b2ksz74cpigxqzf63rddar3vfmnbpwpdcbs11v0ml89pb8ar79j"))))
     (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     (propagated-inputs
      `(("perl-catalyst-runtime" ,perl-catalyst-runtime)
        ("perl-devel-stacktrace" ,perl-devel-stacktrace)
@@ -1537,6 +1607,8 @@ number, file name, and code context surrounding the line number.")
         (base32
          "1h8f12bhzh0ssq9gs8r9g3hqn8zn2k0q944vc1vm8j81bns16msy"))))
     (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     (propagated-inputs
      `(("perl-catalyst-runtime" ,perl-catalyst-runtime)
        ("perl-mime-types" ,perl-mime-types)
@@ -1557,7 +1629,7 @@ MIME type directly to the browser, without being processed through Catalyst.")
 (define-public perl-catalyst-runtime
   (package
     (name "perl-catalyst-runtime")
-    (version "5.90082")
+    (version "5.90115")
     (source
      (origin
        (method url-fetch)
@@ -1565,10 +1637,11 @@ MIME type directly to the browser, without being processed through Catalyst.")
                            "Catalyst-Runtime-" version ".tar.gz"))
        (sha256
         (base32
-         "1gs70nq4rikpq6siwds9disb1z03vwjzf979xi9kf7saa1drfncs"))))
+         "0kh3ng6pjpxmndq9vrn515f70x7h44ish5bsgjwj4pjvchcyivzm"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-test-fatal" ,perl-test-fatal)))
+     `(("perl-module-install" ,perl-module-install)
+       ("perl-test-fatal" ,perl-test-fatal)))
     (propagated-inputs
      `(("perl-cgi-simple" ,perl-cgi-simple)
        ("perl-cgi-struct" ,perl-cgi-struct)
@@ -1636,7 +1709,8 @@ run an application on the web, either by doing them itself, or by letting you
     (native-inputs
      `(("perl-catalyst-runtime" ,perl-catalyst-runtime)
        ("perl-catalystx-roleapplicator" ,perl-catalystx-roleapplicator)
-       ("perl-http-message" ,perl-http-message)))
+       ("perl-http-message" ,perl-http-message)
+       ("perl-module-install" ,perl-module-install)))
     (propagated-inputs
      `(("perl-moose" ,perl-moose)
        ("perl-namespace-autoclean" ,perl-namespace-autoclean)
@@ -1665,6 +1739,7 @@ replaced with the contents of the X-Request-Base header.")
     (build-system perl-build-system)
     (native-inputs
      `(("perl-catalyst-runtime" ,perl-catalyst-runtime)
+       ("perl-module-install" ,perl-module-install)
        ("perl-test-simple" ,perl-test-simple)
        ("perl-test-www-mechanize-catalyst" ,perl-test-www-mechanize-catalyst)
        ("perl-text-csv" ,perl-text-csv)
@@ -1690,7 +1765,8 @@ table based report in a variety of formats (CSV, HTML, etc.).")
          "0x943j1n2r0zqanyzdrs1xsnn8ayn2wqskn7h144xcqa6v6gcisl"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-yaml" ,perl-yaml)))
+     `(("perl-module-install" ,perl-module-install)
+       ("perl-yaml" ,perl-yaml)))
     (inputs
      `(("perl-catalyst-runtime" ,perl-catalyst-runtime)
        ("perl-json-maybexs" ,perl-json-maybexs)
@@ -1799,7 +1875,8 @@ application classes.")
          "0h02mpkc4cmi3jpvcd7iw7xyzx55bqvvl1qkf967gqkvpklm0qx5"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-test-www-mechanize-catalyst" ,perl-test-www-mechanize-catalyst)))
+     `(("perl-module-install" ,perl-module-install)
+       ("perl-test-www-mechanize-catalyst" ,perl-test-www-mechanize-catalyst)))
     (propagated-inputs
      `(("perl-catalyst-runtime" ,perl-catalyst-runtime)
        ("perl-moose" ,perl-moose)
@@ -1837,6 +1914,33 @@ processing and preparing HTTP requests and responses.  Major features include
 processing form submissions, file uploads, reading and writing cookies, query
 string generation and manipulation, and processing and preparing HTTP
 headers.")
+    (license l:perl-license)))
+
+(define-public perl-cgi-session
+  (package
+    (name "perl-cgi-session")
+    (version "4.48")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/M/MA/MARKSTOS/CGI-Session-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "1xsl2pz1jrh127pq0b01yffnj4mnp9nvkp88h5mndrscq9hn8xa6"))))
+    (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-build" ,perl-module-build)))
+    (inputs `(("perl-cgi" ,perl-cgi)))
+    (home-page
+     "http://search.cpan.org/dist/CGI-Session")
+    (synopsis
+     "Persistent session data in CGI applications")
+    (description
+     "@code{CGI::Session} provides modular session management system across
+HTTP requests.")
     (license l:perl-license)))
 
 (define-public perl-cgi-simple
@@ -1968,7 +2072,11 @@ with Encode::decode(locale => $string).")
     (build-system perl-build-system)
     (arguments
      ;; Tests expect to query files at http://stupidfool.org/perl/feeds/
-     `(#:tests? #f))
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'set-env
+           (lambda _ (setenv "PERL_USE_UNSAFE_INC" "1"))))))
     (inputs
      `(("perl-class-errorhandler" ,perl-class-errorhandler)
        ("perl-html-parser" ,perl-html-parser)
@@ -2107,6 +2215,37 @@ composed of HTML::Element style components.")
 <form> ... </form> instance.")
     (license l:perl-license)))
 
+(define-public perl-html-scrubber
+  (package
+    (name "perl-html-scrubber")
+    (version "0.15")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/N/NI/NIGELM/HTML-Scrubber-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "1m1f8gm2jry42zxja05dxp2ck7y66m7i8vc38nj6hccnwlby6cvi"))))
+    (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-build" ,perl-module-build)
+       ("perl-test-cpan-meta" ,perl-test-cpan-meta)
+       ("perl-test-eol" ,perl-test-eol)
+       ("perl-test-memory-cycle" ,perl-test-memory-cycle)
+       ("perl-test-notabs" ,perl-test-notabs)))
+    (inputs
+     `(("perl-html-parser" ,perl-html-parser)))
+    (home-page
+     "http://search.cpan.org/dist/HTML-Scrubber")
+    (synopsis
+     "Perl extension for scrubbing/sanitizing html")
+    (description
+     "@code{HTML::Scrubber} Perl extension for scrubbing/sanitizing HTML.")
+    (license l:perl-license)))
+
 (define-public perl-html-lint
   (package
     (name "perl-html-lint")
@@ -2156,15 +2295,15 @@ in tables within an HTML document, either as text or encoded element trees.")
 (define-public perl-html-tree
   (package
     (name "perl-html-tree")
-    (version "5.03")
+    (version "5.07")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "mirror://cpan/authors/id/C/CJ/CJM/"
+       (uri (string-append "mirror://cpan/authors/id/K/KE/KENTNL/"
                            "HTML-Tree-" version ".tar.gz"))
        (sha256
         (base32
-         "13qlqbpixw470gnck0xgny8hyjj576m8y24bba2p9ai2lvy76vbx"))))
+         "1gyvm4qlwm9y6hczkpnrdfl303ggbybr0nqxdjw09hii8yw4sdzh"))))
     (build-system perl-build-system)
     (native-inputs
      `(("perl-module-build" ,perl-module-build)
@@ -2457,6 +2596,8 @@ supported.")
         (base32
          "02d84xq1mm53c7jl33qyb7v5w4372vydp74z6qj0vc96wcrnhkkr"))))
     (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     (home-page "http://search.cpan.org/dist/HTTP-Parser-XS")
     (synopsis "Fast HTTP request parser")
     (description "HTTP::Parser::XS is a fast, primitive HTTP request/response
@@ -2503,7 +2644,16 @@ environment from an HTTP::Request.")
     (arguments
      ;; See the discussion of a related tests issue at
      ;; https://lists.gnu.org/archive/html/guix-devel/2015-01/msg00346.html
-     `(#:tests? #f))
+     `(#:tests? #f
+
+       #:phases (modify-phases %standard-phases
+                   (add-before 'configure 'set-search-path
+                     (lambda _
+                       ;; Work around "dotless @INC" build failure.
+                       (setenv "PERL5LIB"
+                               (string-append (getcwd) ":"
+                                              (getenv "PERL5LIB")))
+                       #t)))))
     (home-page "http://search.cpan.org/dist/HTTP-Server-Simple")
     (synopsis "Lightweight HTTP server")
     (description "HTTP::Server::Simple is a simple standalone HTTP daemon with
@@ -2783,7 +2933,7 @@ HTTP/1.1.")
 (define-public perl-net-server
   (package
     (name "perl-net-server")
-    (version "2.008")
+    (version "2.009")
     (source
      (origin
        (method url-fetch)
@@ -2791,7 +2941,7 @@ HTTP/1.1.")
                            "Net-Server-" version ".tar.gz"))
        (sha256
         (base32
-         "182gfikn7r40kmm3d35m2qc6r8g0y1j8gxbn9ffaawf8xmm0a889"))))
+         "0gw1k9gcw7habbkxvsfa2gz34brlbwcidk6khgsf1qjm0dbccrw2"))))
     (build-system perl-build-system)
     (home-page "http://search.cpan.org/dist/Net-Server")
     (synopsis "Extensible Perl server engine")
@@ -2953,6 +3103,8 @@ required.")
         (base32
          "1zmsccdy6wr5hxzj07r1nsmaymyibk87p95z0wzknjw10lwmqs9f"))))
     (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     (propagated-inputs
      `(("perl-plack" ,perl-plack)))
     (home-page "http://search.cpan.org/dist/Plack-Middleware-ReverseProxy")
@@ -3020,6 +3172,8 @@ either mocked HTTP or a locally spawned server.")
     (build-system perl-build-system)
     (native-inputs
      `(("perl-test-exception" ,perl-test-exception)))
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     (propagated-inputs
      `(("perl-carp-assert-more" ,perl-carp-assert-more)
        ("perl-html-form" ,perl-html-form)
@@ -3052,6 +3206,7 @@ WWW::Mechanize that incorporates features for web application testing.")
      `(("perl-catalyst-plugin-session" ,perl-catalyst-plugin-session)
        ("perl-catalyst-plugin-session-state-cookie"
         ,perl-catalyst-plugin-session-state-cookie)
+       ("perl-module-install" ,perl-module-install)
        ("perl-test-exception" ,perl-test-exception)
        ("perl-test-pod" ,perl-test-pod)
        ("perl-test-utf8" ,perl-test-utf8)))
@@ -3205,6 +3360,7 @@ methods for WebSocket URIs as it does for HTTP URIs.")
     (native-inputs
      `(("perl-test-pod-coverage" ,perl-test-pod-coverage)
        ("perl-test-pod" ,perl-test-pod)
+       ("perl-module-install" ,perl-module-install)
        ("perl-json" ,perl-json)))
     (home-page "http://search.cpan.org/dist/URI-Template")
     (synopsis "Object for handling URI templates")
@@ -3227,7 +3383,18 @@ RFC 6570.")
                 "1fmp9aib1kaps9vhs4dwxn7b15kgnlz9f714bxvqsd1j1q8spzsj"))))
     (build-system perl-build-system)
     (arguments
-     '(#:tests? #f))                        ;XXX: tests require network access
+     '(#:tests? #f                          ;XXX: tests require network access
+
+       #:phases (modify-phases %standard-phases
+                   (add-before 'configure 'set-search-path
+                     (lambda _
+                       ;; Work around "dotless @INC" build failure.
+                       (setenv "PERL5LIB"
+                               (string-append (getcwd) ":"
+                                              (getenv "PERL5LIB")))
+                       #t)))))
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     (inputs `(("curl" ,curl)))
     (synopsis "Perl extension interface for libcurl")
     (description
@@ -3239,21 +3406,26 @@ library.")
 (define-public perl-www-mechanize
   (package
     (name "perl-www-mechanize")
-    (version "1.73")
+    (version "1.86")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "mirror://cpan/authors/id/E/ET/ETHER/"
+       (uri (string-append "mirror://cpan/authors/id/O/OA/OALDERS/"
                            "WWW-Mechanize-" version ".tar.gz"))
        (sha256
         (base32
-         "1zrw8aadhwy48q51x2z2rqlkwf17bya4j4h3hy89mw783j96rmg9"))))
+         "0sfl6b7mx8nannnh3ys5jk44d1s1b2d1mffrnrphkzzykaw6hm0f"))))
     (build-system perl-build-system)
     (native-inputs                      ;only for tests
-     `(("perl-cgi" ,perl-cgi)))
+     `(("perl-cgi" ,perl-cgi)
+       ("perl-test-deep" ,perl-test-deep)
+       ("perl-test-fatal" ,perl-test-fatal)
+       ("perl-test-output" ,perl-test-output)
+       ("perl-test-warnings" ,perl-test-warnings)))
     (propagated-inputs
      `(("perl-html-form" ,perl-html-form)
        ("perl-html-parser" ,perl-html-parser)
+       ("perl-html-tree" ,perl-html-tree)
        ("perl-http-message" ,perl-http-message)
        ("perl-http-server-simple" ,perl-http-server-simple)
        ("perl-libwww" ,perl-libwww)
@@ -3277,8 +3449,18 @@ web browsing, used for automating interaction with websites.")
                (base32
                 "1yxplx1q1qk2fvnzqrbk01lz26fy1lyhay51a3ky7q3jgh9p01rb"))))
     (build-system perl-build-system)
-    (arguments
-     `(#:tests? #f)) ; Tests require further modules to be packaged
+    (native-inputs
+     `(("perl-class-errorhandler" ,perl-class-errorhandler)
+       ("perl-datetime" ,perl-datetime)
+       ("perl-datetime-format-mail" ,perl-datetime-format-mail)
+       ("perl-datetime-format-w3cdtf" ,perl-datetime-format-w3cdtf)
+       ("perl-feed-find" ,perl-feed-find)
+       ("perl-module-install" ,perl-module-install)
+       ("perl-module-pluggable" ,perl-module-pluggable)
+       ("perl-uri-fetch" ,perl-uri-fetch)
+       ("perl-test-simple" ,perl-test-simple)
+       ("perl-xml-atom" ,perl-xml-atom)
+       ("perl-xml-rss" ,perl-xml-rss)))
     (inputs
      `(("perl-data-page" ,perl-data-page)
        ("perl-libwww" ,perl-libwww)
@@ -3395,13 +3577,13 @@ in systems and applications.")
 (define-public r-servr
   (package
     (name "r-servr")
-    (version "0.6")
+    (version "0.7")
     (source (origin
               (method url-fetch)
               (uri (cran-uri "servr" version))
               (sha256
                (base32
-                "0sqz3wssxa19g9mpmf9s4gx2a5rvzl8nrd11qkgpz5v3iqsc6ysr"))))
+                "0rxh89csqlpyf9wv5wlymya9kbddj79mlmxz2x0xmls12gbrxaaa"))))
     (build-system r-build-system)
     (propagated-inputs
      `(("r-httpuv" ,r-httpuv)
@@ -3889,6 +4071,74 @@ C.  It is developed as part of the NetSurf project.")
 parse both valid and invalid web content.  It is developed as part of the
 NetSurf project.")
     (license l:expat)))
+
+(define-public ikiwiki
+  (package
+    (name "ikiwiki")
+    (version "3.20170111")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "http://snapshot.debian.org/archive/debian/"
+                           "20170111T215449Z/pool/main/i/ikiwiki/ikiwiki_"
+                           version ".tar.xz"))
+       (sha256
+        (base32
+         "00d7yzv426fvqbhvzyafddv7fa6b4j2647b0wi371wd5yjj9j3sz"))))
+    (build-system perl-build-system)
+    (arguments
+     `(;; Image tests fail
+       ;;
+       ;; Test Summary Report
+       ;; -------------------
+       ;; t/img.t                      (Wstat: 2304 Tests: 62 Failed: 9)
+       ;;   Failed tests:  21, 27-28, 30-35
+       ;;   Non-zero exit status: 9
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'install 'wrap-programs
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out  (assoc-ref outputs "out"))
+                    (bin  (string-append out "/bin/"))
+                    (path (getenv "PERL5LIB")))
+               (for-each (lambda (file)
+                           (wrap-program file
+                             `("PERL5LIB" ":" prefix (,path))))
+                         (find-files bin))
+               #t))))))
+    (native-inputs
+     `(("which" ,which)
+       ("perl-html-tagset" ,perl-html-tagset)
+       ("perl-timedate" ,perl-timedate)
+       ("perl-xml-sax" ,perl-xml-sax)
+       ("perl-xml-simple" ,perl-xml-simple)
+       ("gettext" ,gettext-minimal)
+       ("subversion" ,subversion)
+       ("git" ,git)
+       ("bazaar" ,bazaar)
+       ("cvs" ,cvs)
+       ("mercurial" ,mercurial)))
+    (inputs
+     `(("python" ,python-wrapper)
+       ("perl-cgi-session" ,perl-cgi-session)
+       ("perl-cgi-simple" ,perl-cgi-simple)
+       ("perl-json" ,perl-json)
+       ("perl-image-magick" ,perl-image-magick)
+       ("perl-uri" ,perl-uri)
+       ("perl-html-parser" ,perl-html-parser)
+       ("perl-uri" ,perl-uri)
+       ("perl-text-markdown-discount" ,perl-text-markdown-discount)
+       ("perl-html-scrubber" ,perl-html-scrubber)
+       ("perl-html-template" ,perl-html-template)
+       ("perl-yaml-libyaml" ,perl-yaml-libyaml)))
+    (home-page "https://ikiwiki.info/")
+    (synopsis "Wiki compiler, capable of generating HTML")
+    (description
+     "Ikiwiki is a wiki compiler, capable of generating a static set of web
+pages, but also incorporating dynamic features like a web based editor and
+commenting.")
+    (license l:gpl2+)))
 
 (define-public libwapcaplet
   (package
@@ -4697,7 +4947,7 @@ command-line arguments or read from stdin.")
 (define-public python-internetarchive
   (package
     (name "python-internetarchive")
-    (version "1.6.0")
+    (version "1.7.1")
     (source
      (origin
        (method url-fetch)
@@ -4706,7 +4956,7 @@ command-line arguments or read from stdin.")
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
         (base32
-         "00v1489rv1ydcihwbdl7sqpcpmm98b9kqqlfggr32k0ndmv7ivas"))))
+         "1lj4r0y67mwjns2gcjvw0y7m5x0vqir2iv7s4q2y93492azli1qh"))))
     (build-system python-build-system)
     (arguments
      `(#:tests? #f ; 11 tests of 105 fail to mock "requests".
@@ -4902,3 +5152,86 @@ reference class object that implements a @code{call} method or an R closure
 that takes exactly one argument, an environment, and returns a list with three
 named elements: the @code{status}, the @code{headers}, and the @code{body}.")
     (license l:gpl2)))
+
+(define-public rss-bridge
+  (package
+    (name "rss-bridge")
+    (version "2017-08-03")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://github.com/RSS-Bridge/rss-bridge/archive/"
+                           version ".tar.gz"))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32
+         "05s16y552hbyj91s7bnlkx1bi64s6aw0fjy29az8via3i3b21yhl"))))
+    (build-system trivial-build-system)
+    (native-inputs
+     `(("gzip" ,gzip)
+       ("tar" ,tar)))
+    (arguments
+     '(#:modules ((guix build utils))
+       #:builder
+       (begin
+         (use-modules (guix build utils)
+                      (ice-9 match))
+         (let* ((out (assoc-ref %outputs "out"))
+                (share-rss-bridge (string-append out "/share/rss-bridge")))
+           (set-path-environment-variable
+            "PATH" '("bin") (map (match-lambda ((_ . input) input))
+                                 %build-inputs))
+           (mkdir-p share-rss-bridge)
+           (system* "tar" "xvf" (assoc-ref %build-inputs "source")
+                    "--strip-components" "1" "-C" share-rss-bridge)
+           #t))))
+    (home-page "https://github.com/RSS-Bridge/rss-bridge")
+    (synopsis "Generate Atom feeds for social networking websites")
+    (description "rss-bridge generates Atom feeds for social networking
+websites lacking feeds.  Supported websites include Facebook, Twitter,
+Instagram and YouTube.")
+    (license (list l:public-domain
+                   l:expat)))) ;; vendor/simplehtmldom/simple_html_dom.php
+
+(define-public linkchecker
+  (package
+    (name "linkchecker")
+    (version "9.3")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "LinkChecker" version))
+       (sha256
+        (base32
+         "0v8pavf0bx33xnz1kwflv0r7lxxwj7vg3syxhy2wzza0wh6sc2pf"))))
+    (build-system python-build-system)
+    (inputs
+     `(("python2-requests" ,python2-requests)))
+    (arguments
+     `(#:python ,python-2
+       #:phases
+       (modify-phases %standard-phases
+         ;; Remove faulty python-requests version check. This has been fixed
+         ;; upstream, and can be removed in version 9.4.
+         (add-after 'unpack 'remove-python-requests-version
+           (lambda _
+             (substitute* "linkcheck/__init__.py"
+               (("requests.__version__ <= '2.2.0'") "False"))
+             #t)))))
+    (home-page "https://linkcheck.github.io/linkchecker")
+    (synopsis "Check websites for broken links")
+    (description "LinkChecker is a website validator.  It checks for broken
+links in websites.  It is recursive and multithreaded providing output in
+colored or normal text, HTML, SQL, CSV, XML or as a sitemap graph.  It
+supports checking HTTP/1.1, HTTPS, FTP, mailto, news, nntp, telnet and local
+file links.")
+    (license (list l:gpl2+
+                   l:bsd-2 ; linkcheck/better_exchook2.py
+                   l:bsd-3 ; linkcheck/colorama.py
+                   l:psfl  ; linkcheck/gzip2.py
+                   l:expat ; linkcheck/mem.py
+                   ;; FIXME: Unbundle dnspython and miniboa
+                   ;; This issue has been raised upstream
+                   ;; https://github.com/wummel/linkchecker/issues/729
+                   l:isc   ; third_party/dnspython
+                   l:asl2.0)))) ; third_party/miniboa

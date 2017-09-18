@@ -45,7 +45,7 @@
 (define-public parallel
   (package
     (name "parallel")
-    (version "20170722")
+    (version "20170822")
     (source
      (origin
       (method url-fetch)
@@ -53,7 +53,7 @@
                           version ".tar.bz2"))
       (sha256
        (base32
-        "117g50bx1kcbrqix0f1539z5rzhvgsni2wddjv939wcxkrdb1idx"))))
+        "0j4i0dfbk1i37mcdl7l5ynsldp8biqnbm32sm0cl26by0nivyjc9"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
@@ -136,9 +136,8 @@ and they are executed on lists of files, hosts, users or other items.")
             (string-append "--with-ssl=" (assoc-ref %build-inputs "openssl")))
       #:phases
       (modify-phases %standard-phases
-       (add-before
-        'configure 'autogen
-        (lambda _ (zero? (system* "autoconf"))))))) ; configure.ac was patched
+        (add-after 'unpack 'autogen
+          (lambda _ (zero? (system* "autoconf"))))))) ; configure.ac was patched
    (home-page "http://slurm.schedmd.com/")
    (synopsis "Workload manager for cluster computing")
    (description

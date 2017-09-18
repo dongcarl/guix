@@ -1,7 +1,7 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2015 Ricardo Wurmus <rekado@elephly.net>
-;;; Copyright © 2015, 2016 Ludovic Courtès <ludo@gnu.org>
-;;; Copyright © 2015, 2016 Efraim Flashner <efraim@flashner.co.il>
+;;; Copyright © 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2015, 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 Danny Milosavljevic <dannym@scratchpost.org>
 ;;; Copyright © 2017 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2017 Mark H Weaver <mhw@netris.org>
@@ -27,10 +27,14 @@
   #:use-module (guix download)
   #:use-module (guix build-system gnu)
   #:use-module (gnu packages)
+  #:use-module (gnu packages algebra)
+  #:use-module (gnu packages autotools)
   #:use-module (gnu packages avahi)
   #:use-module (gnu packages compression)
+  #:use-module (gnu packages groff)
   #:use-module (gnu packages libusb)
-  #:use-module (gnu packages autotools)
+  #:use-module (gnu packages perl)
+  #:use-module (gnu packages pretty-print)
   #:use-module (gnu packages python)
   #:use-module (gnu packages scanner)
   #:use-module (gnu packages image)
@@ -53,7 +57,7 @@
 (define-public cups-filters
   (package
     (name "cups-filters")
-    (version "1.13.1")
+    (version "1.14.1")
     (source(origin
               (method url-fetch)
               (uri
@@ -61,7 +65,7 @@
                               "cups-filters-" version ".tar.xz"))
               (sha256
                (base32
-                "0s7hylp2lcvc1vrqpywpv7lspkrh4xf7cyi4nbg10cf38rshj474"))
+                "0175jhqpsyn7bkh7w43ydhyws5zsdak05hr1fsadvzslvwqkffgi"))
               (modules '((guix build utils)))
               (snippet
                ;; install backends, banners and filters to cups-filters output
@@ -141,7 +145,7 @@ filters for the PDF-centric printing workflow introduced by OpenPrinting.")
 (define-public cups-minimal
   (package
     (name "cups-minimal")
-    (version "2.2.1")
+    (version "2.2.4")
     (source
      (origin
        (method url-fetch)
@@ -149,7 +153,7 @@ filters for the PDF-centric printing workflow introduced by OpenPrinting.")
                            version "/cups-" version "-source.tar.gz"))
        (sha256
         (base32
-         "1m8rwhbk0l8n19iwm51r2569jj15d0x6mpqhfig0bk3pm4577f43"))))
+         "1k4qxafmapq6hzbkh273fdyzkj9alw6ppwz5k933bhsi4svlsvar"))))
     (build-system gnu-build-system)
     (arguments
      `(#:configure-flags
@@ -445,3 +449,119 @@ device-specific programs to convert and print many types of files.")
               ;; TODO: Make hp-setup find python-dbus.
               ("python-dbus" ,python-dbus)))
     (native-inputs `(("pkg-config" ,pkg-config)))))
+
+(define-public foomatic-filters
+  (package
+    (name "foomatic-filters")
+    (version "4.0.12")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "http://www.openprinting.org/download/foomatic/"
+                    name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "17w26r15094j4fqifa7f7i7jad4gsy9zdlq69kffrykcw31qx3q8"))
+              (patches
+               (search-patches "foomatic-filters-CVE-2015-8327.patch"
+                               "foomatic-filters-CVE-2015-8560.patch"))))
+    (build-system gnu-build-system)
+    (home-page
+     "https://wiki.linuxfoundation.org/openprinting/database/foomatic")
+    (native-inputs
+     `(("perl" ,perl)
+       ("pkg-config" ,pkg-config)))
+    (inputs
+     `(("dbus" ,dbus)
+       ("a2ps" ,a2ps)))
+    (arguments
+     '( ;; Specify the installation directories.
+       #:configure-flags (list (string-append "ac_cv_path_CUPS_BACKENDS="
+                                              (assoc-ref %outputs "out")
+                                              "/lib/cups/backend")
+                               (string-append "ac_cv_path_CUPS_FILTERS="
+                                              (assoc-ref %outputs "out")
+                                              "/lib/cups/filter")
+                               (string-append "ac_cv_path_PPR_INTERFACES="
+                                              (assoc-ref %outputs "out")
+                                              "/lib/ppr/interfaces")
+                               (string-append "ac_cv_path_PPR_LIB="
+                                              (assoc-ref %outputs "out")
+                                              "/lib/ppr/lib")
+
+                               ;; For some reason these are misdiagnosed.
+                               "ac_cv_func_malloc_0_nonnull=yes"
+                               "ac_cv_func_realloc_0_nonnull=yes")
+       #:test-target "tests"))
+    (synopsis "Convert PostScript to the printer's native format")
+    (description
+     "This package contains filter scripts used by the printer spoolers to
+convert the incoming PostScript data into the printer's native format using a
+printer/driver specific, but spooler-independent PPD file.")
+    (license license:gpl2+)))
+
+(define-public foo2zjs
+  (package
+    ;; The tarball is called "foo2zjs", but the web page talks about
+    ;; "foo2xqx".  Go figure!
+    (name "foo2zjs")
+    (version "201709")
+    (source (origin
+              (method url-fetch)
+              ;; XXX: This is an unversioned URL!
+              (uri "http://foo2zjs.rkkda.com/foo2zjs.tar.gz")
+              (sha256
+               (base32
+                "0amjj3jr6s6h7crzxyx11v31sj0blz7k5c2vycz4gn8cxlmk3c7w"))))
+    (build-system gnu-build-system)
+    (arguments
+     '(#:phases (modify-phases %standard-phases
+                  (replace 'configure
+                    (lambda* (#:key outputs #:allow-other-keys)
+                      (substitute* (find-files "." "^Makefile$")
+                        ;; Set the installation directory.
+                        (("^PREFIX[[:blank:]]*=.*$")
+                         (string-append "PREFIX = "
+                                        (assoc-ref outputs "out")
+                                        "\n"))
+                        (("^UDEVBIN[[:blank:]]*=.*$")
+                         "UDEVBIN = $(PREFIX)/bin\n")
+                        ;; Don't try to chown/chgrp the installed files.
+                        (("-oroot")
+                         "")
+                        (("-glp")
+                         "")
+                        ;; Placate the dependency checks.
+                        (("/usr/include/stdio.h")
+                         "/etc/passwd")
+                        (("/usr/")
+                         "$(PREFIX)/")
+                        ;; Ensure fixed timestamps in man pages.
+                        (("^MODTIME[[:blank:]]*=.*$")
+                         "MODTIME = echo Thu Jan 01 01:00:00 1970\n"))
+                      #t))
+                  (add-after 'install 'remove-pdf
+                    (lambda* (#:key outputs #:allow-other-keys)
+                      ;; Remove 'manual.pdf' which is (1) useless (it's a
+                      ;; concatenation of man pages), and (2) not
+                      ;; bit-reproducible due to <https://bugs.gnu.org/27593>.
+                      (let ((out (assoc-ref outputs "out")))
+                        (for-each delete-file
+                                  (find-files out "^manual\\.pdf$"))
+                        #t))))
+       #:parallel-build? #f                       ;broken makefile
+       #:tests? #f                                ;no tests
+       #:make-flags '("CC=gcc")))
+    (inputs
+     `(("ghostscript" ,ghostscript)
+       ("foomatic-filters" ,foomatic-filters)))   ;for 'foomatic-rip'
+    (native-inputs
+     `(("bc" ,bc)
+       ("groff" ,groff)))
+    (home-page "http://foo2xqx.rkkda.com/")
+    (synopsis "Printer driver for XQX stream protocol")
+    (description
+     "This package provides a printer driver notably for the ZJS and XQX
+protocols, which cover printers made by Konica, HP (LaserJet), Oki, Samsung,
+and more.  See @file{README} for details.")
+    (license license:gpl2+)))

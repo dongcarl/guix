@@ -41,6 +41,7 @@
   #:use-module (gnu bootloader)
   #:use-module (gnu system file-systems)
   #:use-module (gnu system linux-container)
+  #:use-module (gnu system uuid)
   #:use-module (gnu system vm)
   #:use-module (gnu services)
   #:use-module (gnu services shepherd)
@@ -77,7 +78,6 @@
 (define (read-operating-system file)
   "Read the operating-system declaration from FILE and return it."
   (load* file %user-module))
-
 
 
 ;;;
@@ -156,7 +156,7 @@ TARGET, and register them."
 (define* (install-bootloader installer-drv
                              #:key
                              bootcfg bootcfg-file
-                             device target)
+                             target)
   "Call INSTALLER-DRV with error handling, in %STORE-MONAD."
   (with-monad %store-monad
     (let* ((gc-root      (string-append target %gc-roots-directory
@@ -175,7 +175,7 @@ TARGET, and register them."
                  (when install
                    (save-load-path-excursion (primitive-load install)))))
         (delete-file temp-gc-root)
-        (leave (G_ "failed to install bootloader on device ~a '~a'~%") install device))
+        (leave (G_ "failed to install bootloader ~a~%") install))
 
       ;; Register bootloader config file as a GC root so that its dependencies
       ;; (background image, font, etc.) are not reclaimed.
@@ -185,13 +185,12 @@ TARGET, and register them."
 (define* (install os-drv target
                   #:key (log-port (current-output-port))
                   bootloader-installer install-bootloader?
-                  bootcfg bootcfg-file
-                  device)
+                  bootcfg bootcfg-file)
   "Copy the closure of BOOTCFG, which includes the output of OS-DRV, to
 directory TARGET.  TARGET must be an absolute directory name since that's what
 'guix-register' expects.
 
-When INSTALL-BOOTLOADER? is true, install bootloader on DEVICE, using BOOTCFG."
+When INSTALL-BOOTLOADER? is true, install bootloader using BOOTCFG."
   (define (maybe-copy to-copy)
     (with-monad %store-monad
       (if (string=? target "/")
@@ -233,7 +232,6 @@ the ownership of '~a' may be incorrect!~%")
         (install-bootloader bootloader-installer
                             #:bootcfg bootcfg
                             #:bootcfg-file bootcfg-file
-                            #:device device
                             #:target target)))))
 
 
@@ -463,12 +461,11 @@ STORE is an open connection to the store."
         (mbegin %store-monad
           (show-what-to-build* drvs)
           (built-derivations drvs)
-          ;; Only install bootloader configuration file. Thus, no installer
-          ;; nor device is provided here.
+          ;; Only install bootloader configuration file. Thus, no installer is
+          ;; provided here.
           (install-bootloader #f
                               #:bootcfg bootcfg
                               #:bootcfg-file bootcfg-file
-                              #:device #f
                               #:target target))))))
 
 
@@ -539,7 +536,10 @@ list of services."
       ;; TRANSLATORS: Please preserve the two-space indentation.
       (format #t (G_ "  label: ~a~%") label)
       (format #t (G_ "  bootloader: ~a~%") bootloader-name)
-      (format #t (G_ "  root device: ~a~%") root-device)
+      (format #t (G_ "  root device: ~a~%")
+              (if (uuid? root-device)
+                  (uuid->string root-device)
+                  root-device))
       (format #t (G_ "  kernel: ~a~%") kernel))))
 
 (define* (list-generations pattern #:optional (profile %system-profile))
@@ -621,17 +621,16 @@ and TARGET arguments."
 (define* (perform-action action os
                          #:key install-bootloader?
                          dry-run? derivations-only?
-                         use-substitutes? device target
+                         use-substitutes? bootloader-target target
                          image-size file-system-type full-boot?
                          (mappings '())
                          (gc-root #f))
   "Perform ACTION for OS.  INSTALL-BOOTLOADER? specifies whether to install
-bootloader; DEVICE is the target devices for bootloader; TARGET is the target
-root directory; IMAGE-SIZE is the size of the image to be built, for the
-'vm-image' and 'disk-image' actions.
-The root filesystem is created as a FILE-SYSTEM-TYPE filesystem.
-FULL-BOOT? is used for the 'vm' action;
-it determines whether to boot directly to the kernel or to the bootloader.
+bootloader; BOOTLOADER-TAGET is the target for the bootloader; TARGET is the
+target root directory; IMAGE-SIZE is the size of the image to be built, for
+the 'vm-image' and 'disk-image' actions.  The root filesystem is created as a
+FILE-SYSTEM-TYPE filesystem.  FULL-BOOT? is used for the 'vm' action; it
+determines whether to boot directly to the kernel or to the bootloader.
 
 When DERIVATIONS-ONLY? is true, print the derivation file name(s) without
 building anything.
@@ -671,7 +670,7 @@ output when building a system derivation, such as a disk image."
               (target    (or target "/")))
           (bootloader-installer-derivation installer
                                            bootloader-package
-                                           device target)))
+                                           bootloader-target target)))
 
        ;; For 'init' and 'reconfigure', always build BOOTCFG, even if
        ;; --no-bootloader is passed, because we then use it as a GC root.
@@ -703,7 +702,6 @@ output when building a system derivation, such as a disk image."
                  (install-bootloader bootloader-installer
                                      #:bootcfg bootcfg
                                      #:bootcfg-file bootcfg-file
-                                     #:device device
                                      #:target "/"))))
             ((init)
              (newline)
@@ -713,8 +711,7 @@ output when building a system derivation, such as a disk image."
                       #:install-bootloader? install-bootloader?
                       #:bootcfg bootcfg
                       #:bootcfg-file bootcfg-file
-                      #:bootloader-installer bootloader-installer
-                      #:device device))
+                      #:bootloader-installer bootloader-installer))
             (else
              ;; All we had to do was to build SYS and maybe register an
              ;; indirect GC root.
@@ -759,6 +756,8 @@ Some ACTIONS support additional ARGS.\n"))
   (newline)
   (display (G_ "The valid values for ACTION are:\n"))
   (newline)
+  (display (G_ "\
+   search           search for existing service types\n"))
   (display (G_ "\
    reconfigure      switch to a new operating system configuration\n"))
   (display (G_ "\
@@ -878,7 +877,6 @@ Some ACTIONS support additional ARGS.\n"))
     (substitutes? . #t)
     (graft? . #t)
     (build-hook? . #t)
-    (max-silent-time . 3600)
     (verbosity . 0)
     (file-system-type . "ext4")
     (image-size . guess)
@@ -908,8 +906,9 @@ resulting from command-line parsing."
          (target      (match args
                         ((first second) second)
                         (_ #f)))
-         (device      (and bootloader?
-                           (bootloader-configuration-device
+         (bootloader-target
+                      (and bootloader?
+                           (bootloader-configuration-target
                             (operating-system-bootloader os)))))
 
     (with-store store
@@ -942,9 +941,16 @@ resulting from command-line parsing."
                                                       (_ #f))
                                                     opts)
                              #:install-bootloader? bootloader?
-                             #:target target #:device device
+                             #:target target
+                             #:bootloader-target bootloader-target
                              #:gc-root (assoc-ref opts 'gc-root)))))
         #:system system))))
+
+(define (resolve-subcommand name)
+  (let ((module (resolve-interface
+                 `(guix scripts system ,(string->symbol name))))
+        (proc (string->symbol (string-append "guix-system-" name))))
+    (module-ref module proc)))
 
 (define (process-command command args opts)
   "Process COMMAND, one of the 'guix system' sub-commands.  ARGS is its
@@ -958,6 +964,8 @@ argument list and OPTS is the option alist."
                       ((pattern) pattern)
                       (x (leave (G_ "wrong number of arguments~%"))))))
        (list-generations pattern)))
+    ((search)
+     (apply (resolve-subcommand "search") args))
     ;; The following commands need to use the store, but they do not need an
     ;; operating system configuration file.
     ((switch-generation)
@@ -989,7 +997,7 @@ argument list and OPTS is the option alist."
           (case action
             ((build container vm vm-image disk-image reconfigure init
               extension-graph shepherd-graph list-generations roll-back
-              switch-generation installer)
+              switch-generation search installer)
              (alist-cons 'action action result))
             (else (leave (G_ "~a: unknown action~%") action))))))
 

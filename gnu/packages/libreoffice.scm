@@ -6,6 +6,7 @@
 ;;; Copyright © 2017 Thomas Danckaert <post@thomasdanckaert.be>
 ;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2017 Andy Wingo <wingo@igalia.com>
+;;; Copyright © 2017 Ludovic Courtès <ludo@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -24,12 +25,14 @@
 
 (define-module (gnu packages libreoffice)
   #:use-module (guix build-system gnu)
+  #:use-module (guix build-system trivial)
   #:use-module (guix download)
   #:use-module ((guix licenses)
                 #:select (gpl2+ lgpl2.1+ lgpl3+ mpl1.1 mpl2.0
                           non-copyleft x11-style))
   #:use-module (guix packages)
   #:use-module (guix utils)
+  #:use-module (ice-9 match)
   #:use-module (gnu packages)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages base)
@@ -364,8 +367,8 @@ CorelDRAW documents of all versions.")
     (arguments
      `(#:configure-flags '("--with-mdds=1.2")
        #:phases (modify-phases %standard-phases
-                  (add-before 'configure 'autoreconf
-                              (lambda _ (system* "autoreconf"))))))
+                  (add-after 'unpack 'autoreconf
+                    (lambda _ (system* "autoreconf"))))))
     (native-inputs
      `(("cppunit" ,cppunit)
        ("doxygen" ,doxygen)
@@ -719,6 +722,9 @@ Zoner Draw version 4 and 5.")
          (add-after 'unpack 'bootstrap
            (lambda _
              (zero? (system* "autoreconf" "-vfi")))))))
+    (native-search-paths (list (search-path-specification
+                                (variable "DICPATH")
+                                (files '("share/hunspell")))))
     (home-page "https://hunspell.github.io/")
     (synopsis "Spell checker")
     (description "Hunspell is a spell checker and morphological analyzer
@@ -726,6 +732,78 @@ library and program designed for languages with rich morphology and complex
 word compounding or character encoding.")
     ;; Triple license, including "mpl1.1 or later".
     (license (list mpl1.1 gpl2+ lgpl2.1+))))
+
+(define (dicollecte-french-dictionary variant synopsis)
+  ;; Return a French dictionary package from dicollecte.org, for the given
+  ;; VARIANT.
+  (package
+    (name (match variant
+            ("classique" "hunspell-dict-fr")
+            (_ (string-append "hunspell-dict-fr-" variant))))
+    (version "6.1")
+    (source (origin
+              (uri (string-append
+                    "http://www.dicollecte.org/download/fr/hunspell-french-dictionaries-v"
+                    version ".zip"))
+              (method url-fetch)
+              (sha256
+               (base32
+                "0w2hzh36wj3lsj2yd4mh7z7547dg452sywj79vnzx27csclwqshc"))))
+    (build-system trivial-build-system)
+    (native-inputs `(("unzip" ,unzip)))
+    (arguments
+     `(#:modules ((guix build utils))
+       #:builder (begin
+                   (use-modules (guix build utils)
+                                (srfi srfi-26))
+
+                   (let* ((out      (assoc-ref %outputs "out"))
+                          (hunspell (string-append out "/share/hunspell"))
+                          (myspell  (string-append out "/share/myspell"))
+                          (doc      (string-append out "/share/doc/"
+                                                   ,name))
+                          (unzip    (assoc-ref %build-inputs "unzip")))
+                     (system* (string-append unzip "/bin/unzip")
+                              (assoc-ref %build-inputs "source"))
+                     (for-each (cut install-file <> hunspell)
+                               (find-files "."
+                                           ,(string-append variant
+                                                           "\\.(dic|aff)$")))
+                     (mkdir-p myspell)
+                     (symlink hunspell (string-append myspell "/dicts"))
+                     (for-each (cut install-file <> doc)
+                               (find-files "." "\\.(txt|org|md)$"))
+                     #t))))
+    (synopsis synopsis)
+    (description
+     "This package provides a dictionary for the Hunspell spell-checking
+library.")
+    (home-page "https://www.dicollecte.org/home.php?prj=fr")
+    (license mpl2.0)))
+
+(define-syntax define-french-dictionary
+  (syntax-rules (synopsis)
+    ((_ name variant (synopsis text))
+     (define-public name
+       (dicollecte-french-dictionary variant text)))))
+
+(define-french-dictionary hunspell-dict-fr-classique
+  "classique"
+  ;; TRANSLATORS: In French, this is "Français classique".
+  (synopsis "Hunspell dictionary for ``classic'' French (recommended)"))
+
+(define-french-dictionary hunspell-dict-fr-moderne
+  "moderne"
+  ;; TRANSLATORS: In French, this is "Français moderne".
+  (synopsis "Hunspell dictionary for ``modern'' French"))
+
+(define-french-dictionary hunspell-dict-fr-réforme-1990
+  "reforme1990"
+  (synopsis "Hunspell dictionary for the post @dfn{1990 réforme} French"))
+
+(define-french-dictionary hunspell-dict-fr-toutes-variantes
+  "toutesvariantes"
+  (synopsis "Hunspell dictionary for all variants of French"))
 
 (define-public hyphen
   (package
@@ -789,7 +867,7 @@ and to return information on pronunciations, meanings and synonyms.")
 (define-public libreoffice
   (package
     (name "libreoffice")
-    (version "5.3.2.2")
+    (version "5.3.5.2")
     (source
      (origin
       (method url-fetch)
@@ -798,7 +876,7 @@ and to return information on pronunciations, meanings and synonyms.")
           "http://download.documentfoundation.org/libreoffice/src/"
           (version-prefix version 3) "/libreoffice-" version ".tar.xz"))
       (sha256 (base32
-               "1bcy1wx2cixawpd6cpivakwcwv8ryyy25kdw0fbci319p5gaj4c8"))))
+               "1sknmb9bhm8mxyfycqbwng1jqs4avyp1ffcla7dhlpwqs1aqxvx5"))))
     (build-system gnu-build-system)
     (native-inputs
      `(;; autoreconf is run by the LibreOffice build system, since after
@@ -837,6 +915,7 @@ and to return information on pronunciations, meanings and synonyms.")
        ("libetonyek" ,libetonyek)
        ("libexttextcat" ,libexttextcat)
        ("libfreehand" ,libfreehand)
+       ("liblangtag" ,liblangtag)
        ("libmspub" ,libmspub)
        ("libmwaw" ,libmwaw)
        ("libodfgen" ,libodfgen)
@@ -919,15 +998,16 @@ and to return information on pronunciations, meanings and synonyms.")
                      (substitute* (string-append out src)
                        (("Exec=libreoffice[0-9]+\\.[0-9]+ ")
                         (string-append "Exec=" out "/bin/libreoffice "))
-                       (("Icon=libreoffice[0-9]+\\.[0-9]+")
-                        "Icon=libreoffice")
+                       (("Icon=libreoffice.*")
+                        (string-append "Icon=" app "\n"))
                        (("LibreOffice [0-9]+\\.[0-9]+")
                         "LibreOffice"))
-                     (symlink-output src dst)
-                     (install-file (string-append
+                     (symlink-output src dst)))
+                 (define (install-appdata app)
+                   (install-file (string-append
                                     "sysui/desktop/appstream-appdata/"
                                     "libreoffice-" app ".appdata.xml")
-                                   (string-append out "/share/appdata"))))
+                                   (string-append out "/share/appdata")))
                  (symlink-output "/lib/libreoffice/program/soffice"
                                  "/bin/soffice")
                  (symlink-output "/lib/libreoffice/program/soffice"
@@ -940,16 +1020,18 @@ and to return information on pronunciations, meanings and synonyms.")
                   "workdir/CustomTarget/sysui/share/libreoffice/openoffice.org.xml"
                   "/share/mime/packages/libreoffice.xml")
                  (for-each install-desktop-file
+                           '("base" "calc" "draw" "impress" "writer"
+                             "math" "startcenter"))
+                 (for-each install-appdata
                            '("base" "calc" "draw" "impress" "writer"))
-                 (mkdir-p (string-append out "/share/icons"))
+                 (mkdir-p (string-append out "/share/icons/hicolor"))
                  (copy-recursively "sysui/desktop/icons/hicolor"
-                                   (string-append out "/share/icons/")))
+                                   (string-append out "/share/icons/hicolor")))
                #t)))
        #:configure-flags
         (list
           "--enable-release-build"
           "--enable-verbose"
-          "--without-parallelism" ; otherwise the build fails
           "--disable-fetch-external" ; disable downloads
           "--with-system-libs" ; enable all --with-system-* flags
           (string-append "--with-boost-libdir="
@@ -969,8 +1051,7 @@ and to return information on pronunciations, meanings and synonyms.")
           "--disable-firebird-sdbc" ; embedded firebird
           "--disable-gltf"
           "--without-doxygen"
-          "--disable-gtk3"
-          "--disable-liblangtag")))
+          "--disable-gtk3")))
     (home-page "https://www.libreoffice.org/")
     (synopsis "Office suite")
     (description "LibreOffice is a comprehensive office suite.  It contains

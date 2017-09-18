@@ -46,7 +46,7 @@
 (define-public lftp
   (package
     (name "lftp")
-    (version "4.7.8")
+    (version "4.8.1")
     (source (origin
               (method url-fetch)
               ;; See https://lftp.tech/get.html for mirrors.
@@ -58,7 +58,7 @@
                                         "ftp/lftp/lftp-" version ".tar.xz")))
               (sha256
                (base32
-                "19ijsmbb5589vg5ga355ys3075z6s2x2h0bdbga343hfqmnid2pi"))))
+                "09vvwn5w3n8ahx57b7n6qvg1abnw9w7mm4d8p381pliab6jxlw77"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("pkg-config" ,pkg-config)))
@@ -159,7 +159,7 @@ FTP browser, as well as non-interactive commands such as 'ncftpput' and
     (arguments
      `(#:phases
        (modify-phases %standard-phases
-         (add-before 'configure 'bootstrap
+         (add-after 'unpack 'bootstrap
            (lambda _ (zero? (system* "autoreconf" "-vfi")))))))
     (home-page "http://weex.sourceforge.net/")
     (synopsis "Non-interactive client for FTP synchronization")
@@ -173,7 +173,7 @@ as required.")
 (define-public libfilezilla
   (package
     (name "libfilezilla")
-    (version "0.9.0")
+    (version "0.10.1")
     (source
      (origin
        (method url-fetch)
@@ -181,10 +181,11 @@ as required.")
                            name "/" name "-" version ".tar.bz2"))
        (sha256
         (base32
-         "0340v5xs48f28q2d16ldb9359dkzlhl4l449mgyv3qabnlz2pl21"))))
+         "1yi9db0hpxh3giyjhkbz7ajmf95qw27xdvh3xvw208zri5k575x0"))))
     (build-system gnu-build-system)
     (native-inputs
-     `(("cppunit" ,cppunit)))
+     `(("cppunit" ,cppunit)
+       ("pkg-config" ,pkg-config)))
     (home-page "https://lib.filezilla-project.org")
     (synopsis "Cross-platform C++ library used by Filezilla client")
     (description
@@ -195,7 +196,7 @@ platform-independent programs.")
 (define-public filezilla
   (package
     (name "filezilla")
-    (version "3.24.1")
+    (version "3.27.1")
     (source
      (origin
        (method url-fetch)
@@ -204,7 +205,7 @@ platform-independent programs.")
                            "/FileZilla_" version "_src" ".tar.bz2"))
        (sha256
         (base32
-         "0ahcld3g6jj92nakm5i58wgmcv6f4l9yisw3aqbc2ry0gs679pg6"))))
+         "14lsplbp9fy7lk6cpwi3aj6jskz4j82h67x0fik82z1bns0zm2a3"))))
     (build-system gnu-build-system)
     (arguments
       ;; Don't let filezilla phone home to check for updates.

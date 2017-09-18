@@ -2,6 +2,7 @@
 ;;; Copyright © 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2015, 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2017 Muriithi Frederick Muriuki <fredmanglis@gmail.com>
+;;; Copyright © 2017 Oleg Pykhalov <go.wigust@gmail.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -26,6 +27,7 @@
   #:use-module (guix utils)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system python)
+  #:use-module (guix build-system emacs)
   #:use-module ((guix licenses) #:select (gpl2+ gpl3+ lgpl2.1+ asl2.0 bsd-3))
   #:use-module (gnu packages)
   #:use-module (gnu packages guile)
@@ -76,8 +78,8 @@
   ;; Note: the 'update-guix-package.scm' script expects this definition to
   ;; start precisely like this.
   (let ((version "0.13.0")
-        (commit "228a3982df157847554abc9d0831d687264d8ebd")
-        (revision 5))
+        (commit "a9468b422b6df2349a3f4d1451c9302c3d77011b")
+        (revision 6))
     (package
       (name "guix")
 
@@ -93,7 +95,7 @@
                       (commit commit)))
                 (sha256
                  (base32
-                  "1gnc1w9kby7db9jih4xwrhrv0j57zy09lmr85gbmcqna6bx3wypw"))
+                  "0bv323yp657x0a2aa2z5pp5541hjqmn908kh9jqlbdw5gpx9vg3d"))
                 (file-name (string-append "guix-" version "-checkout"))))
       (build-system gnu-build-system)
       (arguments
@@ -261,7 +263,7 @@
                          (base32
                           "1giy2aprjmn5fp9c4s9r125fljw4wv6ixy5739i5bffw4jgr0f9r"))))))
       (propagated-inputs
-       `(("gnutls" ,gnutls/guile-2.2)             ;for 'guix download' & co.
+       `(("gnutls" ,gnutls)
          ("guile-json" ,guile-json)
          ("guile-ncurses/gpm" ,guile-ncurses/gpm)
          ("guile-ssh" ,guile-ssh)
@@ -289,7 +291,7 @@ the Nix package manager.")
      `(("guile" ,guile-2.0)
        ,@(alist-delete "guile" (package-inputs guix))))
     (propagated-inputs
-     `(("gnutls" ,gnutls)
+     `(("gnutls" ,gnutls/guile-2.0)
        ("guile-json" ,guile2.0-json)
        ("guile-ssh" ,guile2.0-ssh)
        ("guile-git" ,guile2.0-git)))))
@@ -311,10 +313,11 @@ generated file."
      #t)))
 
 (define-public current-guix
-  (let ((select? (delay (or (git-predicate
-                             (string-append (current-source-directory)
-                                            "/../.."))
-                            source-file?))))
+  (let* ((repository-root (canonicalize-path
+                           (string-append (current-source-directory)
+                                          "/../..")))
+         (select? (delay (or (git-predicate repository-root)
+                             source-file?))))
     (lambda ()
       "Return a package representing Guix built from the current source tree.
 This works by adding the current source tree to the store (after filtering it
@@ -322,7 +325,7 @@ out) and returning a package that uses that as its 'source'."
       (package
         (inherit guix)
         (version (string-append (package-version guix) "+"))
-        (source (local-file "../.." "guix-current"
+        (source (local-file repository-root "guix-current"
                             #:recursive? #t
                             #:select? (force select?)))))))
 
@@ -380,6 +383,23 @@ store, usually the directory /nix/store, where each package has its own unique
 sub-directory.")
     (license lgpl2.1+)))
 
+(define-public emacs-nix-mode
+  (package
+    (inherit nix)
+    (name "emacs-nix-mode")
+    (build-system emacs-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'chdir-elisp
+           ;; Elisp directory is not in root of the source.
+           (lambda _
+             (chdir "misc/emacs"))))))
+    (synopsis "Emacs major mode for editing Nix expressions")
+    (description "@code{nixos-mode} provides an Emacs major mode for editing
+Nix expressions.  It supports syntax highlighting, indenting and refilling of
+comments.")))
+
 (define-public stow
   (package
     (name "stow")
@@ -412,15 +432,15 @@ symlinks to the files in a common directory such as /usr/local.")
 (define-public rpm
   (package
     (name "rpm")
-    (version "4.12.0.1")
+    (version "4.13.0.1")
     (source (origin
               (method url-fetch)
-              (uri (string-append "http://rpm.org/releases/rpm-4.12.x/rpm-"
+              (uri (string-append "http://ftp.rpm.org/releases/rpm-"
+                                  (version-major+minor version) ".x/rpm-"
                                   version ".tar.bz2"))
               (sha256
                (base32
-                "0a82ym8phx7g0f3k6smvxnvzh7yv857l42xafk49689kzhld5pbp"))
-              (patches (search-patches "rpm-CVE-2014-8118.patch"))))
+                "03cvbwbfrhm0fa02j7828k1qp05hf2m0fradwcf2nqhrsjkppz17"))))
     (build-system gnu-build-system)
     (arguments
      '(#:configure-flags '("--with-external-db"   ;use the system's bdb

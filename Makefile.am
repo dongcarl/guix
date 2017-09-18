@@ -79,6 +79,7 @@ MODULES =					\
   guix/build-system/dub.scm			\
   guix/build-system/emacs.scm			\
   guix/build-system/font.scm			\
+  guix/build-system/meson.scm			\
   guix/build-system/minify.scm			\
   guix/build-system/asdf.scm			\
   guix/build-system/glib-or-gtk.scm		\
@@ -106,6 +107,7 @@ MODULES =					\
   guix/build/cmake-build-system.scm		\
   guix/build/dub-build-system.scm		\
   guix/build/emacs-build-system.scm		\
+  guix/build/meson-build-system.scm		\
   guix/build/minify-build-system.scm		\
   guix/build/font-build-system.scm		\
   guix/build/asdf-build-system.scm		\
@@ -164,6 +166,7 @@ MODULES =					\
   guix/scripts/authenticate.scm			\
   guix/scripts/refresh.scm			\
   guix/scripts/system.scm			\
+  guix/scripts/system/search.scm		\
   guix/scripts/lint.scm				\
   guix/scripts/challenge.scm			\
   guix/scripts/import/cran.scm			\
@@ -234,8 +237,8 @@ dist_noinst_DATA = guix/tests.scm guix/tests/http.scm
 # Auxiliary files for packages.
 AUX_FILES =						\
   gnu/packages/aux-files/emacs/guix-emacs.el		\
-  gnu/packages/aux-files/linux-libre/4.12-i686.conf	\
-  gnu/packages/aux-files/linux-libre/4.12-x86_64.conf	\
+  gnu/packages/aux-files/linux-libre/4.13-i686.conf	\
+  gnu/packages/aux-files/linux-libre/4.13-x86_64.conf	\
   gnu/packages/aux-files/linux-libre/4.9-i686.conf	\
   gnu/packages/aux-files/linux-libre/4.9-x86_64.conf	\
   gnu/packages/aux-files/linux-libre/4.4-i686.conf	\
@@ -323,6 +326,7 @@ SCM_TESTS =					\
   tests/workers.scm				\
   tests/zlib.scm				\
   tests/file-systems.scm			\
+  tests/uuid.scm				\
   tests/system.scm				\
   tests/services.scm				\
   tests/scripts-build.scm			\
@@ -588,7 +592,7 @@ GUIXSD_SUPPORTED_SYSTEMS ?= x86_64-linux i686-linux
 GUIXSD_VM_SYSTEMS ?= x86_64-linux
 
 # Prefix of the GuixSD installation image file name.
-GUIXSD_IMAGE_BASE = guixsd-usb-install-$(PACKAGE_VERSION)
+GUIXSD_IMAGE_BASE = guixsd-install-$(PACKAGE_VERSION)
 
 # Prefix of the GuixSD VM image file name.
 GUIXSD_VM_IMAGE_BASE = guixsd-vm-image-$(PACKAGE_VERSION)
@@ -639,6 +643,7 @@ release: dist
 	for system in $(GUIXSD_SUPPORTED_SYSTEMS) ; do					\
 	  image=`$(top_builddir)/pre-inst-env						\
 	    guix system disk-image							\
+	    --file-system-type=iso9660							\
             --system=$$system								\
 	    gnu/system/install.scm` ;							\
 	  if [ ! -f "$$image" ] ; then							\

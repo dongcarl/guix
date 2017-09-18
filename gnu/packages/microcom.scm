@@ -32,7 +32,7 @@
     (source (origin
               (method git-fetch)
               (uri (git-reference
-                    (url "git://git.pengutronix.de/git/tools/microcom.git")
+                    (url "https://git.pengutronix.de/git/tools/microcom.git")
                     (commit "v2016.01.0")))
               (file-name (string-append name "-" version "-checkout"))
               (sha256
@@ -42,7 +42,7 @@
     (arguments
      `(#:phases
        (modify-phases %standard-phases
-         (add-before 'configure 'bootstrap
+         (add-after 'unpack 'bootstrap
            (lambda _
              (zero? (system* "autoreconf" "-i")))))))
     (inputs `(("readline" ,readline)))

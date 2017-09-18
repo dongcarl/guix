@@ -5,7 +5,7 @@
 ;;; Copyright © 2014, 2016 David Thompson <davet@gnu.org>
 ;;; Copyright © 2014, 2015, 2016 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2015 Eric Bavier <bavier@member.fsf.org>
-;;; Copyright © 2015 Sou Bunnbu <iyzsong@gmail.com>
+;;; Copyright © 2015, 2016 Sou Bunnbu <iyzsong@gmail.com>
 ;;; Copyright © 2015 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016, 2017 ng0 <contact.ng0@cryptolab.net>
@@ -18,6 +18,7 @@
 ;;; Copyright © 2017 Arun Isaac <arunisaac@systemreboot.net>
 ;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2017 Alex Vong <alexvong1995@gmail.com>
+;;; Copyright © 2017 Ben Woodcroft <donttrustben@gmail.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -52,6 +53,7 @@
   #:use-module (gnu packages gettext)
   #:use-module (gnu packages glib)
   #:use-module (gnu packages gnupg)
+  #:use-module (gnu packages time)
   #:use-module (gnu packages jemalloc)
   #:use-module (gnu packages language)
   #:use-module (gnu packages libevent)
@@ -115,9 +117,9 @@
     (arguments
      `(#:phases
        (modify-phases %standard-phases
-         (add-before 'configure 'generate-configure
+         (add-after 'unpack 'generate-configure
            (lambda _
-             (zero? (system* "./autogen.sh")))))))
+             (zero? (system* "sh" "autogen.sh")))))))
     ;; http://www.4store.org has been down for a while now.
     (home-page "https://github.com/garlik/4store")
     (synopsis "Clustered RDF storage and query engine")
@@ -128,14 +130,14 @@ either single machines or networked clusters.")
 (define-public gdbm
   (package
     (name "gdbm")
-    (version "1.12")
+    (version "1.13")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://gnu/gdbm/gdbm-"
                                   version ".tar.gz"))
               (sha256
                (base32
-                "1smwz4x5qa4js0zf1w3asq6z7mh20zlgwbh2bk5dczw6xrk22yyr"))))
+                "0lx201q20dvc70f8a3c9s7s18z15inlxvbffph97ngvrgnyjq9cx"))))
     (arguments `(#:configure-flags '("--enable-libgdbm-compat")))
     (build-system gnu-build-system)
     (home-page "http://www.gnu.org.ua/software/gdbm")
@@ -371,12 +373,7 @@ applications.")
                        (for-each delete-file
                                  (find-files (string-append out "/bin")
                                              "_embedded$"))
-                       #t))))
-       ;; On aarch64 the test suite runs out of memory and fails.
-       ,@(if (string-prefix? "aarch64-linux"
-                             (or (%current-target-system) (%current-system)))
-           '(#:tests? #f)
-           '())))
+                       #t))))))
     (native-inputs
      `(("bison" ,bison)
        ("perl" ,perl)))
@@ -474,14 +471,14 @@ as a drop-in replacement of MySQL.")
 (define-public postgresql
   (package
     (name "postgresql")
-    (version "9.6.4")
+    (version "9.6.5")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://ftp.postgresql.org/pub/source/v"
                                   version "/postgresql-" version ".tar.bz2"))
               (sha256
                (base32
-                "04yffrrmn85k25n3nq389aa9c1j8mkimrf889kayl772h9nv2fib"))))
+                "0k3ls2x182jz6djjiqj9kycddabdl2gk1y1ajq1vipnxwfki5nh6"))))
     (build-system gnu-build-system)
     (arguments
      `(#:configure-flags '("--with-uuid=e2fs")
@@ -754,7 +751,7 @@ for example from a shell script.")
 (define-public sqlite
   (package
    (name "sqlite")
-   (version "3.17.0")
+   (version "3.19.3")
    (source (origin
             (method url-fetch)
             (uri (let ((numeric-version
@@ -770,7 +767,7 @@ for example from a shell script.")
                                   numeric-version ".tar.gz")))
             (sha256
              (base32
-              "0k472gq0p706jq4529p60znvw02hdf172qxgbdv59q0n7anqbr54"))))
+              "00b3l2qglpl1inx21fckiwxnfq5xf6441flc79rqg7zdvh1rq4h6"))))
    (build-system gnu-build-system)
    (inputs `(("readline" ,readline)))
    (arguments
@@ -793,14 +790,14 @@ is in the public domain.")
 (define-public tdb
   (package
     (name "tdb")
-    (version "1.3.14")
+    (version "1.3.15")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://www.samba.org/ftp/tdb/tdb-"
                                   version ".tar.gz"))
               (sha256
                (base32
-                "1sfbia8xyaywgx9zy7x618vrvyx9gc3cgqf763shsii9javlnz9s"))))
+                "0a37jhpij8wr4f4pjqdlwnffy2l6a2vkqdpz1bqxj6v06cwbz8dl"))))
     (build-system gnu-build-system)
     (arguments
      '(#:phases
@@ -861,6 +858,7 @@ extremely small.")
     (native-inputs
      `(("perl-dbd-sqlite" ,perl-dbd-sqlite)
        ("perl-file-temp" ,perl-file-temp)
+       ("perl-module-install" ,perl-module-install)
        ("perl-package-stash" ,perl-package-stash)
        ("perl-test-deep" ,perl-test-deep)
        ("perl-test-exception" ,perl-test-exception)
@@ -914,7 +912,8 @@ single query, \"JOIN\", \"LEFT JOIN\", \"COUNT\", \"DISTINCT\", \"GROUP BY\",
     (build-system perl-build-system)
     (native-inputs
      `(("perl-cache-cache" ,perl-cache-cache)
-       ("perl-dbd-sqlite" ,perl-dbd-sqlite)))
+       ("perl-dbd-sqlite" ,perl-dbd-sqlite)
+       ("perl-module-install" ,perl-module-install)))
     (propagated-inputs
      `(("perl-carp-clan" ,perl-carp-clan)
        ("perl-dbix-class" ,perl-dbix-class)))
@@ -937,6 +936,8 @@ built-in caching support.")
         (base32
          "1w47rh2241iy5x3a9bqsyd5kdp9sk43dksr99frzv4qn4jsazfn6"))))
     (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     (propagated-inputs
      `(("perl-dbix-class" ,perl-dbix-class)))
     (home-page "http://search.cpan.org/dist/DBIx-Class-IntrospectableM2M")
@@ -967,6 +968,7 @@ introspected and examined.")
        ("perl-config-general" ,perl-config-general)
        ("perl-dbd-sqlite" ,perl-dbd-sqlite)
        ("perl-dbix-class-introspectablem2m" ,perl-dbix-class-introspectablem2m)
+       ("perl-module-install" ,perl-module-install)
        ("perl-moose" ,perl-moose)
        ("perl-moosex-markasmethods" ,perl-moosex-markasmethods)
        ("perl-moosex-nonmoose" ,perl-moosex-nonmoose)
@@ -1090,7 +1092,8 @@ module, and nothing else.")
          "17sgwq3mvqjhv3b77cnvrq60xgp8harjhlnvpwmxc914rqc5ckaz"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-test-deep" ,perl-test-deep)
+     `(("perl-module-install" ,perl-module-install)
+       ("perl-test-deep" ,perl-test-deep)
        ("perl-test-exception" ,perl-test-exception)
        ("perl-test-warn" ,perl-test-warn)))
     (propagated-inputs
@@ -1562,7 +1565,7 @@ for ODBC.")
     (arguments
      `(#:phases
        (modify-phases %standard-phases
-         (add-before 'configure 'autoreconf
+         (add-after 'unpack 'autoreconf
            (lambda _
              (zero? (system* "autoreconf" "-vfi")))))))
     (home-page "http://mdbtools.sourceforge.net/")
@@ -1620,3 +1623,56 @@ Memory-Mapped Database} (LMDB), a high-performance key-value store.")
 
 (define-public python2-lmdb
   (package-with-python2 python-lmdb))
+
+(define-public python-orator
+  (package
+    (name "python-orator")
+    (version "0.9.7")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "orator" version))
+              (sha256
+               (base32
+                "14r58z64fdp76ixnvmi4lni762b405ynmsx6chr1qihs3yl9zn6c"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'loosen-dependencies
+           ;; Tests are not actually run since they are not included with the
+           ;; distributed package, but dependencies are checked.
+           (lambda _
+             (substitute* "setup.py"
+               ((",<.*'") "'")
+               (("flexmock==0.9.7") "flexmock")
+               ;; The pytest-mock package is out of date, so we remove minimum
+               ;; version requirement.
+               (("pytest-mock.*'") "pytest-mock'"))
+             #t)))))
+    (native-inputs
+     `(("python-pytest-mock" ,python-pytest-mock)
+       ("python-pytest" ,python-pytest-3.0)
+       ("python-flexmock" ,python-flexmock)))
+    (propagated-inputs
+     `(("python-backpack" ,python-backpack)
+       ("python-blinker" ,python-blinker)
+       ("python-cleo" ,python-cleo)
+       ("python-faker" ,python-faker)
+       ("python-inflection" ,python-inflection)
+       ("python-lazy-object-proxy" ,python-lazy-object-proxy)
+       ("python-pendulum" ,python-pendulum)
+       ("python-pyaml" ,python-pyaml)
+       ("python-pygments" ,python-pygments)
+       ("python-simplejson" ,python-simplejson)
+       ("python-six" ,python-six)
+       ("python-wrapt" ,python-wrapt)))
+    (home-page "https://orator-orm.com/")
+    (synopsis "ActiveRecord ORM for Python")
+    (description
+     "Orator provides a simple ActiveRecord-like Object Relational Mapping
+implementation for Python.")
+    (license license:expat)
+    (properties `((python2-variant . ,(delay python2-orator))))))
+
+(define-public python2-orator
+  (package-with-python2 (strip-python2-variant python-orator)))

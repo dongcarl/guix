@@ -30,16 +30,47 @@
   #:use-module (guix gexp)
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 match)
-  #:export (nginx-configuration
+  #:export (<nginx-configuration>
+            nginx-configuration
             nginx-configuration?
+            nginx-configuartion-nginx
+            nginx-configuration-log-directory
+            nginx-configuration-run-directory
+            nginx-configuration-server-blocks
+            nginx-configuration-upstream-blocks
+            nginx-configuration-file
+
+            <nginx-server-configuration>
             nginx-server-configuration
             nginx-server-configuration?
+            nginx-server-configuration-http-port
+            nginx-server-configuartion-https-port
+            nginx-server-configuration-server-name
+            nginx-server-configuration-root
+            nginx-server-configuration-locations
+            nginx-server-configuration-index
+            nginx-server-configuration-ssl-certificate
+            nginx-server-configuration-ssl-certificate-key
+            nginx-server-configuration-server-tokens?
+
+            <nginx-upstream-configuration>
             nginx-upstream-configuration
             nginx-upstream-configuration?
+            nginx-upstream-configuration-name
+            nginx-upstream-configuration-servers
+
+            <nginx-location-configuration>
             nginx-location-configuration
             nginx-location-configuration?
+            nginx-location-configuration-uri
+            nginx-location-configuration-body
+
+            <nginx-named-location-configuration>
             nginx-named-location-configuration
             nginx-named-location-configuration?
+            nginx-named-location-configuration-name
+            nginx-named-location-configuration-body
+
             nginx-service
             nginx-service-type
 
@@ -231,7 +262,7 @@ of index files."
 (define nginx-activation
   (match-lambda
     (($ <nginx-configuration> nginx log-directory run-directory server-blocks
-                              upstream-blocks config-file)
+                              upstream-blocks file)
      #~(begin
          (use-modules (guix build utils))
 
@@ -250,7 +281,7 @@ of index files."
          (mkdir-p (string-append #$run-directory "/logs"))
          ;; Check configuration file syntax.
          (system* (string-append #$nginx "/sbin/nginx")
-                  "-c" #$(or config-file
+                  "-c" #$(or file
                              (default-nginx-config nginx log-directory
                                run-directory server-blocks upstream-blocks))
                   "-t")))))
@@ -258,14 +289,14 @@ of index files."
 (define nginx-shepherd-service
   (match-lambda
     (($ <nginx-configuration> nginx log-directory run-directory server-blocks
-                              upstream-blocks config-file)
+                              upstream-blocks file)
      (let* ((nginx-binary (file-append nginx "/sbin/nginx"))
             (nginx-action
              (lambda args
                #~(lambda _
                    (zero?
                     (system* #$nginx-binary "-c"
-                             #$(or config-file
+                             #$(or file
                                    (default-nginx-config nginx log-directory
                                      run-directory server-blocks upstream-blocks))
                              #$@args))))))
@@ -293,26 +324,9 @@ of index files."
                             (inherit config)
                             (server-blocks
                               (append (nginx-configuration-server-blocks config)
-                              servers)))))))
-
-(define* (nginx-service #:key (nginx nginx)
-                        (log-directory "/var/log/nginx")
-                        (run-directory "/var/run/nginx")
-                        (server-list '())
-                        (upstream-list '())
-                        (config-file #f))
-  "Return a service that runs NGINX, the nginx web server.
-
-The nginx daemon loads its runtime configuration from CONFIG-FILE, stores log
-files in LOG-DIRECTORY, and stores temporary runtime files in RUN-DIRECTORY."
-  (service nginx-service-type
-           (nginx-configuration
-            (nginx nginx)
-            (log-directory log-directory)
-            (run-directory run-directory)
-            (server-blocks server-list)
-            (upstream-blocks upstream-list)
-            (file config-file))))
+                              servers)))))
+                (default-value
+                  (nginx-configuration))))
 
 (define-record-type* <fcgiwrap-configuration> fcgiwrap-configuration
   make-fcgiwrap-configuration

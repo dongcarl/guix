@@ -3,6 +3,7 @@
 ;;; Copyright © 2015 Andy Wingo <wingo@igalia.com>
 ;;; Copyright © 2015 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2016 Sou Bunnbu <iyzsong@gmail.com>
+;;; Copyright © 2017 Maxim Cournoyer <maxim.cournoyer@gmail.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -72,6 +73,9 @@
             elogind-configuration?
             elogind-service
             elogind-service-type
+
+            accountsservice-service-type
+            accountsservice-service
 
             gnome-desktop-configuration
             gnome-desktop-configuration?
@@ -381,32 +385,67 @@ site} for more information."
 ;;; Bluetooth.
 ;;;
 
-(define (bluetooth-shepherd-service bluez)
+(define-record-type* <bluetooth-configuration>
+  bluetooth-configuration make-bluetooth-configuration
+  bluetooth-configuration?
+  (bluez bluetooth-configuration-bluez (default bluez))
+  (auto-enable? bluetooth-configuration-auto-enable? (default #f)))
+
+(define (bluetooth-configuration-file config)
+  "Return a configuration file for the systemd bluetooth service, as a string."
+  (string-append
+   "[Policy]\n"
+   "AutoEnable=" (bool (bluetooth-configuration-auto-enable?
+                        config))))
+
+(define (bluetooth-directory config)
+  (computed-file "etc-bluetooth"
+                 #~(begin
+                     (mkdir #$output)
+                     (chdir #$output)
+                     (call-with-output-file "main.conf"
+                       (lambda (port)
+                         (display #$(bluetooth-configuration-file config)
+                                  port))))))
+
+(define (bluetooth-shepherd-service config)
   "Return a shepherd service for @command{bluetoothd}."
   (shepherd-service
    (provision '(bluetooth))
    (requirement '(dbus-system udev))
    (documentation "Run the bluetoothd daemon.")
    (start #~(make-forkexec-constructor
-             (string-append #$bluez "/libexec/bluetooth/bluetoothd")))
+             (string-append #$(bluetooth-configuration-bluez config)
+                            "/libexec/bluetooth/bluetoothd")))
    (stop #~(make-kill-destructor))))
 
 (define bluetooth-service-type
   (service-type
    (name 'bluetooth)
    (extensions
-    (list (service-extension dbus-root-service-type list)
-          (service-extension udev-service-type list)
+    (list (service-extension dbus-root-service-type
+                             (compose list bluetooth-configuration-bluez))
+          (service-extension udev-service-type
+                             (compose list bluetooth-configuration-bluez))
+          (service-extension etc-service-type
+                             (lambda (config)
+                               `(("bluetooth"
+                                  ,(bluetooth-directory config)))))
           (service-extension shepherd-root-service-type
                              (compose list bluetooth-shepherd-service))))))
 
-(define* (bluetooth-service #:key (bluez bluez))
+(define* (bluetooth-service #:key (bluez bluez) (auto-enable? #f))
   "Return a service that runs the @command{bluetoothd} daemon, which manages
-all the Bluetooth devices and provides a number of D-Bus interfaces.
+all the Bluetooth devices and provides a number of D-Bus interfaces.  When
+AUTO-ENABLE? is true, the bluetooth controller is powered automatically at
+boot.
 
 Users need to be in the @code{lp} group to access the D-Bus service.
 "
-  (service bluetooth-service-type bluez))
+  (service bluetooth-service-type
+           (bluetooth-configuration
+            (bluez bluez)
+            (auto-enable? auto-enable?))))
 
 
 ;;;
@@ -693,7 +732,8 @@ seats.)"
 
                        ;; We need /run/user, /run/systemd, etc.
                        (service-extension file-system-service-type
-                                          (const %elogind-file-systems))))))
+                                          (const %elogind-file-systems))))
+                (default-value (elogind-configuration))))
 
 (define* (elogind-service #:key (config (elogind-configuration)))
   "Return a service that runs the @command{elogind} login and seat management
@@ -702,6 +742,33 @@ system components to know the set of logged-in users as well as their session
 types (graphical, console, remote, etc.).  It can also clean up after users
 when they log out."
   (service elogind-service-type config))
+
+
+;;;
+;;; AccountsService service.
+;;;
+
+(define %accountsservice-activation
+  #~(begin
+      (use-modules (guix build utils))
+      (mkdir-p "/var/lib/AccountsService")))
+
+(define accountsservice-service-type
+  (service-type (name 'accountsservice)
+                (extensions
+                 (list (service-extension activation-service-type
+                                          (const %accountsservice-activation))
+                       (service-extension dbus-root-service-type list)
+                       (service-extension polkit-service-type list)))))
+
+(define* (accountsservice-service #:key (accountsservice accountsservice))
+  "Return a service that runs AccountsService, a system service that
+can list available accounts, change their passwords, and so on.
+AccountsService integrates with PolicyKit to enable unprivileged users to
+acquire the capability to modify their system configuration.
+@uref{https://www.freedesktop.org/wiki/Software/AccountsService/, the
+accountsservice web site} for more information."
+  (service accountsservice-service-type accountsservice))
 
 
 ;;;
@@ -779,10 +846,12 @@ with the administrator's password."
          (simple-service 'mtp udev-service-type (list libmtp))
 
          ;; The D-Bus clique.
+         (service network-manager-service-type)
+         (service wpa-supplicant-service-type)    ;needed by NetworkManager
          (avahi-service)
-         (wicd-service)
          (udisks-service)
          (upower-service)
+         (accountsservice-service)
          (colord-service)
          (geoclue-service)
          (polkit-service)

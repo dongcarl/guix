@@ -181,7 +181,7 @@ high-volume and high-reliability applications. The name BIND stands for
     (arguments
      `(#:phases
        (modify-phases %standard-phases
-         (add-before 'configure 'autoreconf
+         (add-after 'unpack 'autoreconf
            (lambda _
              ;; Re-generate build files due to unbundling ltdl.
              ;; TODO: Prevent generating new libltdl and building it.
@@ -229,7 +229,7 @@ servers is included, and an up-to-date version is available at
        #:tests? #f
        #:phases
        (modify-phases %standard-phases
-         (add-before 'configure 'create-configure
+         (add-after 'unpack 'create-configure
            (lambda _
              (zero? (system* "make" "configure")))))))
     (native-inputs
@@ -483,14 +483,14 @@ Extensions} (DNSSEC).")
 (define-public knot
   (package
     (name "knot")
-    (version "2.5.3")
+    (version "2.5.4")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://secure.nic.cz/files/knot-dns/"
                                   name "-" version ".tar.xz"))
               (sha256
                (base32
-                "13lxxnnw0v7s0q648grz87bwlfwjh5sfbj1qax7jdklalqqy52np"))
+                "1w14m9pmc8vl9mcgikvwbflwcxwz52l77jq98wvxyxab13lpdpiz"))
               (modules '((guix build utils)))
               (snippet
                '(begin

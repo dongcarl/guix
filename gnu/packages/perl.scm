@@ -1,12 +1,12 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2012, 2013, 2014, 2015, 2016 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2012, 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2013 Andreas Enge <andreas@enge.fr>
 ;;; Copyright © 2015, 2016, 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2015, 2016 Eric Bavier <bavier@member.fsf.org>
 ;;; Copyright © 2015 Eric Dvorsak <eric@dvorsak.fr>
 ;;; Copyright © 2016 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2016 Jochem Raat <jchmrt@riseup.net>
-;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
+;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Coypright © 2016 ng0 <ng0@libertad.pw>
 ;;; Copyright © 2016 Alex Sassmannshausen <alex@pompo.co>
 ;;; Copyright © 2016 Roel Janssen <roel@gnu.org>
@@ -16,6 +16,7 @@
 ;;; Copyright © 2017 Marius Bakke <mbakke@fastmail.com>
 ;;; Copyright © 2017 Adriano Peluso <catonano@gmail.com>
 ;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
+;;; Copyright © 2017 Leo Famulari <leo@famulari.name>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -51,16 +52,16 @@
   ;; Yeah, Perl...  It is required early in the bootstrap process by Linux.
   (package
     (name "perl")
-    (replacement perl/fixed)
-    (version "5.24.0")
+    (version "5.26.0")
     (source (origin
              (method url-fetch)
              (uri (string-append "mirror://cpan/src/5.0/perl-"
                                  version ".tar.gz"))
              (sha256
               (base32
-               "00jj8zr8fnihrxxhl8h936ssczv5x86qb618yz1ig40d1rp0qhvy"))
+               "0zxn9hd7mqgq06ikyi6k70ngbvjf01z1paw0jd25byyl0rlwdrzb"))
              (patches (search-patches
+                       "perl-file-path-CVE-2017-6512.patch"
                        "perl-no-sys-dirs.patch"
                        "perl-autosplit-default-time.patch"
                        "perl-deterministic-ordering.patch"
@@ -147,17 +148,6 @@
 24 years of development.")
     (home-page "http://www.perl.org/")
     (license gpl1+)))                          ; or "Artistic"
-
-(define perl/fixed
-  (package
-    (inherit perl)
-    (source
-      (origin
-        (inherit (package-source perl))
-        (patches
-          (append
-            (origin-patches (package-source perl))
-            (search-patches "perl-file-path-CVE-2017-6512.patch")))))))
 
 (define-public perl-algorithm-c3
   (package
@@ -426,6 +416,8 @@ compiling the surrounding scope.")
                (base32
                 "1gl9ybm9hgia3ld5s11b7bv2p2hmx5rss5hxcfy6rmbzrjcnci01"))))
     (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     ;; The optional input module Statistics::PointEstimation (from
     ;; Statistics-TTest) lists no license.
     (synopsis "Benchmarking with statistical confidence")
@@ -700,15 +692,15 @@ Perl.")
 (define-public perl-carp-clan
   (package
     (name "perl-carp-clan")
-    (version "6.04")
+    (version "6.06")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "mirror://cpan/authors/id/S/ST/STBEY/"
+       (uri (string-append "mirror://cpan/authors/id/K/KE/KENTNL/"
                            "Carp-Clan-" version ".tar.gz"))
        (sha256
         (base32
-         "1v71k8s1pi16l5y579gnrg372c6pdvy6qqm6iddm8h1dx7n16bjl"))))
+         "1m6902n6s627nsvyn2vyrk29q7lh6808hsdk7ka5cirm27vchjpa"))))
     (build-system perl-build-system)
     (native-inputs
      `(("perl-test-exception" ,perl-test-exception)))
@@ -801,7 +793,8 @@ the same mk_accessors interface.")
          "1zp74yv023q3macrf4rv3i82z8pkffqyhh7xk9xg8fbr63ikwqf4"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-test-exception" ,perl-test-exception)))
+     `(("perl-module-install" ,perl-module-install)
+       ("perl-test-exception" ,perl-test-exception)))
     (propagated-inputs
      `(("perl-class-xsaccessor" ,perl-class-xsaccessor)
        ("perl-module-runtime" ,perl-module-runtime)
@@ -872,7 +865,8 @@ supporting the same interface, but using Class::C3 to do the hard work.")
          "1nzav8arxll0rya7r2vp032s3acliihbb9mjlfa13rywhh77bzvl"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-test-exception" ,perl-test-exception)))
+     `(("perl-module-install" ,perl-module-install)
+       ("perl-test-exception" ,perl-test-exception)))
     (propagated-inputs
      `(("perl-class-c3" ,perl-class-c3)
        ("perl-class-inspector" ,perl-class-inspector)
@@ -967,15 +961,15 @@ to the calling program.")
 (define-public perl-class-inspector
   (package
     (name "perl-class-inspector")
-    (version "1.28")
+    (version "1.31")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "mirror://cpan/authors/id/A/AD/ADAMK/"
+       (uri (string-append "mirror://cpan/authors/id/P/PL/PLICEASE/"
                            "Class-Inspector-" version ".tar.gz"))
        (sha256
         (base32
-         "04iij8dbcgaim7g109frpyf7mh4ydsd8zh53r53chk0zxnivg91w"))))
+         "1sqfjgzxx1f951fykc6vgfvys4j8rxaw2zf3jq26yrvs3ygn8pq6"))))
     (build-system perl-build-system)
     (home-page "http://search.cpan.org/dist/Class-Inspector")
     (synopsis "Get information about a class and its structure")
@@ -1207,15 +1201,15 @@ as defined by two typical specimens of Perl coders.")
 (define-public perl-config-any
   (package
     (name "perl-config-any")
-    (version "0.24")
+    (version "0.32")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "mirror://cpan/authors/id/B/BR/BRICAS/"
+       (uri (string-append "mirror://cpan/authors/id/H/HA/HAARG/"
                            "Config-Any-" version ".tar.gz"))
        (sha256
         (base32
-         "06n6jn3q3xhk57icwip0ihzqixxav6sgp6rrb35hahj1z748y3vi"))))
+         "0l31sg7dwh4dwwnql42hp7arkhcm15bhsgfg4i6xvbjzy9f2mnk8"))))
     (build-system perl-build-system)
     (propagated-inputs
      `(("perl-module-pluggable" ,perl-module-pluggable)))
@@ -1297,15 +1291,15 @@ and writing of @code{.ini}-style configuration files.")
 (define-public perl-context-preserve
   (package
     (name "perl-context-preserve")
-    (version "0.01")
+    (version "0.02")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "mirror://cpan/authors/id/J/JR/JROCKWAY/"
+       (uri (string-append "mirror://cpan/authors/id/E/ET/ETHER/"
                            "Context-Preserve-" version ".tar.gz"))
        (sha256
         (base32
-         "0gssillawjknqks81x7fg7w2x94bnyklgd8ry2pr1k6ifkjhwz46"))))
+         "0qkjj1qifr87zlfpfnn21gdyrpfgilh8zp3b53008m2ax02k87gc"))))
     (build-system perl-build-system)
     (native-inputs
      `(("perl-test-exception" ,perl-test-exception)
@@ -1317,10 +1311,38 @@ the context the subroutine would have seen if it were the last statement in
 the caller.")
     (license (package-license perl))))
 
+(define-public perl-convert-binhex
+  (package
+    (name "perl-convert-binhex")
+    (version "1.125")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/S/ST/STEPHEN/Convert-BinHex-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "15v3489k179cx0fz3lix79ssjid0nhhpf6c33swpxga6pss92dai"))))
+    (build-system perl-build-system)
+    (native-inputs
+     `(("perl-file-slurp" ,perl-file-slurp)
+       ("perl-test-most" ,perl-test-most)))
+    (home-page
+     "http://search.cpan.org/dist/Convert-BinHex")
+    (synopsis "Extract data from Macintosh BinHex files")
+    (description
+     "BinHex is a format for transporting files safely through electronic
+mail, as short-lined, 7-bit, semi-compressed data streams.  Ths module
+provides a means of converting those data streams back into into binary
+data.")
+    (license perl-license)))
+
 (define-public perl-cpan-meta-check
   (package
     (name "perl-cpan-meta-check")
-    (version "0.011")
+    (version "0.014")
     (source
      (origin
        (method url-fetch)
@@ -1328,7 +1350,7 @@ the caller.")
                            "CPAN-Meta-Check-" version ".tar.gz"))
        (sha256
         (base32
-         "0nxi0xhhd3dwhgri3l8z8gpz2ibvhm5k7jjls8xmnlh0v84p04kh"))))
+         "07rmdbz1rbnb7w33vswn1wixlyh947sqr93xrvcph1hwzhmmg818"))))
     (build-system perl-build-system)
     (native-inputs `(("perl-test-deep" ,perl-test-deep)))
     (propagated-inputs `(("perl-cpan-meta" ,perl-cpan-meta)))
@@ -1529,15 +1551,15 @@ code that, when \"eval\"ed, produces a deep copy of the original arguments.")
 (define-public perl-data-dumper-concise
   (package
     (name "perl-data-dumper-concise")
-    (version "2.022")
+    (version "2.023")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "mirror://cpan/authors/id/F/FR/FREW/"
+       (uri (string-append "mirror://cpan/authors/id/E/ET/ETHER/"
                            "Data-Dumper-Concise-" version ".tar.gz"))
        (sha256
         (base32
-         "0z7vxgk1f2kw2zpiimdsyf7jq9f4s5dhh3dlimq5yrirypnk03sc"))))
+         "0lsqbl1mxhkj0qnjfa1jrvx8wwbyi81bgwfyj1si6cdg7h8jzhm6"))))
     (build-system perl-build-system)
     (home-page "http://search.cpan.org/dist/Data-Dumper-Concise")
     (synopsis "Concise data dumper")
@@ -1593,6 +1615,49 @@ the case that a result set is returned that is larger than we want to display
 on one page.  This results in wanting to page through various pages of data.
 The maths behind this is unfortunately fiddly, hence this module.")
     (license (package-license perl))))
+
+(define-public perl-data-perl
+  (package
+    (name "perl-data-perl")
+    (version "0.002009")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/M/MA/MATTP/Data-Perl-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "12vgqdjbfqf2qfg21x22wg88xnwxfbw2ki3qzcb3nb0chwjj4axn"))))
+    (build-system perl-build-system)
+    (native-inputs
+     `(("perl-test-deep" ,perl-test-deep)
+       ("perl-test-fatal" ,perl-test-fatal)
+       ("perl-test-output" ,perl-test-output)))
+    (inputs
+     `(("perl-class-method-modifiers"
+        ,perl-class-method-modifiers)
+       ("perl-module-runtime" ,perl-module-runtime)
+       ("perl-role-tiny" ,perl-role-tiny)
+       ("perl-strictures" ,perl-strictures)))
+    (propagated-inputs
+     `(("perl-list-moreutils" ,perl-list-moreutils)))
+    (home-page
+     "http://search.cpan.org/dist/Data-Perl")
+    (synopsis "Base classes wrapping fundamental Perl data types")
+    (description
+     "@code{Data::Perl} is a container class for the following classes:
+@itemize
+@item @code{Data::Perl::Collection::Hash}
+@item @code{Data::Perl::Collection::Array}
+@item @code{Data::Perl::String}
+@item @code{Data::Perl::Number}
+@item @code{Data::Perl::Counter}
+@item @code{Data::Perl::Bool}
+@item @code{Data::Perl::Code}
+@end itemize")
+    (license perl-license)))
 
 (define-public perl-data-stag
   (package
@@ -1799,7 +1864,7 @@ hours, minutes, seconds, and time zones.")
 (define-public perl-datetime
   (package
     (name "perl-datetime")
-    (version "1.18")
+    (version "1.43")
     (source
      (origin
        (method url-fetch)
@@ -1807,15 +1872,17 @@ hours, minutes, seconds, and time zones.")
                            "DateTime-" version ".tar.gz"))
        (sha256
         (base32
-         "0fli1ls298qa8nfki15myxqqqfpxvslxk4j5r3vjk577wfgjrnms"))))
+         "0xgrcqs7zza7646g81j54z3fcxb8rw11ynlfm02afr436lgfnfql"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-module-build" ,perl-module-build)
+     `(("perl-cpan-meta-check" ,perl-cpan-meta-check)
+       ("perl-module-build" ,perl-module-build)
        ("perl-test-fatal" ,perl-test-fatal)
        ("perl-test-warnings" ,perl-test-warnings)))
     (propagated-inputs
      `(("perl-datetime-locale" ,perl-datetime-locale)
        ("perl-datetime-timezone" ,perl-datetime-timezone)
+       ("perl-file-sharedir" ,perl-file-sharedir)
        ("perl-params-validate" ,perl-params-validate)
        ("perl-try-tiny" ,perl-try-tiny)))
     (home-page "http://search.cpan.org/dist/DateTime")
@@ -1852,7 +1919,7 @@ precise.")
 (define-public perl-datetime-set
   (package
     (name "perl-datetime-set")
-    (version "0.3400")
+    (version "0.3900")
     (source
      (origin
        (method url-fetch)
@@ -1860,7 +1927,7 @@ precise.")
                            "DateTime-Set-" version ".tar.gz"))
        (sha256
         (base32
-         "1b27699zkj68w5ll9chjhs52vmf39f9via6x5r5844as30qh9zxb"))))
+         "0ih9pi6myg5i26hjpmpzqn58s0yljl2qxdd6gzpy9zda4hwirx4l"))))
     (build-system perl-build-system)
     (native-inputs
      `(("perl-module-build" ,perl-module-build)))
@@ -1879,7 +1946,7 @@ within a time range.")
 (define-public perl-datetime-event-ical
   (package
     (name "perl-datetime-event-ical")
-    (version "0.12")
+    (version "0.13")
     (source
      (origin
        (method url-fetch)
@@ -1887,7 +1954,7 @@ within a time range.")
                            "DateTime-Event-ICal-" version ".tar.gz"))
        (sha256
         (base32
-         "1rfrjhczfmasf7aaz8rfd89vhwjj2nkxlnirxxrmy75z10nmrpjk"))))
+         "1skmykxbrf98ldi72d5s1v6228gfdr5iy4y0gpl0xwswxy247njk"))))
     (build-system perl-build-system)
     (propagated-inputs
      `(("perl-datetime" ,perl-datetime)
@@ -1901,7 +1968,7 @@ create DateTime::Set objects for RFC 2445 style recurrences.")
 (define-public perl-datetime-event-recurrence
   (package
     (name "perl-datetime-event-recurrence")
-    (version "0.16")
+    (version "0.19")
     (source
      (origin
        (method url-fetch)
@@ -1909,7 +1976,7 @@ create DateTime::Set objects for RFC 2445 style recurrences.")
                            "DateTime-Event-Recurrence-" version ".tar.gz"))
        (sha256
         (base32
-         "02c6ky3k26r0c8r87rcsd8gbn7rd6j2pylryin8pllnrdh9f0wiq"))))
+         "19dms2vg9hvfx80p85m8gkn2ww0yxjrjn8qsr9k7f431lj4qfh7r"))))
     (build-system perl-build-system)
     (propagated-inputs
      `(("perl-datetime" ,perl-datetime)
@@ -1951,7 +2018,7 @@ to do this without writing reams of structural code.")
 (define-public perl-datetime-format-flexible
   (package
     (name "perl-datetime-format-flexible")
-    (version "0.26")
+    (version "0.28")
     (source
      (origin
        (method url-fetch)
@@ -1959,7 +2026,7 @@ to do this without writing reams of structural code.")
                            "DateTime-Format-Flexible-" version ".tar.gz"))
        (sha256
         (base32
-         "0gb9dsn178dpvgbbgwnaf3v2v8zy4xj36i0w5q8qbhvwx32znvj3"))))
+         "1g63zs0q2x40h29r7in50c55g6kxiw3m2faw2p6c4rg74sj2k2b5"))))
     (build-system perl-build-system)
     (propagated-inputs
      `(("perl-datetime" ,perl-datetime)
@@ -2005,7 +2072,7 @@ order to create the appropriate objects.")
 (define-public perl-datetime-format-natural
   (package
     (name "perl-datetime-format-natural")
-    (version "1.02")
+    (version "1.05")
     (source
      (origin
        (method url-fetch)
@@ -2013,7 +2080,7 @@ order to create the appropriate objects.")
                            "DateTime-Format-Natural-" version ".tar.gz"))
        (sha256
         (base32
-         "1qq3adq1y08d0jlmwk9059s5d39hb26f3zjag099gjjyvs5c8yal"))))
+         "10ldrhz5rnpsd8qmqn1a4s0w5hhfbjrr13a93yx7kpp89g85pxqv"))))
     (build-system perl-build-system)
     (native-inputs
      `(("perl-module-build" ,perl-module-build)
@@ -2038,7 +2105,7 @@ parsing logic.")
 (define-public perl-datetime-format-strptime
   (package
     (name "perl-datetime-format-strptime")
-    (version "1.56")
+    (version "1.73")
     (source
      (origin
        (method url-fetch)
@@ -2046,13 +2113,16 @@ parsing logic.")
                            "DateTime-Format-Strptime-" version ".tar.gz"))
        (sha256
         (base32
-         "0a4bszmff16rw6fz1yr4v9001q9vxrdxnxkj9sqaln83b87rvxig"))))
+         "1gmjcmvh81cla6yn2pvlkr7i25bspg90pzzsizrfb0c5xc37h1vd"))))
     (build-system perl-build-system)
     (propagated-inputs
      `(("perl-datetime" ,perl-datetime)
        ("perl-datetime-locale" ,perl-datetime-locale)
        ("perl-datetime-timezone" ,perl-datetime-timezone)
-       ("perl-params-validate" ,perl-params-validate)))
+       ("perl-package-deprecationmanager" ,perl-package-deprecationmanager)
+       ("perl-params-validate" ,perl-params-validate)
+       ("perl-sub-name" ,perl-sub-name)
+       ("perl-test-warnings" ,perl-test-warnings)))
     (home-page "http://search.cpan.org/dist/DateTime-Format-Strptime")
     (synopsis "Parse and format strp and strf time patterns")
     (description "This module implements most of `strptime(3)`, the POSIX
@@ -2064,7 +2134,7 @@ takes a string and a pattern and returns the `DateTime` object associated.")
 (define-public perl-datetime-locale
   (package
     (name "perl-datetime-locale")
-    (version "0.45")
+    (version "1.16")
     (source
      (origin
        (method url-fetch)
@@ -2072,13 +2142,20 @@ takes a string and a pattern and returns the `DateTime` object associated.")
                            "DateTime-Locale-" version ".tar.gz"))
        (sha256
         (base32
-         "175grkrxiv012n6ch3z1sip4zprcili6m5zqi3njdk5c1gdvi8ca"))))
+         "1zkc0wggbsczbj4qadahh197imr9fa6knxr10zl241lw2i14rbyz"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-module-build" ,perl-module-build)))
+     `(("perl-file-sharedir" ,perl-file-sharedir)
+       ("perl-test-file-sharedir-dist" ,perl-test-file-sharedir-dist)
+       ("perl-test-warnings" ,perl-test-warnings)
+       ("perl-test-requires" ,perl-test-requires)
+       ("perl-namespace-autoclean" ,perl-namespace-autoclean)
+       ("perl-file-sharedir-install" ,perl-file-sharedir-install)
+       ("perl-cpan-meta-check" ,perl-cpan-meta-check)
+       ("perl-module-build" ,perl-module-build)))
     (propagated-inputs
      `(("perl-list-moreutils" ,perl-list-moreutils)
-       ("perl-params-validate" ,perl-params-validate)))
+       ("perl-params-validationcompiler" ,perl-params-validationcompiler)))
     (home-page "http://search.cpan.org/dist/DateTime-Locale")
     (synopsis "Localization support for DateTime.pm")
     (description "The DateTime::Locale modules provide localization data for
@@ -2088,7 +2165,7 @@ the DateTime.pm class.")
 (define-public perl-datetime-timezone
   (package
     (name "perl-datetime-timezone")
-    (version "1.86")
+    (version "2.13")
     (source
      (origin
        (method url-fetch)
@@ -2096,7 +2173,7 @@ the DateTime.pm class.")
                            "DateTime-TimeZone-" version ".tar.gz"))
        (sha256
         (base32
-         "1aj5liy9as7yci2s9cqv9gqna5wggah8yg2jqrc89dnrin25s26z"))))
+         "1371sk4p9clygfwxzvivfqz6q9dy8gn3n4dr1424d0xqsv63jg9k"))))
     (build-system perl-build-system)
     (native-inputs
      `(("perl-test-fatal" ,perl-test-fatal)
@@ -2105,7 +2182,8 @@ the DateTime.pm class.")
      `(("perl-class-singleton" ,perl-class-singleton)
        ("perl-list-allutils" ,perl-list-allutils)
        ("perl-module-runtime" ,perl-module-runtime)
-       ("perl-params-validate" ,perl-params-validate)
+       ("perl-namespace-autoclean" ,perl-namespace-autoclean)
+       ("perl-params-validationcompiler" ,perl-params-validationcompiler)
        ("perl-try-tiny" ,perl-try-tiny)))
     (home-page "http://search.cpan.org/dist/DateTime-TimeZone")
     (synopsis "Time zone object for Perl")
@@ -2169,14 +2247,14 @@ This module parses and emits such dates.")
 (define-public perl-datetime-format-w3cdtf
   (package
     (name "perl-datetime-format-w3cdtf")
-    (version "0.06")
+    (version "0.07")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://cpan/authors/id/G/GW/GWILLIAMS/"
                                   "DateTime-Format-W3CDTF-" version ".tar.gz"))
               (sha256
                (base32
-                "0ymxizwd2zfx8b4bmrmv4k439qwfwf2522jrvn4hlay5v6z459dr"))))
+                "0s32lb1k80p3b3sb7w234zgxnrmadrwbcg41lhaal7dz3dk2p839"))))
     (build-system perl-build-system)
     (inputs
      `(("perl-datetime" ,perl-datetime)))
@@ -2252,6 +2330,30 @@ particular command is available.")
 whether a compiler is available.  It can test for a C99 compiler, or
 you can tell it to compile a C source file with optional linker flags.")
   (license (package-license perl))))
+
+(define-public perl-devel-cycle
+  (package
+    (name "perl-devel-cycle")
+    (version "1.12")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/L/LD/LDS/Devel-Cycle-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "1hhb77kz3dys8yaik452j22cm3510zald2mpvfyv5clqv326aczx"))))
+    (build-system perl-build-system)
+    (home-page
+     "http://search.cpan.org/dist/Devel-Cycle")
+    (synopsis "Find memory cycles in objects")
+    (description
+     "@code{Devel::Cycle} This is a tool for finding circular references in
+objects and other types of references.  Because of Perl's reference-count
+based memory management, circular references will cause memory leaks.")
+    (license perl-license)))
 
 (define-public perl-devel-globaldestruction
   (package
@@ -2372,7 +2474,7 @@ providing a simple interface to this data.")
 (define-public perl-devel-stacktrace-ashtml
   (package
     (name "perl-devel-stacktrace-ashtml")
-    (version "0.14")
+    (version "0.15")
     (source
      (origin
        (method url-fetch)
@@ -2380,7 +2482,7 @@ providing a simple interface to this data.")
                            "Devel-StackTrace-AsHTML-" version ".tar.gz"))
        (sha256
         (base32
-         "0yl296y0qfwybwjgqjzd4j2w2bj5a2nz342qqgxchnf5bqynl1c9"))))
+         "0iri5nb2lb76qv5l9z0vjpfrq5j2fyclkd64kh020bvy37idp0v2"))))
     (build-system perl-build-system)
     (propagated-inputs
      `(("perl-devel-stacktrace" ,perl-devel-stacktrace)))
@@ -2396,7 +2498,7 @@ each stack frame.")
 (define-public perl-devel-symdump
   (package
     (name "perl-devel-symdump")
-    (version "2.17")
+    (version "2.18")
     (source
      (origin
        (method url-fetch)
@@ -2404,7 +2506,7 @@ each stack frame.")
                            "Devel-Symdump-" version ".tar.gz"))
        (sha256
         (base32
-         "0qkfjk7bm7jwn9d9qaldg298zvkqh2f19fgvfh5j1rp66mwzql1c"))))
+         "1h3n0w23camhj20a97nw7v40rqa7xcxx8vkn2qjjlngm0yhq2vw2"))))
     (build-system perl-build-system)
     (home-page "http://search.cpan.org/dist/Devel-Symdump")
     (synopsis "Dump symbol names or the symbol table")
@@ -2572,6 +2674,11 @@ also known as JIS 2000.")
         (base32
          "0fj4vd8iva2i0j6s2fyhwgr9afrvhr6gjlzi7805h257mmnb1m0z"))))
     (build-system perl-build-system)
+    (arguments
+     '(#:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'set-env
+           (lambda _ (setenv "PERL_USE_UNSAFE_INC" "1"))))))
     (home-page "http://search.cpan.org/dist/Encode-HanExtra")
     (synopsis "Additional Chinese encodings")
     (description "This Perl module provides Chinese encodings that are not
@@ -2926,15 +3033,15 @@ directories.")
 (define-public perl-file-find-rule-perl
   (package
     (name "perl-file-find-rule-perl")
-    (version "1.13")
+    (version "1.15")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "mirror://cpan/authors/id/A/AD/ADAMK/"
+       (uri (string-append "mirror://cpan/authors/id/E/ET/ETHER/"
                            "File-Find-Rule-Perl-" version ".tar.gz"))
        (sha256
         (base32
-         "0xi4ppqr6r57l5xlkwxpvkvpb9p7dvz053d76v2m9pwdfxqb5v6j"))))
+         "19iy8spzrvh71x33b5yi16wjw5jjvs12jvjj0f7f3370hqzl6j4s"))))
     (build-system perl-build-system)
     (propagated-inputs
      `(("perl-file-find-rule" ,perl-file-find-rule)
@@ -2973,19 +3080,18 @@ provide a quick dropin when such functionality is needed.")
 (define-public perl-file-homedir
   (package
     (name "perl-file-homedir")
-    (version "1.00")
+    (version "1.002")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "mirror://cpan/authors/id/A/AD/ADAMK/"
+       (uri (string-append "mirror://cpan/authors/id/R/RE/REHSACK/"
                            "File-HomeDir-" version ".tar.gz"))
        (sha256
         (base32
-         "0hvihydd0y4gdxafi8dpybk9ll8q35bz5ycibfic0gh92cslzfc5"))))
+         "0x62hn8rc7ninf9nlp69h61yh21g4cbq2g81sh64cf2ify2hqk7b"))))
     (build-system perl-build-system)
     (propagated-inputs
-     `(("perl-file-which" ,perl-file-which)
-       ("perl-file-temp" ,perl-file-temp)))
+     `(("perl-file-which" ,perl-file-which)))
     (arguments `(#:tests? #f))          ;Not appropriate for chroot
     (home-page "http://search.cpan.org/dist/File-HomeDir")
     (synopsis "Find your home and other directories on any platform")
@@ -3077,15 +3183,15 @@ matching a regular expression.")
 (define-public perl-file-remove
   (package
     (name "perl-file-remove")
-    (version "1.52")
+    (version "1.57")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "mirror://cpan/authors/id/A/AD/ADAMK/"
+       (uri (string-append "mirror://cpan/authors/id/S/SH/SHLOMIF/"
                            "File-Remove-" version ".tar.gz"))
        (sha256
         (base32
-         "1p8bal9qhwkjbghivxn1d5m3qdj2qwm1agrjbmakm6la9dbxqm21"))))
+         "1b814lw181kkqh6c1n4p2zlzzsq6ic5pfpr831nphf2w2rhcvgmk"))))
     (build-system perl-build-system)
     (home-page "http://search.cpan.org/dist/File-Remove")
     (synopsis "Remove files and directories in Perl")
@@ -3098,7 +3204,7 @@ accepts wildcards, * and ?, as arguments for file names.")
 (define-public perl-file-sharedir
   (package
     (name "perl-file-sharedir")
-    (version "1.102")
+    (version "1.104")
     (source
      (origin
        (method url-fetch)
@@ -3106,7 +3212,7 @@ accepts wildcards, * and ?, as arguments for file names.")
                            "File-ShareDir-" version ".tar.gz"))
        (sha256
         (base32
-         "04blqn4cms9zjmhlfvwyx6mrglaaq1mmy4xwv7xqf9c8fjwk8wvw"))))
+         "1bqwhk3qfg60bkpi5b83bh93sng8jx20i3ka5sixc0prrppjidh7"))))
     (build-system perl-build-system)
     (native-inputs
      `(("perl-file-sharedir-install" ,perl-file-sharedir-install)))
@@ -3122,19 +3228,40 @@ correct directory, you can use File::ShareDir to find your files again after
 the installation.")
     (license (package-license perl))))
 
-(define-public perl-file-sharedir-install
+(define-public perl-file-sharedir-dist
   (package
-    (name "perl-file-sharedir-install")
-    (version "0.10")
+    (name "perl-file-sharedir-dist")
+    (version "0.04")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "mirror://cpan/authors/id/G/GW/GWYN/"
+       (uri (string-append "mirror://cpan/authors/id/P/PL/PLICEASE/"
+                           "File-ShareDir-Dist-" version ".tar.gz"))
+       (sha256
+        (base32
+         "028vnjw3fdmwk540w3b07cmr93ap0s13ni2b4c7iv56mgyy6gfc1"))))
+    (build-system perl-build-system)
+    (home-page "http://search.cpan.org/dist/File-ShareDir-Dist")
+    (synopsis "Locate per-dist shared files")
+    (description "File::ShareDir::Dist finds share directories for
+distributions.  It is a companion module to File::ShareDir.")
+    (license (package-license perl))))
+
+(define-public perl-file-sharedir-install
+  (package
+    (name "perl-file-sharedir-install")
+    (version "0.11")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "mirror://cpan/authors/id/E/ET/ETHER/"
                            "File-ShareDir-Install-" version ".tar.gz"))
        (sha256
         (base32
-         "1xz60bi7x8755lq24rx7y1jkyk3icssn7s55z665mysdxhfzg2kh"))))
+         "1j0cw1aq9fdv9kl1a6fnfa4zihsvmcqzy9sb0xk0i9pyx5r8ggrj"))))
     (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-build" ,perl-module-build)))
     (home-page "http://search.cpan.org/dist/File-ShareDir-Install")
     (synopsis "Install shared files")
     (description "File::ShareDir::Install allows you to install read-only data
@@ -3259,6 +3386,8 @@ shell.")
                (base32
                 "16v61rn0yimpv5kp6b20z2f1c93n5kpsyjvr0gq4w2dc43gfvc8w"))))
     (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     (home-page "http://search.cpan.org/dist/File-Zglob")
     (synopsis "Extended Unix style glob functionality")
     (description "@code{File::Zglob} provides a traditional Unix @code{glob}
@@ -3398,6 +3527,16 @@ which are tied to the scope exit.")
         (base32
          "1wg8nzczfxif55j2nbymbhyd25pjy7dqs4bvd6jrcds3ll3mflaw"))))
     (build-system perl-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'set-perl-search-path
+           (lambda _
+             ;; Work around "dotless @INC" build failure.
+             (setenv "PERL5LIB"
+                     (string-append (getcwd) ":"
+                                    (getenv "PERL5LIB")))
+             #t)))))
     (native-inputs
      `(("perl-module-build" ,perl-module-build)
        ("perl-test-leaktrace" ,perl-test-leaktrace)))
@@ -3449,6 +3588,29 @@ merged.")
     (synopsis "Store multiple values per key")
     (description "Hash::MultiValue is an object (and a plain hash reference)
 that may contain multiple values per key, inspired by MultiDict of WebOb.")
+    (license (package-license perl))))
+
+(define-public perl-importer
+  (package
+    (name "perl-importer")
+    (version "0.024")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (string-append "mirror://cpan/authors/id/E/EX/EXODIST/Importer-"
+                            version ".tar.gz"))
+        (sha256
+         (base32
+          "0mx50xds7iphxykbr9b0w2qki92l3gpagsdchm4ncsrnxc67c68x"))))
+    (build-system perl-build-system)
+    (home-page "http://search.cpan.org/dist/Importer/")
+    (synopsis "Alternative but compatible interface to modules that export symbols")
+    (description "This module acts as a layer between Exporter and modules which
+consume exports.  It is feature-compatible with Exporter, plus some much needed
+extras.  You can use this to import symbols from any exporter that follows
+Exporters specification.  The exporter modules themselves do not need to use or
+inherit from the Exporter module, they just need to set @@EXPORT and/or other
+variables.")
     (license (package-license perl))))
 
 (define-public perl-import-into
@@ -4067,6 +4229,51 @@ implementation of these functions only serves as a fallback in case the C
 portions of this module couldn't be compiled on this machine.")
     (license (package-license perl))))
 
+(define-public perl-mailtools
+  (package
+    (name "perl-mailtools")
+    (version "2.19")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/M/MA/MARKOV/MailTools-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "06jykkv8mp484vzkmwd6dkicx029rl3ir5ljzrbap3paxw1dfzn1"))))
+    (build-system perl-build-system)
+    (propagated-inputs
+     `(("perl-timedate" ,perl-timedate)))
+    (home-page
+     "http://search.cpan.org/dist/MailTools")
+    (synopsis "Bundle of ancient email modules")
+    (description "MailTools contains the following modules:
+@table @asis
+@item Mail::Address
+Parse email address from a header line.
+@item Mail::Cap
+Interpret mailcap files: mappings of file-types to applications as used by
+many command-line email programs.
+@item Mail::Field
+Simplifies access to (some) email header fields.  Used by Mail::Header.
+@item Mail::Filter
+Process Mail::Internet messages.
+@item Mail::Header
+Collection of Mail::Field objects, representing the header of a Mail::Internet
+object.
+@item Mail::Internet
+Represents a single email message, with header and body.
+@item Mail::Mailer
+Send Mail::Internet emails via direct smtp or local MTA's.
+@item Mail::Send
+Build a Mail::Internet object, and then send it out using Mail::Mailer.
+@item Mail::Util
+\"Smart functions\" you should not depend on.
+@end table")
+    (license perl-license)))
+
 (define-public perl-memoize-expirelru
   (package
     (name "perl-memoize-expirelru")
@@ -4090,14 +4297,14 @@ the argument to the CACHESIZE parameter, will be cached.")
 (define-public perl-mime-charset
   (package
     (name "perl-mime-charset")
-    (version "1.012")
+    (version "1.012.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://cpan/authors/id/N/NE/NEZUMI/"
                                   "MIME-Charset-" version ".tar.gz"))
               (sha256
                (base32
-                "1kfc5p4g1x9c0ffhg125wvhravcviny3alwrgnhnrm2a33ad3rff"))))
+                "04qxgcg9mvia121i3zcqxgp20y0d9kg0qv6hddk93ian0af7g347"))))
     (build-system perl-build-system)
     (home-page "http://search.cpan.org/dist/MIME-Charset")
     (synopsis "Charset information for MIME messages")
@@ -4105,6 +4312,36 @@ the argument to the CACHESIZE parameter, will be cached.")
      "@code{MIME::Charset} provides information about character sets used for
 MIME messages on Internet.")
     (license (package-license perl))))
+
+(define-public perl-mime-tools
+  (package
+    (name "perl-mime-tools")
+    (version "5.509")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/D/DS/DSKOLL/MIME-tools-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "0wv9rzx5j1wjm01c3dg48qk9wlbm6iyf91j536idk09xj869ymv4"))))
+    (build-system perl-build-system)
+    (native-inputs
+     `(("perl-test-deep" ,perl-test-deep)))
+    (inputs
+     `(("perl-convert-binhex" ,perl-convert-binhex)))
+    (propagated-inputs
+     `(("perl-mailtools" ,perl-mailtools)))
+    (home-page
+     "http://search.cpan.org/dist/MIME-tools")
+    (synopsis "Tools to manipulate MIME messages")
+    (description
+     "MIME-tools is a collection of Perl5 MIME:: modules for parsing,
+decoding, and generating single- or multipart (even nested multipart) MIME
+messages.")
+    (license perl-license)))
 
 (define-public perl-mime-types
   (package
@@ -4154,17 +4391,16 @@ file names are added for you.")
 (define-public perl-modern-perl
   (package
     (name "perl-modern-perl")
-    (version "1.20150127")
+    (version "1.20170117")
     (source
      (origin
        (method url-fetch)
        (uri (string-append
              "mirror://cpan/authors/id/C/CH/CHROMATIC/Modern-Perl-"
-             version
-             ".tar.gz"))
+             version ".tar.gz"))
        (sha256
         (base32
-         "0iv2crfxl3xh6mq36g1gv9fr8iqq3kpbj8afxy5qi60hh7v3xhcl"))))
+         "0a1n9c04zhs1a1km1zi0d1hj78d10qv3bhxr4bdi4chnc4saiwjx"))))
     (build-system perl-build-system)
     (native-inputs
      `(("perl-module-build" ,perl-module-build)))
@@ -4408,7 +4644,7 @@ from Moose::Conflicts and moose-outdated.")
 (define-public perl-module-scandeps
   (package
     (name "perl-module-scandeps")
-    (version "1.18")
+    (version "1.24")
     (source
      (origin
        (method url-fetch)
@@ -4416,7 +4652,7 @@ from Moose::Conflicts and moose-outdated.")
                            "Module-ScanDeps-" version ".tar.gz"))
        (sha256
         (base32
-         "17mbyqwd8c20nqw01hjshl524vkw8pq6y2lwndmw36xkqr945npz"))))
+         "0s6cj90ckhy351gql52ksh4ms1x8piv26iadl09fcpzkx7j0srw9"))))
     (build-system perl-build-system)
     (native-inputs
      `(("perl-test-requires" ,perl-test-requires)))
@@ -4576,7 +4812,8 @@ sentences.")
          "1lkn1h4sxr1483jicsgsgzclbfw63g2i2c3m4v4j9ar75yrb0kh8"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-test-exception" ,perl-test-exception)))
+     `(("perl-module-install" ,perl-module-install)
+       ("perl-test-exception" ,perl-test-exception)))
     (propagated-inputs
      `(("perl-moose" ,perl-moose)))
     (home-page "http://search.cpan.org/dist/MooseX-Emulate-Class-Accessor-Fast")
@@ -4915,7 +5152,7 @@ prevent name clashes between packages.")
 (define-public perl-moosex-types-datetime
   (package
     (name "perl-moosex-types-datetime")
-    (version "0.10")
+    (version "0.13")
     (source
      (origin
        (method url-fetch)
@@ -4923,7 +5160,7 @@ prevent name clashes between packages.")
                            "MooseX-Types-DateTime-" version ".tar.gz"))
        (sha256
         (base32
-         "03p66rx0qj2p23n2i2rj7c7x41621jzzaxscrpg95mb3mqmravc0"))))
+         "1iir3mdvz892kbbs2q91vjxnhas7811m3d3872m7x8gn6rka57xq"))))
     (build-system perl-build-system)
     (native-inputs
      `(("perl-module-build-tiny" ,perl-module-build-tiny)
@@ -5006,6 +5243,109 @@ all coercions and constraints are inherited.")
 constraint with coercion to load the class.")
     (license (package-license perl))))
 
+(define-public perl-moox
+  (package
+    (name "perl-moox")
+    (version "0.101")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/G/GE/GETTY/MooX-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "1m9jvrqcidiabdih211byadwnnkygafq54r2ljnf1akqdrjimy9g"))))
+    (build-system perl-build-system)
+    (inputs
+     `(("perl-data-optlist" ,perl-data-optlist)
+       ("perl-import-into" ,perl-import-into)
+       ("perl-module-runtime" ,perl-module-runtime)
+       ("perl-moo" ,perl-moo)))
+    (home-page "http://search.cpan.org/dist/MooX")
+    (synopsis
+     "Using Moo and MooX:: packages the most lazy way")
+    (description "Contains the MooX and MooX::Role packages.")
+    (license perl-license)))
+
+(define-public perl-moox-handlesvia
+  (package
+    (name "perl-moox-handlesvia")
+    (version "0.001008")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/M/MA/MATTP/MooX-HandlesVia-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "137yrjn2jmw4cj0fjdajnkjgqr5arnpq72kbm6w66xskncinz55h"))))
+    (build-system perl-build-system)
+    (native-inputs
+     `(("perl-moox-types-mooselike"
+        ,perl-moox-types-mooselike)
+       ("perl-test-exception" ,perl-test-exception)
+       ("perl-test-fatal" ,perl-test-fatal)))
+    (inputs
+     `(("perl-class-method-modifiers"
+        ,perl-class-method-modifiers)
+       ("perl-module-runtime" ,perl-module-runtime)
+       ("perl-moo" ,perl-moo)
+       ("perl-role-tiny" ,perl-role-tiny)))
+    (propagated-inputs
+     `(("perl-data-perl" ,perl-data-perl)))
+    (home-page
+     "http://search.cpan.org/dist/MooX-HandlesVia")
+    (synopsis "NativeTrait-like behavior for Moo")
+    (description
+     "@code{MooX::HandlesVia} is an extension of Moo's @code{handles}
+attribute functionality.  It provides a means of proxying functionality from
+an external class to the given atttribute.")
+    (license perl-license)))
+
+(define-public perl-moox-late
+  (package
+    (name "perl-moox-late")
+    (version "0.015")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/T/TO/TOBYINK/MooX-late-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "1gzvd9zws3v09sh0xx6srmw4jwi22fnrya4zcsc8dykn62pjclqp"))))
+    (build-system perl-build-system)
+    (native-inputs
+     `(("perl-test-fatal" ,perl-test-fatal)
+       ("perl-test-requires" ,perl-test-requires)))
+    (inputs
+     `(("perl-moo" ,perl-moo)
+       ("perl-moox" ,perl-moox)
+       ("perl-moox-handlesvia" ,perl-moox-handlesvia)))
+    (propagated-inputs
+     `(("perl-type-tiny" ,perl-type-tiny)))
+    (home-page
+     "http://search.cpan.org/dist/MooX-late")
+    (synopsis "Easily translate Moose code to Moo")
+    (description
+     "MooX::late does the following:
+@enumerate
+@item Supports isa => $stringytype
+@item Supports does => $rolename
+@item Supports lazy_build => 1
+@item Exports blessed and confess functions to your namespace.
+@item Handles certain attribute traits
+Currently Hash, Array and Code are supported.  This feature requires
+MooX::HandlesVia.
+@end enumerate")
+    (license perl-license)))
+
 (define-public perl-moox-types-mooselike
   (package
     (name "perl-moox-types-mooselike")
@@ -5076,6 +5416,7 @@ subset of the functionality for reduced startup time.")
     (build-system perl-build-system)
     (native-inputs
      `(("perl-any-moose" ,perl-any-moose)
+       ("perl-module-install" ,perl-module-install)
        ("perl-test-fatal" ,perl-test-fatal)))
     (propagated-inputs
      `(("perl-mouse" ,perl-mouse)))
@@ -5111,15 +5452,15 @@ and libraries based on OpenSSL.")
 (define-public perl-mro-compat
   (package
     (name "perl-mro-compat")
-    (version "0.12")
+    (version "0.13")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "mirror://cpan/authors/id/B/BO/BOBTFISH/"
+       (uri (string-append "mirror://cpan/authors/id/H/HA/HAARG/"
                            "MRO-Compat-" version ".tar.gz"))
        (sha256
         (base32
-         "1mhma2g83ih9f8nkmg2k9l0x6izhhbb6k5lli4rpllxad4wbk9dv"))))
+         "1y547lr6zccf7919vx01v22zsajy528psanhg5aqschrrin3nb4a"))))
     (build-system perl-build-system)
     (home-page "http://search.cpan.org/dist/MRO-Compat")
     (synopsis "MRO interface compatibility for Perls < 5.9.5")
@@ -5184,6 +5525,38 @@ cycle.  Functions called in the package itself will still be bound by their
 name, but they won't show up as methods on your class or instances.")
     (license (package-license perl))))
 
+(define-public perl-net-idn-encode
+  (package
+    (name "perl-net-idn-encode")
+    (version "2.400")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/C/CF/CFAERBER/Net-IDN-Encode-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "0a9knav5f9kjldrkxx1k47ivd3p23zkmi8aqgyhnxidhgasz1dlq"))))
+    (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-build" ,perl-module-build)
+       ("perl-test-nowarnings" ,perl-test-nowarnings)))
+    (home-page
+     "http://search.cpan.org/dist/Net-IDN-Encode")
+    (synopsis
+     "Internationalizing Domain Names in Applications (IDNA)")
+    (description
+     "Internationalized Domain Names (IDNs) use characters drawn from a large
+repertoire (Unicode), but IDNA allows the non-ASCII characters to be
+represented using only the ASCII characters already allowed in so-called host
+names today (letter-digit-hyphen, /[A-Z0-9-]/i).
+
+Use this module if you just want to convert domain names (or email addresses),
+using whatever IDNA standard is the best choice at the moment.")
+    (license perl-license)))
+
 (define-public perl-net-statsd
   (package
    (name "perl-net-statsd")
@@ -5238,6 +5611,8 @@ subroutine, which you can call with a value to be tested against.")
         (base32
          "0c8l7195bjvx0v6zmkgdnxvwg7yj2zq8hi7xd25a3iikd12dc4f6"))))
     (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     (home-page "http://search.cpan.org/dist/Object-Signature")
     (synopsis "Generate cryptographic signatures for objects")
     (description "Object::Signature is an abstract base class that you can
@@ -5462,6 +5837,36 @@ checking parameters easier.")
     (synopsis "Validate method/function parameters")
     (description "The Params::Validate module allows you to validate method or
 function call parameters to an arbitrary level of specificity.")
+    (license artistic2.0)))
+
+(define-public perl-params-validationcompiler
+  (package
+    (name "perl-params-validationcompiler")
+    (version "0.24")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (string-append "mirror://cpan/authors/id/D/DR/DROLSKY/"
+                            "Params-ValidationCompiler-" version ".tar.gz"))
+        (sha256
+         (base32
+          "11s29wd7gci4c7gcksxw7pzxfzganvr8x4f1dsww4676p93kg5m8"))))
+    (build-system perl-build-system)
+    (native-inputs
+     `(("perl-test-without-module" ,perl-test-without-module)
+       ("perl-test2-bundle-extended" ,perl-test2-bundle-extended)
+       ("perl-test2-plugin-nowarnings" ,perl-test2-plugin-nowarnings)))
+    (propagated-inputs
+     `(("perl-eval-closure" ,perl-eval-closure)
+       ("perl-exception-class" ,perl-exception-class)
+       ("perl-specio" ,perl-specio)))
+    (home-page "https://github.com/houseabsolute/Params-ValidationCompiler")
+    (synopsis "Build an optimized subroutine parameter validator")
+    (description "This module creates a customized, highly efficient
+parameter checking subroutine.  It can handle named or positional
+parameters, and can return the parameters as key/value pairs or a list
+of values.  In addition to type checks, it also supports parameter
+defaults, optional parameters, and extra \"slurpy\" parameters.")
     (license artistic2.0)))
 
 (define-public perl-par-dist
@@ -5700,14 +6105,14 @@ of @code{ref}.")
 (define-public perl-regexp-common
   (package
     (name "perl-regexp-common")
-    (version "2013031301")
+    (version "2017060201")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://cpan/authors/id/A/AB/ABIGAIL/"
                                   "Regexp-Common-" version ".tar.gz"))
               (sha256
                (base32
-                "112wybsm0vr8yfannx6sdfvgp5vza28gjgr3pgn69ak4sac836kj"))))
+                "16q8d7mx0c4nbjrvj69jdn4q33d1k40imgxn83h11wq6xqx8a1zf"))))
     (build-system perl-build-system)
     (synopsis "Provide commonly requested regular expressions")
     (description
@@ -5889,6 +6294,38 @@ compact.")
 arrays by one or multiple calculated keys.")
     (license (package-license perl))))
 
+(define-public perl-specio
+  (package
+    (name "perl-specio")
+    (version "0.38")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "mirror://cpan/authors/id/D/DR/DROLSKY/"
+                           "Specio-" version ".tar.gz"))
+       (sha256
+        (base32
+         "1s5xd9awwrzc94ymimjkxqs6jq513wwlmwwarxaklvg2hk4lps0l"))))
+    (build-system perl-build-system)
+    (propagated-inputs
+     `(("perl-devel-stacktrace" ,perl-devel-stacktrace)
+       ("perl-eval-closure" ,perl-eval-closure)
+       ("perl-module-runtime" ,perl-module-runtime)
+       ("perl-mro-compat" ,perl-mro-compat)
+       ("perl-role-tiny" ,perl-role-tiny)
+       ("perl-test-fatal" ,perl-test-fatal)
+       ("perl-test-needs" ,perl-test-needs)))
+    (home-page "http://search.cpan.org/dist/Specio/")
+    (synopsis "Classes for representing type constraints and coercion")
+    (description "The Specio distribution provides classes for representing type
+constraints and coercion, along with syntax sugar for declaring them.  Note that
+this is not a proper type system for Perl. Nothing in this distribution will
+magically make the Perl interpreter start checking a value's type on assignment
+to a variable. In fact, there's no built-in way to apply a type to a variable at
+all.  Instead, you can explicitly check a value against a type, and optionally
+coerce values to that type.")
+    (license artistic2.0)))
+
 (define-public perl-spiffy
   (package
     (name "perl-spiffy")
@@ -5965,6 +6402,16 @@ run from within a source-controlled directory.")
         (base32
          "17kh8nap2z5g5rqcvw0m7mvbai7wr7h0al39w8l827zhqad8ss42"))))
     (build-system perl-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'set-perl-search-path
+           (lambda _
+             ;; Work around "dotless @INC" build failure.
+             (setenv "PERL5LIB"
+                     (string-append (getcwd) ":"
+                                    (getenv "PERL5LIB")))
+             #t)))))
     (home-page "http://search.cpan.org/dist/String-CamelCase")
     (synopsis "Camelcase and de-camelcase")
     (description "This module may be used to convert from under_score text to
@@ -6079,6 +6526,27 @@ renaming exports, if they try to use them.")
     (synopsis "Retrieve names of code references")
     (description "Sub::Identify allows you to retrieve the real name of code
 references.")
+    (license (package-license perl))))
+
+(define-public perl-sub-info
+  (package
+    (name "perl-sub-info")
+    (version "0.002")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (string-append "mirror://cpan/authors/id/E/EX/EXODIST/Sub-Info-"
+                            version ".tar.gz"))
+        (sha256
+         (base32
+          "1snhrmc6gpw2zjnj7zvvqj69mlw711bxah6kk4dg5vxxjvb5cc7a"))))
+    (build-system perl-build-system)
+    (propagated-inputs
+     `(("perl-importer" ,perl-importer)))
+    (home-page "http://search.cpan.org/dist/Sub-Info/")
+    (synopsis "Tool to inspect subroutines")
+    (description "This package provides tools for inspecting subroutines
+in Perl.")
     (license (package-license perl))))
 
 (define-public perl-sub-install
@@ -6240,6 +6708,15 @@ of a system.")
         (base32
          "1i7kd9v8fjsqyhr4rx4a1jv7n5vfjjm1v4agb24pizh0b72p3qk7"))))
     (build-system perl-build-system)
+    (arguments
+     '(#:phases (modify-phases %standard-phases
+                  (add-before 'configure 'set-search-path
+                    (lambda _
+                      ;; Work around "dotless @INC" build failure.
+                      (setenv "PERL5LIB"
+                              (string-append (getcwd) ":"
+                                             (getenv "PERL5LIB")))
+                      #t)))))
     (home-page "http://search.cpan.org/dist/Task-Weaken")
     (synopsis "Ensure that a platform has weaken support")
     (description "One recurring problem in modules that use Scalar::Util's
@@ -6309,6 +6786,8 @@ processing in Perl code.")
         (base32
          "1k6g4q7snxggv5fdqnzw29al4mwbwg0hl0skzfnczh508qiyfx7j"))))
     (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     (home-page "http://search.cpan.org/dist/Term-Encoding")
     (synopsis "Detect encoding of the current terminal")
     (description "Term::Encoding is a simple module to detect the encoding of
@@ -6407,6 +6886,77 @@ so the input modes can be changed (thus allowing reads of a single character
 at a time), and also provides non-blocking reads of stdin, as well as several
 other terminal related features, including retrieval/modification of the
 screen size, and retrieval/modification of the control characters.")
+    (license (package-license perl))))
+
+(define-public perl-term-table
+  (package
+    (name "perl-term-table")
+    (version "0.008")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (string-append "mirror://cpan/authors/id/E/EX/EXODIST/Term-Table-"
+                            version ".tar.gz"))
+        (sha256
+         (base32
+          "0gi4lyvs6n8y6hjwmflfpamfl65y7mb1g39zi0rx35nclj8xb370"))))
+    (build-system perl-build-system)
+    (propagated-inputs
+     `(("perl-importer" ,perl-importer)))
+    (home-page "http://search.cpan.org/dist/Term-Table/")
+    (synopsis "Format a header and rows into a table")
+    (description "This module is able to generically format rows of data
+into tables.")
+    (license (package-license perl))))
+
+(define-public perl-test2-bundle-extended
+  (package
+    (name "perl-test2-bundle-extended")
+    (version "0.000072")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (string-append "mirror://cpan/authors/id/E/EX/EXODIST/Test2-Suite-"
+                            version ".tar.gz"))
+        (sha256
+         (base32
+          "0hgd6n29qjh1pwqvbglm2kb852yqshmixqqjhsr2kvvibdr58qpf"))))
+    (build-system perl-build-system)
+    (arguments
+     '(#:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'set-env
+           (lambda _ (setenv "PERL_USE_UNSAFE_INC" "1"))))))
+    (propagated-inputs
+     `(("perl-importer" ,perl-importer)
+       ("perl-term-table" ,perl-term-table)
+       ("perl-sub-info" ,perl-sub-info)))
+    (home-page "http://search.cpan.org/~exodist/Test2-Suite/lib/Test2/Bundle/Extended.pm")
+    (synopsis "Full set of tools for Test2::Suite")
+    (description "This package provides a rich set of tools, plugins, bundles,
+etc built upon the Test2 testing library.")
+    (license (package-license perl))))
+
+(define-public perl-test2-plugin-nowarnings
+  (package
+    (name "perl-test2-plugin-nowarnings")
+    (version "0.06")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (string-append "mirror://cpan/authors/id/D/DR/DROLSKY/Test2-Plugin-NoWarnings-"
+                            version ".tar.gz"))
+        (sha256
+         (base32
+          "002qk6qsm0l6r2kaxywvc38w0yf0mlavgywq8li076pn6kcw3242"))))
+    (build-system perl-build-system)
+    (propagated-inputs
+     `(("perl-test2-bundle-extended" ,perl-test2-bundle-extended)))
+    (home-page "http://search.cpan.org/dist/Test2-Plugin-NoWarnings/")
+    (synopsis "Fail if tests warn")
+    (description "Loading this plugin causes your tests to fail if there any
+warnings while they run.  Each warning generates a new failing test and the
+warning content is outputted via diag.")
     (license (package-license perl))))
 
 (define-public perl-test-base
@@ -6530,6 +7080,61 @@ namespace::autoclean or namespace::clean and are therefore available to be
 called as methods, which usually isn't want you want.")
     (license (package-license perl))))
 
+(define-public perl-test-cpan-meta
+  (package
+    (name "perl-test-cpan-meta")
+    (version "0.25")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/B/BA/BARBIE/Test-CPAN-Meta-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "1dcdbbdwdyhpldkhjzc9rvzlmb5jbil6fwh2x07nsfdwysf4ynzm"))))
+    (build-system perl-build-system)
+    (native-inputs
+     `(("perl-test-cpan-meta-json" ,perl-test-cpan-meta-json)
+       ("perl-test-pod" ,perl-test-pod)
+       ("perl-test-pod-coverage" ,perl-test-pod-coverage)))
+    (home-page
+     "http://search.cpan.org/dist/Test-CPAN-Meta")
+    (synopsis "Validate your CPAN META.yml files")
+    (description
+     "This module was written to ensure that a META.yml file meets the
+specification.")
+    (license artistic2.0)))
+
+(define-public perl-test-cpan-meta-json
+  (package
+    (name "perl-test-cpan-meta-json")
+    (version "0.16")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/B/BA/BARBIE/Test-CPAN-Meta-JSON-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "1jg9ka50ixwq083wd4k12rhdjq87w0ihb34gd8jjn7gvvyd51b37"))))
+    (build-system perl-build-system)
+    (native-inputs
+     `(("perl-test-pod" ,perl-test-pod)
+       ("perl-test-pod-coverage" ,perl-test-pod-coverage)))
+    (inputs
+     `(("perl-json" ,perl-json)))
+    (home-page
+     "http://search.cpan.org/dist/Test-CPAN-Meta-JSON")
+    (synopsis "Validate your CPAN META.json files")
+    (description
+     "This module was written to ensure that a META.json file meets the
+specification.")
+    (license artistic2.0)))
+
 (define-public perl-test-deep
   (package
     (name "perl-test-deep")
@@ -6603,6 +7208,30 @@ modified or tested with this API, making it simple to test both individual
 files, as well as to verify that there are no missing or unknown files.")
     (license (package-license perl))))
 
+(define-public perl-test-eol
+  (package
+    (name "perl-test-eol")
+    (version "2.00")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/E/ET/ETHER/Test-EOL-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "0l3bxpsw0x7j9nclizcp53mnf9wny25dmg2iglfhzgnk0xfpwzwf"))))
+    (build-system perl-build-system)
+    (home-page
+     "http://search.cpan.org/dist/Test-EOL")
+    (synopsis
+     "Check the correct line endings in your project")
+    (description
+     "@code{Test::EOL} lets you check for the presence of trailing whitespace
+and/or windows line endings in your perl code.")
+    (license perl-license)))
+
 (define-public perl-test-exception
   (package
     (name "perl-test-exception")
@@ -6648,6 +7277,32 @@ Test::Exception.  It does much less, but should allow greater flexibility in
 testing exception-throwing code with about the same amount of typing.")
     (license (package-license perl))))
 
+(define-public perl-test-file-sharedir-dist
+  (package
+    (name "perl-test-file-sharedir-dist")
+    (version "1.001002")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (string-append "mirror://cpan/authors/id/K/KE/KENTNL/"
+                            "Test-File-ShareDir-" version ".tar.gz"))
+        (sha256
+         (base32
+          "1bbs6cx69wcinq77gif4i4pmrj8a7lwb92sgvvxzrwmjnk5lfdmk"))))
+    (build-system perl-build-system)
+    (propagated-inputs
+     `(("perl-class-tiny" ,perl-class-tiny)
+       ("perl-file-copy-recursive" ,perl-file-copy-recursive)
+       ("perl-file-sharedir" ,perl-file-sharedir)
+       ("perl-path-tiny" ,perl-path-tiny)
+       ("perl-scope-guard" ,perl-scope-guard)
+       ("perl-test-fatal" ,perl-test-fatal)))
+    (home-page "https://github.com/kentnl/Test-File-ShareDir")
+    (synopsis "Dist oriented ShareDir tester")
+    (description "This module creates a Fake ShareDir for your modules
+for testing.")
+    (license (package-license perl))))
+
 (define-public perl-test-files
   (package
     (name "perl-test-files")
@@ -6676,7 +7331,7 @@ contents of a file is equal to a particular string.")
 (define-public perl-test-harness
   (package
     (name "perl-test-harness")
-    (version "3.36")
+    (version "3.39")
     (source
      (origin
        (method url-fetch)
@@ -6684,7 +7339,7 @@ contents of a file is equal to a particular string.")
                            "Test-Harness-" version ".tar.gz"))
        (sha256
         (base32
-         "0gmnjss0hjkyiwvgby50nl5nzv254pn7fjqqdysjil21n09nymp7"))))
+         "0chiqnzmna2mglm37nzxvn9qhq2j31iwz3i9isqjs7bf3k449gb9"))))
     (build-system perl-build-system)
     (arguments
      `(#:phases (alist-cons-before
@@ -6706,15 +7361,15 @@ automatically aggregated and output to STDOUT.")
 (define-public perl-test-leaktrace
   (package
     (name "perl-test-leaktrace")
-    (version "0.15")
+    (version "0.16")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "mirror://cpan/authors/id/G/GF/GFUJI/"
+       (uri (string-append "mirror://cpan/authors/id/L/LE/LEEJO/"
                            "Test-LeakTrace-" version ".tar.gz"))
        (sha256
         (base32
-         "0pp6ip012c474ibw0mwd7jgig34gf98bb8xlqk4wdvw1d65vbf7g"))))
+         "00z4hcjra5nk700f3fgpy8fs036d7ry7glpn8g3wh7jzj7nrw22z"))))
     (build-system perl-build-system)
     (home-page "http://search.cpan.org/dist/Test-LeakTrace")
     (synopsis "Traces memory leaks in Perl")
@@ -6765,6 +7420,42 @@ running all of the t/*.t files in ASCII-betical order, it looks in the t/test_ma
 file to find out which tests you want to run and the order in which you want to run them.
 It constructs the right value for the build system to do the right thing.")
     (license (package-license perl))))
+
+(define-public perl-test-memory-cycle
+  (package
+    (name "perl-test-memory-cycle")
+    (version "1.06")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/P/PE/PETDANCE/Test-Memory-Cycle-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "00ijmgx1r3cxrcs1qa9rb2s4gbm3nsawd90drda89kb4r7yxslwx"))))
+    (build-system perl-build-system)
+    (inputs
+     `(("perl-padwalker" ,perl-padwalker)))
+    (propagated-inputs
+     `(("perl-devel-cycle" ,perl-devel-cycle)))
+    (home-page
+     "http://search.cpan.org/dist/Test-Memory-Cycle")
+    (synopsis
+     "Verifies code hasn't left circular references")
+    (description
+     "@code{Test::Memory::Cycle} is built on top of @code{Devel::Cycle} to
+give you an easy way to check for these circular references.
+
+@example
+use Test::Memory::Cycle;
+
+my $object = new MyObject;
+# Do stuff with the object.
+memory_cycle_ok( $object );
+@end example")
+    (license artistic2.0)))
 
 (define-public perl-test-mockobject
   (package
@@ -6870,6 +7561,30 @@ with an error rather than skip.
 
 If used in a subtest, the remainder of the subtest will be skipped.")
     (license (package-license perl))))
+
+(define-public perl-test-notabs
+  (package
+    (name "perl-test-notabs")
+    (version "2.00")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/E/ET/ETHER/Test-NoTabs-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "127kpl1va267qar2ia4c22xb96jby2jqnda3sj5pjgmxg8si26cg"))))
+    (build-system perl-build-system)
+    (home-page
+     "http://search.cpan.org/dist/Test-NoTabs")
+    (synopsis
+     "Check the presence of tabs in your project")
+    (description
+     "@code{Test::NoTabs} lets you check the presence of tabs in your perl
+code.")
+    (license perl-license)))
 
 (define-public perl-test-nowarnings
   (package
@@ -7006,25 +7721,24 @@ If this fails, then rather than failing tests this skips all tests.")
 (define-public perl-test-script
   (package
     (name "perl-test-script")
-    (version "1.07")
+    (version "1.20")
     (source (origin
               (method url-fetch)
-              (uri (string-append "mirror://cpan/authors/id/A/AD/ADAMK/"
+              (uri (string-append "mirror://cpan/authors/id/P/PL/PLICEASE/"
                                   "Test-Script-" version ".tar.gz"))
               (sha256
                (base32
-                "15pb4zzsnm33msc1syhig2bk05xqc0pckmfyahdwbd177bj5w7p2"))))
+                "1msavbi6przkxq3npm90nv925v58iym9jrk677wn46x19whwzwzm"))))
     (build-system perl-build-system)
     (propagated-inputs
-     `(("probe-perl" ,perl-probe-perl)
-       ("ipc-run3"   ,perl-ipc-run3)))
+     `(("perl-capture-tiny" ,perl-capture-tiny)
+       ("perl-probe-perl" ,perl-probe-perl)))
     (synopsis "Basic cross-platform tests for scripts")
     (description
      "The intent of the Test::Script module is to provide a series of basic
 tests for 80% of the testing you will need to do for scripts in the script (or
 bin as is also commonly used) paths of your Perl distribution.")
-    (home-page (string-append "http://search.cpan.org/~adamk/"
-                              "Test-Script-" version))
+    (home-page "http://search.cpan.org/dist/Test-Script")
     (license (package-license perl))))
 
 (define-public perl-test-sharedfork
@@ -7091,18 +7805,19 @@ a minimum of effort.")
 (define-public perl-test-trap
   (package
     (name "perl-test-trap")
-    (version "v0.3.0")
+    (version "0.3.2")
     (source
      (origin
        (method url-fetch)
        (uri (string-append "mirror://cpan/authors/id/E/EB/EBHANSSEN/"
-                           "Test-Trap-" version ".tar.gz"))
+                           "Test-Trap-v" version ".tar.gz"))
        (sha256
         (base32
-         "05b4zc4087imwphls4yksg4chzx9yavbri301gaxas9kv1yhx13w"))))
+         "0jq54pkm4s61gk8gzxglix1ff9s0m9vi6bpfv7f63lb9qq4r76rr"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-module-build" ,perl-module-build)))
+     `(("perl-module-build" ,perl-module-build)
+       ("perl-test-simple" ,perl-test-simple)))
     (propagated-inputs
      `(("perl-test-tester" ,perl-test-tester)
        ("perl-data-dump" ,perl-data-dump)))
@@ -7127,6 +7842,8 @@ from boxed blocks of test code.")
         (base32
          "0yhvf735v334qqvp9zg7i66qyk6r4cbk5s2psv93d3fdd4bindzg"))))
     (build-system perl-build-system)
+    (native-inputs
+     `(("perl-module-install" ,perl-module-install)))
     (home-page "http://search.cpan.org/dist/Test-utf8")
     (synopsis "UTF-8 testing in Perl")
     (description "This module is a collection of tests useful for dealing with
@@ -7459,6 +8176,32 @@ algorism to indicate multiplication by 1000.")
     (description "Text::Table renders plaintext tables.")
     (license x11)))
 
+(define-public perl-text-template
+  (package
+    (name "perl-text-template")
+    (version "1.47")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/M/MS/MSCHOUT/Text-Template-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "1z781cgz7wbn80lf3kqr2ad0pg6g1wlnim0822h8liw28k3l5msh"))))
+    (build-system perl-build-system)
+    (home-page
+     "http://search.cpan.org/dist/Text-Template")
+    (synopsis
+     "Expand template text with embedded Perl")
+    (description
+     "This is a library for generating letters, building HTML pages, or
+filling in templates generally.  A template is a piece of text that has little
+Perl programs embedded in it here and there.  When you fill in a template, you
+evaluate the little programs and replace them with their values.")
+    (license perl-license)))
+
 (define-public perl-text-unidecode
   (package
     (name "perl-text-unidecode")
@@ -7605,7 +8348,8 @@ $object->TIEHASH are avoided.")
          "0klg33yzb7pr9ra76s6gj5k7nravqnw2lbh022x1xwlj92f43756"))))
     (build-system perl-build-system)
     (native-inputs
-     `(("perl-test-pod" ,perl-test-pod)
+     `(("perl-module-install" ,perl-module-install)
+       ("perl-test-pod" ,perl-test-pod)
        ("perl-test-pod-coverage" ,perl-test-pod-coverage)))
     (home-page "http://search.cpan.org/dist/Time-Duration")
     (synopsis "English expression of durations")
@@ -7864,6 +8608,15 @@ common serialisation formats such as JSON or CBOR.")
         (base32
          "0v04bcyjfcfap4kfpc8q3ikq3j7s68nym4ckw3iasmmksdskmcq0"))))
     (build-system perl-build-system)
+    (arguments
+     '(#:phases (modify-phases %standard-phases
+                  (add-before 'configure 'set-search-path
+                    (lambda _
+                      ;; Work around "dotless @INC" build failure.
+                      (setenv "PERL5LIB"
+                              (string-append (getcwd) ":"
+                                             (getenv "PERL5LIB")))
+                      #t)))))
     (home-page "http://search.cpan.org/dist/Unicode-Normalize")
     (synopsis "Unicode normalization forms")
     (description "This Perl module provides Unicode normalization forms.")
@@ -7882,6 +8635,16 @@ common serialisation formats such as JSON or CBOR.")
         (base32
          "1lq4p3mqqljhhy8wyiyahris33j4m5qfzpi6iacmcqjzw5g4afbm"))))
     (build-system perl-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'set-perl-search-path
+           (lambda _
+             ;; Work around "dotless @INC" build failure.
+             (setenv "PERL5LIB"
+                     (string-append (getcwd) ":"
+                                    (getenv "PERL5LIB")))
+             #t)))))
     (propagated-inputs
      `(("perl-unicode-normalize" ,perl-unicode-normalize)))
     (home-page "http://search.cpan.org/dist/Unicode-Collate")
@@ -7917,14 +8680,14 @@ defined by Annex #11 is used to determine breaking positions.")
 (define-public perl-unicode-utf8
   (package
     (name "perl-unicode-utf8")
-    (version "0.60")
+    (version "0.62")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://cpan/authors/id/C/CH/CHANSEN/"
                                   "Unicode-UTF8-" version ".tar.gz"))
               (sha256
                (base32
-                "1g3fp47slsk7wbz3189kpg342lfs7lpsy570jxnx7s9v59dg5k7n"))))
+                "1xnhazbdvpyfpnxd90krzhxkvabf8fa2ji6xzlrf75j6nz8251zs"))))
     (build-system perl-build-system)
     (native-inputs
      `(("perl-test-fatal" ,perl-test-fatal)
@@ -8041,6 +8804,7 @@ attribute names.")
     (build-system perl-build-system)
     (native-inputs
      `(("perl-extutils-depends" ,perl-extutils-depends)
+       ("perl-module-install" ,perl-module-install)
        ("perl-test-fatal" ,perl-test-fatal)))
     (home-page "http://search.cpan.org/dist/XS-Object-Magic")
     (synopsis "Opaque, extensible XS pointer backed objects using sv_magic")
@@ -8072,6 +8836,30 @@ neither visible nor modifiable from Perl space).")
 on the YAML 1.0 specification.")
     (license (package-license perl))))
 
+(define-public perl-yaml-libyaml
+  (package
+    (name "perl-yaml-libyaml")
+    (version "0.65")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "mirror://cpan/authors/id/T/TI/TINITA/YAML-LibYAML-"
+             version
+             ".tar.gz"))
+       (sha256
+        (base32
+         "0izhvz8f29x1f50hhwfgm0iq1lz7apjjvg77lmky949jr07hnwfv"))))
+    (build-system perl-build-system)
+    (home-page
+     "http://search.cpan.org/dist/YAML-LibYAML")
+    (synopsis
+     "Perl YAML Serialization using XS and libyaml")
+    (description
+     "@code{YAML::XS} is a Perl XS binding to libyaml which offers Perl the
+best YAML support to date.")
+    (license perl-license)))
+
 (define-public perl-yaml-tiny
   (package
     (name "perl-yaml-tiny")
@@ -8100,17 +8888,17 @@ and memory overhead.")
 (define-public perl-parse-yapp
   (package
     (name "perl-parse-yapp")
-    (version "1.05")
+    (version "1.2")
     (source
      (origin
        (method url-fetch)
        (uri (string-append
-             "mirror://cpan/authors/id/F/FD/FDESAR/Parse-Yapp-"
+             "mirror://cpan/authors/id/W/WB/WBRASWELL/Parse-Yapp-"
              version
              ".tar.gz"))
        (sha256
         (base32
-         "0azjqqf4m7nkfgmmj4q77vy9sdgg01wn8xxv40bq3pis93xnr2i2"))))
+         "16p4qgqg28cy76ylcf4wq1r693gqpx8xq0w32b3564i67h49zljb"))))
     (build-system perl-build-system)
     (home-page "http://search.cpan.org/dist/Parse-Yapp")
     (synopsis "Generate and use LALR parsers")

@@ -39,7 +39,7 @@
 (define-public kdevelop
   (package
     (name "kdevelop")
-    (version "5.1.1")
+    (version "5.1.2")
     (source
       (origin
         (method url-fetch)
@@ -48,7 +48,7 @@
                             version ".tar.xz"))
         (sha256
          (base32
-          "0m6pnmylp1gij5cr75waz8hjry5894qillj5977h467hnbzs808a"))))
+          "1iqaq0ilijjigqb34v5wq9in6bnjs0p9cmgbygjmy53xhh3yhm5g"))))
     (build-system cmake-build-system)
     (native-inputs
      `(("extra-cmake-modules" ,extra-cmake-modules)
@@ -151,7 +151,7 @@ for some KDevelop language plugins (Ruby, PHP, CSS...).")
 (define-public kdevplatform
   (package
     (name "kdevplatform")
-    (version "5.1.1")
+    (version "5.1.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://kde/stable/kdevelop"
@@ -159,7 +159,7 @@ for some KDevelop language plugins (Ruby, PHP, CSS...).")
                                   version ".tar.xz"))
               (sha256
                (base32
-                "09p7lvniw55g6x8v8wl3azlps8c13yx03x1m9cd3qdxi282l8n9i"))))
+                "0jk6g1kiqpyjy8pca0236b9944gxqnymqv8ny6m8nrraannxs8p6"))))
     (build-system cmake-build-system)
     (native-inputs
      `(("extra-cmake-modules" ,extra-cmake-modules)
@@ -258,7 +258,7 @@ used in KDE development tools Kompare and KDevelop.")
 (define-public libksysguard
   (package
     (name "libksysguard")
-    (version "5.8.2")
+    (version "5.10.4")
     (source
      (origin
        (method url-fetch)
@@ -266,7 +266,7 @@ used in KDE development tools Kompare and KDevelop.")
                            "/libksysguard-" version ".tar.xz"))
        (sha256
         (base32
-         "158n30wbpsgbw3axhhsc58hnwhwdd02j3zc9hhcybmnbkfl5c96l"))))
+         "01w0laywva0p0ar2lvr1k5000bhjikjfxsb4f6p30qswrchrmrh3"))))
     (native-inputs
      `(("extra-cmake-modules" ,extra-cmake-modules)
        ("pkg-config" ,pkg-config)))
@@ -300,10 +300,15 @@ used in KDE development tools Kompare and KDevelop.")
              ;; KF5AuthConfig.cmake.in contains this already.
              (substitute* "processcore/CMakeLists.txt"
                (("KAUTH_HELPER_INSTALL_DIR") "KDE_INSTALL_LIBEXECDIR"))))
+         (add-before 'check 'check-setup
+           (lambda _
+             ;; make Qt render "offscreen", required for tests
+             (setenv "QT_QPA_PLATFORM" "offscreen")))
          (replace 'check
-           (lambda _         ;other tests require a display and therefore fail
-             (zero? (system* "ctest" "-R" "chronotest")))))))
-    (home-page "https://www.kde.org/info/plasma-5.8.2.php")
+           (lambda _
+             ;; TODO: Fix this failing test-case
+             (zero? (system* "ctest" "-E" "processtest")))))))
+    (home-page "https://www.kde.org/info/plasma-5.10.4.php")
     (synopsis "Network enabled task and system monitoring")
     (description "KSysGuard can obtain information on system load and
 manage running processes.  It obtains this information by interacting
