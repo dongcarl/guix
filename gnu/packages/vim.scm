@@ -1,7 +1,7 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2013 Cyril Roelandt <tipecaml@gmail.com>
 ;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
-;;; Copyright © 2016, 2017 ng0 <ng0@no-reply.pragmatique.xyz>
+;;; Copyright © 2016, 2017 ng0 <ng0@infotropique.org>
 ;;; Copyright © 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2017 Marius Bakke <mbakke@fastmail.com>
 ;;;
@@ -60,7 +60,7 @@
 (define-public vim
   (package
     (name "vim")
-    (version "8.0.0808")
+    (version "8.0.1300")
     (source (origin
              (method url-fetch)
              (uri (string-append "https://github.com/vim/vim/archive/v"
@@ -68,7 +68,7 @@
              (file-name (string-append name "-" version ".tar.gz"))
              (sha256
               (base32
-               "0qrn9fhq5wdrrf2qhpygwfm5rynl32l406xhbr7lg69r9wl8cjjn"))))
+               "19w1rxmswsr19wng74f1iwwgd5wpx1hhvprjy1i0k41nply5h3h8"))))
     (build-system gnu-build-system)
     (arguments
      `(#:test-target "test"
@@ -101,6 +101,27 @@ that many consider it an entire IDE.  It's not just for programmers, though.
 Vim is perfect for all kinds of text editing, from composing email to editing
 configuration files.")
     (license license:vim)))
+
+(define-public xxd
+  (package (inherit vim)
+    (name "xxd")
+    (arguments
+     `(#:make-flags '("CC=gcc")
+       #:tests? #f ; there are none
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (add-after 'unpack 'chdir
+           (lambda _
+             (chdir "src/xxd")))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((bin (string-append (assoc-ref outputs "out") "/bin")))
+               (install-file "xxd" bin)
+               #t))))))
+    (synopsis "Hexdump utility from vim")
+    (description "This package provides the Hexdump utility xxd that comes
+with the editor vim.")))
 
 (define-public vim-full
   (package
@@ -418,6 +439,46 @@ trouble using them, because you do not have to remember each snippet name.")
        "@code{vim-context-filetype} is context filetype library for Vim script.")
       (home-page "https://github.com/Shougo/context_filetype.vim")
       (license license:expat)))) ; ??? check again
+
+;; The 2.2 release was in 2015, no new releases planned.
+(define-public vim-fugitive
+  (let ((commit "de6c05720cdf74c0218218d7207f700232a5b6dc")
+        (revision "1"))
+    (package
+      (name "vim-fugitive")
+      (version (string-append "2.2-" revision "." (string-take commit 7)))
+      (source
+        (origin
+          (method git-fetch)
+          (uri (git-reference
+                 (url "https://github.com/tpope/vim-fugitive.git")
+                 (commit commit)))
+          (file-name (string-append name "-" version "-checkout"))
+         (sha256
+          (base32
+           "0zg9vv7hirnx45vc2mwgg0xijmwwz55bssyd6cpdz71wbhrcpxxb"))))
+      (build-system gnu-build-system)
+      (arguments
+       '(#:tests? #f
+         #:phases
+         (modify-phases %standard-phases
+           (delete 'configure)
+           (delete 'build)
+           (replace 'install
+             (lambda* (#:key outputs #:allow-other-keys)
+               (let* ((out (assoc-ref outputs "out"))
+                      (vimfiles (string-append out "/share/vim/vimfiles"))
+                      (doc (string-append vimfiles "/doc"))
+                      (plugin (string-append vimfiles "/plugin")))
+                 (copy-recursively "doc" doc)
+                 (copy-recursively "plugin" plugin)
+                 #t))))))
+      (home-page "https://github.com/tpope/vim-fugitive")
+      (synopsis "Vim plugin to work with Git")
+      (description "Vim-fugitive is a wrapper for Vim that complements the
+command window, where you can stage and review your changes before the next
+commit or run any Git arbitrary command.")
+      (license license:vim)))) ; distributed under the same license as vim
 
 (define-public vim-airline
   (package

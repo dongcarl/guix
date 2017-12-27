@@ -1,5 +1,6 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2014 Sree Harsha Totakura <sreeharsha@totakura.in>
+;;; Copyright © 2015 Federico Beffa <beffa@fbengineering.ch>
 ;;; Copyright © 2016, 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
@@ -28,14 +29,14 @@
 (define-public miniupnpc
   (package
     (name "miniupnpc")
-    (version "2.0.20170509")
+    (version "2.0.20171212")
     (source
      (origin
        (method url-fetch)
        (uri (string-append "https://miniupnp.tuxfamily.org/files/"
                            name "-" version ".tar.gz"))
        (sha256
-        (base32 "0spi75q6nafxp3ndnrhrlqagzmjlp8wwlr5x7rnvdpswgxi6ihyk"))))
+        (base32 "0za7pr6hrr3ajkifirhhxfn3hlhl06f622g8hnj5h8y18sp3bwff"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("python" ,python-2)))
@@ -59,7 +60,8 @@
            (lambda* (#:key outputs #:allow-other-keys)
              (substitute* "external-ip.sh"
                (("upnpc")
-                (string-append (assoc-ref outputs "out") "/bin/upnpc"))))))))
+                (string-append (assoc-ref outputs "out") "/bin/upnpc")))
+             #t)))))
     (home-page "http://miniupnp.free.fr/")
     (synopsis "UPnP protocol client library")
     (description
@@ -73,3 +75,32 @@ include peer-to-peer applications, active-mode FTP clients, DCC file transfers
 over IRC, instant messaging, network games, and most server software.")
     (license
      (x11-style "file://LICENSE" "See 'LICENSE' file in the distribution"))))
+
+(define-public libupnp
+  (package
+    (name "libupnp")
+    (version "1.6.24")
+    (source
+     (origin
+      (method url-fetch)
+      (uri (string-append "mirror://sourceforge/pupnp/pupnp/libUPnP%20"
+                          version "/" name "-" version ".tar.bz2"))
+      (sha256
+       (base32
+        "15ngi1i7cvsv7g15fb9bkswvi99d1plz52x5qgjn4h5vyfddg0vx"))))
+    (build-system gnu-build-system)
+    (arguments
+     ;; The tests require a network device capable of multicasting which is
+     ;; not available in the build environment. See
+     ;; https://lists.gnu.org/archive/html/guix-devel/2015-01/msg00312.html.
+     `(#:tests? #f
+       #:configure-flags '("--enable-ipv6")))
+    (home-page "http://pupnp.sourceforge.net")
+    (synopsis "Portable SDK for UPnP Devices")
+    (description
+     "The portable SDK for UPnP Devices (libupnp) provides developers with an
+API and code for building control points, devices, and bridges that are
+compliant with Version 1.0 of the Universal Plug and Play Device Architecture
+Specification and support several operating systems like Linux, *BSD, Solaris
+and others.")
+    (license bsd-3)))

@@ -39,7 +39,6 @@
   #:use-module (gnu packages less)
   #:use-module (gnu packages zile)
   #:use-module (gnu packages nano)
-  #:use-module (gnu packages lsof)
   #:use-module (gnu packages gawk)
   #:use-module (gnu packages man)
   #:use-module (gnu packages texinfo)
@@ -231,6 +230,14 @@ directly by the user."
   (kernel-arguments boot-parameters-kernel-arguments)
   (initrd           boot-parameters-initrd))
 
+(define (ensure-not-/dev device)
+  "If DEVICE starts with a slash, return #f.  This is meant to filter out
+Linux device names such as /dev/sda, and to preserve GRUB device names and
+file system labels."
+  (if (and (string? device) (string-prefix? "/" device))
+      #f
+      device))
+
 (define (read-boot-parameters port)
   "Read boot parameters from PORT and return the corresponding
 <boot-parameters> object or #f if the format is unrecognized."
@@ -277,15 +284,16 @@ directly by the user."
           file)))
 
       (store-device
-       (match (assq 'store rest)
-         (('store ('device device) _ ...)
-          (device-sexp->device device))
-         (_                                       ;the old format
-          ;; Root might be a device path like "/dev/sda1", which is not a
-          ;; suitable GRUB device identifier.
-          (if (string-prefix? "/" root)
-              #f
-              root))))
+       ;; Linux device names like "/dev/sda1" are not suitable GRUB device
+       ;; identifiers, so we just filter them out.
+       (ensure-not-/dev
+        (match (assq 'store rest)
+          (('store ('device #f) _ ...)
+           root-device)
+          (('store ('device device) _ ...)
+           (device-sexp->device device))
+          (_                                      ;the old format
+           root-device))))
 
       (store-mount-point
        (match (assq 'store rest)
@@ -441,7 +449,7 @@ a container or that of a \"bare metal\" system."
          (other-fs  (non-boot-file-system-service os))
          (unmount   (user-unmount-service known-fs))
          (swaps     (swap-services os))
-         (procs     (user-processes-service))
+         (procs     (service user-processes-service-type))
          (host-name (host-name-service (operating-system-host-name os)))
          (entries   (operating-system-directory-base-entries
                      os #:container? container?)))
@@ -500,7 +508,6 @@ explicitly appear in OS."
   ;; Default set of packages globally visible.  It should include anything
   ;; required for basic administrator tasks.
   (cons* procps psmisc which less zile nano
-         lsof                                 ;for Guix's 'list-runtime-roots'
          pciutils usbutils
          util-linux inetutils isc-dhcp
          (@ (gnu packages admin) shadow)          ;for 'passwd'
@@ -574,11 +581,14 @@ export INFOPATH=$HOME/.guix-profile/share/info:/run/current-system/profile/share
 export XDG_DATA_DIRS=$HOME/.guix-profile/share:/run/current-system/profile/share
 export XDG_CONFIG_DIRS=$HOME/.guix-profile/etc/xdg:/run/current-system/profile/etc/xdg
 
+# Make sure libXcursor finds cursors installed into user or system profiles.  See <http://bugs.gnu.org/24445>
+export XCURSOR_PATH=$HOME/.icons:$HOME/.guix-profile/share/icons:/run/current-system/profile/share/icons
+
 # Ignore the default value of 'PATH'.
 unset PATH
 
 # Load the system profile's settings.
-GUIX_PROFILE=/run/current-system/profile \\
+GUIX_PROFILE=/run/current-system/profile ; \\
 . /run/current-system/profile/etc/profile
 
 # Prepend setuid programs.
@@ -598,7 +608,7 @@ fi
 if [ -f \"$HOME/.guix-profile/etc/profile\" ]
 then
   # Load the user profile's settings.
-  GUIX_PROFILE=\"$HOME/.guix-profile\" \\
+  GUIX_PROFILE=\"$HOME/.guix-profile\" ; \\
   . \"$HOME/.guix-profile/etc/profile\"
 else
   # At least define this one so that basic things just work
@@ -609,6 +619,10 @@ fi
 # Set the umask, notably for users logging in via 'lsh'.
 # See <http://bugs.gnu.org/22650>.
 umask 022
+
+# Allow Hunspell-based applications (IceCat, LibreOffice, etc.) to
+# find dictionaries.
+export DICPATH=\"$HOME/.guix-profile/share/hunspell:/run/current-system/profile/share/hunspell\"
 
 # Allow GStreamer-based applications to find plugins.
 export GST_PLUGIN_PATH=\"$HOME/.guix-profile/lib/gstreamer-1.0\"
@@ -642,6 +656,11 @@ fi\n")))
        ("bashrc" ,#~#$bashrc)
        ("hosts" ,#~#$(or (operating-system-hosts-file os)
                          (default-/etc/hosts (operating-system-host-name os))))
+       ;; Write the operating-system-host-name to /etc/hostname to prevent
+       ;; NetworkManager from changing the system's hostname when connecting
+       ;; to certain networks.  Some discussion at
+       ;; https://lists.gnu.org/archive/html/help-guix/2017-09/msg00037.html
+       ("hostname" ,(plain-file "hostname" (operating-system-host-name os)))
        ("localtime" ,(file-append tzdata "/share/zoneinfo/"
                                   (operating-system-timezone os)))
        ("sudoers" ,(operating-system-sudoers-file os))))))
@@ -706,7 +725,8 @@ use 'plain-file' instead~%")
   "Return the environment variables of OS for
 @var{session-environment-service-type}, to be used in @file{/etc/environment}."
   `(("LANG" . ,(operating-system-locale os))
-    ("TZ" . ,(operating-system-timezone os))
+    ;; Note: No need to set 'TZ' since (1) we provide /etc/localtime, and (2)
+    ;; it doesn't work for setuid binaries.  See <https://bugs.gnu.org/29212>.
     ("TZDIR" . ,(file-append tzdata "/share/zoneinfo"))
     ;; Tell 'modprobe' & co. where to look for modules.
     ("LINUX_MODULE_DIRECTORY" . "/run/booted-system/kernel/lib/modules")
@@ -900,8 +920,7 @@ listed in OS.  The C library expects to find it under
   "Given FS, a <file-system> object, return a value suitable for use as the
 device in a <menu-entry>."
   (case (file-system-title fs)
-    ((uuid) (file-system-device fs))
-    ((label) (file-system-device fs))
+    ((uuid label device) (file-system-device fs))
     (else #f)))
 
 (define (operating-system-boot-parameters os system.drv root-device)
@@ -925,7 +944,7 @@ kernel arguments for that derivation to <boot-parameters>."
                 (operating-system-user-kernel-arguments os)))
              (initrd initrd)
              (bootloader-name bootloader-name)
-             (store-device (fs->boot-device store))
+             (store-device (ensure-not-/dev (fs->boot-device store)))
              (store-mount-point (file-system-mount-point store))))))
 
 (define (device->sexp device)

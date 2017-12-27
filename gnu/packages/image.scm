@@ -10,9 +10,9 @@
 ;;; Copyright © 2016 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2016, 2017 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
-;;; Copyright © 2016 Tobias Geerinckx-Rice <me@tobias.gr>
+;;; Copyright © 2016, 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2016 Eric Bavier <bavier@member.fsf.org>
-;;; Copyright © 2016 Arun Isaac <arunisaac@systemreboot.net>
+;;; Copyright © 2016, 2017 Arun Isaac <arunisaac@systemreboot.net>
 ;;; Copyright © 2016, 2017 Kei Kebreau <kkebreau@posteo.net>
 ;;; Copyright © 2017 ng0 <ng0@infotropique.org>
 ;;; Copyright © 2017 Hartmut Goebel <h.goebel@crazy-compilers.com>
@@ -39,6 +39,7 @@
   #:use-module (gnu packages assembly)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages boost)
+  #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages documentation)
   #:use-module (gnu packages fontutils)
@@ -66,6 +67,7 @@
   #:use-module (guix build-system cmake)
   #:use-module (guix build-system python)
   #:use-module (guix build-system r)
+  #:use-module (guix build-system scons)
   #:use-module (srfi srfi-1))
 
 (define-public libpng
@@ -167,7 +169,7 @@ APNG patch provides APNG support to libpng.")
 (define-public libpng-1.2
   (package
     (inherit libpng)
-    (version "1.2.57")
+    (version "1.2.59")
     (source
      (origin
        (method url-fetch)
@@ -180,7 +182,8 @@ APNG patch provides APNG support to libpng.")
                    "ftp://ftp.simplesystems.org/pub/libpng/png/src/history"
                    "/libpng12/libpng-" version ".tar.xz")))
        (sha256
-        (base32 "1n2lrzjkm5jhfg2bs10q398lkwbbx742fi27zgdgx0x23zhj0ihg"))))))
+        (base32
+         "1izw9ybm27llk8531w6h4jp4rk2rxy2s9vil16nwik5dp0amyqxl"))))))
 
 (define-public r-png
   (package
@@ -205,25 +208,24 @@ in-memory raw vectors.")
     ;; Any of these GPL versions.
     (license (list license:gpl2 license:gpl3))))
 
-(define-public pngcrunch
+(define-public pngcrush
   (package
-   (name "pngcrunch")
-   (version "1.8.11")
+   (name "pngcrush")
+   (version "1.8.13")
    (source (origin
             (method url-fetch)
             (uri (string-append "mirror://sourceforge/pmt/pngcrush/"
-                                version "/pngcrush-" version ".tar.xz"))
+                                version "/pngcrush-" version "-nolib.tar.xz"))
             (sha256 (base32
-                     "1c7m316i91jp3h1dj1ppppdv6zilm2njk1wrpqy2zj0fcll06lwd"))))
+                     "0l43c59d6v9l0g07z3q3ywhb8xb3vz74llv3mna0izk9bj6aqkiv"))))
    (build-system gnu-build-system)
    (arguments
-    '(#:make-flags '("-f" "Makefile-nolib")
-      #:tests? #f ; no check target
+    '(#:tests? #f ; no check target
       #:phases
       (modify-phases %standard-phases
         (replace 'configure
           (lambda* (#:key inputs outputs #:allow-other-keys)
-            (substitute* "Makefile-nolib"
+            (substitute* "Makefile"
               (("^(PNG(INC|LIB) = )/usr/local/" line vardef)
                (string-append vardef (assoc-ref inputs "libpng") "/"))
               (("^(Z(INC|LIB) = )/usr/local/" line vardef)
@@ -234,11 +236,15 @@ in-memory raw vectors.")
    (inputs
     `(("libpng" ,libpng)
       ("zlib" , zlib)))
-   (home-page "https://pmt.sourceforge.net/pngcrush")
+   (home-page "https://pmt.sourceforge.io/pngcrush")
    (synopsis "Utility to compress PNG files")
    (description "pngcrusqh is an optimizer for PNG (Portable Network Graphics)
 files.  It can compress them as much as 40% losslessly.")
    (license license:zlib)))
+
+(define-public pngcrunch
+  ;; This package used to be wrongfully name "pngcrunch".
+  (deprecated-package "pngcrunch" pngcrush))
 
 (define-public libjpeg
   (package
@@ -509,7 +515,7 @@ work.")
 (define-public openjpeg
   (package
     (name "openjpeg")
-    (version "2.2.0")
+    (version "2.3.0")
     (source
       (origin
         (method url-fetch)
@@ -519,13 +525,7 @@ work.")
         (file-name (string-append name "-" version ".tar.gz"))
         (sha256
          (base32
-          "0yvfghxwfm3dcqr9krkw63pcd76hzkknc3fh7bh11s8qlvjvrpbg"))
-        (patches (search-patches "openjpeg-CVE-2017-12982.patch"
-                                 "openjpeg-CVE-2017-14040.patch"
-                                 "openjpeg-CVE-2017-14041.patch"
-                                 "openjpeg-CVE-2017-14151.patch"
-                                 "openjpeg-CVE-2017-14152.patch"
-                                 "openjpeg-CVE-2017-14164.patch"))))
+          "06npqzkg20avnygdwaqpap91r7qpdqgrn39adj2bl8v0pg0qgirx"))))
     (build-system cmake-build-system)
     (arguments
       ;; Trying to run `$ make check' results in a no rule fault.
@@ -743,15 +743,15 @@ graphics image formats like PNG, BMP, JPEG, TIFF and others.")
 (define-public vigra
   (package
    (name "vigra")
-   (version "1.11.0")
+   (version "1.11.1")
    (source
     (origin
       (method url-fetch)
       (uri (string-append "https://github.com/ukoethe/vigra/releases/download/"
-                          "Version-1-11-0/vigra-"
-                          version "-src.tar.gz"))
+                          "Version-" (string-join (string-split version #\.) "-")
+                          "/vigra-" version "-src.tar.gz"))
       (sha256 (base32
-                "1jzm79kqiiilvys3b8mlzy9cvmiirrcwsrlg19qd9rza8zipsqb8"))))
+                "1bqs8vx5i1bzamvv563i24gx2xxdidqyxh9iaj46mbznhc84wmm5"))))
    (build-system cmake-build-system)
    (inputs
     `(("boost" ,boost)
@@ -797,12 +797,12 @@ processing and analysis library that puts its main emphasis on customizable
 algorithms and data structures.  It is particularly strong for
 multi-dimensional image processing.")
    (license license:expat)
-   (home-page "https://hci.iwr.uni-heidelberg.de/vigra")))
+   (home-page "https://ukoethe.github.io/vigra/")))
 
 (define-public libwebp
   (package
     (name "libwebp")
-    (version "0.6.0")
+    (version "0.6.1")
     (source
      (origin
        (method url-fetch)
@@ -811,7 +811,7 @@ multi-dimensional image processing.")
              ".tar.gz"))
        (sha256
         (base32
-         "0h1brwkyxc7lb8lc53aacdks5vc1y9hzngqi41gg7y6l56912a69"))))
+         "1ayq2zq0zbgf5yizbm32zh7p1vb8kibw74am6am1n5cz5mw3ql06"))))
     (build-system gnu-build-system)
     (inputs
      `(("freeglut" ,freeglut)
@@ -871,6 +871,8 @@ channels.")
                                        version ".tar.gz")
                         (string-append "https://fossies.org/linux/misc/exiv2-"
                                        version ".tar.gz")))
+             (patches (search-patches "exiv2-CVE-2017-14860.patch"
+                                      "exiv2-CVE-2017-14859-14862-14864.patch"))
              (sha256
               (base32
                "1yza317qxd8yshvqnay164imm0ks7cvij8y8j86p1gqi1153qpn7"))))
@@ -1053,10 +1055,9 @@ differences in file encoding, image quality, and other small variations.")
     (home-page "http://steghide.sourceforge.net")
     (synopsis "Image and audio steganography")
     (description
-     "Steghide is a steganography program that is able to hide data in various
-kinds of image- and audio-files.  The color- respectivly sample-frequencies
-are not changed thus making the embedding resistant against first-order
-statistical tests.")
+     "Steghide is a program to hide data in various kinds of image and audio
+files (known as @dfn{steganography}).  Neither color nor sample frequencies are
+changed, making the embedding resistant against first-order statistical tests.")
     (license license:gpl2+)))
 
 (define-public stb-image-for-extempore
@@ -1095,6 +1096,7 @@ installed as @code{stb_image}.")
        (method url-fetch)
        (uri (string-append "http://prdownloads.sourceforge.net/optipng/optipng-"
                            version ".tar.gz"))
+       (patches (search-patches "optipng-CVE-2017-1000229.patch"))
        (sha256
         (base32
          "105yk5qykvhiahzag67gm36s2kplxf6qn5hay02md0nkrcgn6w28"))))
@@ -1121,14 +1123,14 @@ PNG, and performs PNG integrity checks and corrections.")
 (define-public libjpeg-turbo
   (package
     (name "libjpeg-turbo")
-    (version "1.5.2")
+    (version "1.5.3")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://sourceforge/" name "/" version "/"
                                   name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0a5m0psfp5952y5vrcs0nbdz1y9wqzg2ms0xwrx752034wxr964h"))))
+                "08r5b5mywwrxv4axvq80dm31cklz81grczlzlxr2xqa6pgi90j5j"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("nasm" ,nasm)))
@@ -1204,33 +1206,26 @@ medical image data, e.g. magnetic resonance image (MRI) and functional MRI
               (sha256
                (base32
                 "0mxvxk15xhk2i5vfavjhnkk4j3bnii0gpf8di14rlbpq070hd5rs"))))
-    (build-system python-build-system)
+    (build-system scons-build-system)
     (native-inputs
      `(("boost" ,boost)
        ("gettext" ,gnu-gettext)
-       ("pkg-config" ,pkg-config)
-       ("scons" ,scons)))
+       ("pkg-config" ,pkg-config)))
     (inputs
      `(("expat" ,expat)
        ("gtk2" ,gtk+-2)
        ("lua" ,lua-5.2)))
     (arguments
      `(#:tests? #f
+       #:scons ,scons-python2
+       #:scons-flags (list (string-append "DESTDIR=" %output))
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'fix-lua-reference
            (lambda _
              (substitute* "SConscript"
                (("lua5.2") "lua-5.2"))
-             #t))
-         (replace 'build
-           (lambda _
-             (zero? (system* "scons"))))
-         (replace 'install
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let ((dest (assoc-ref outputs "out")))
-               (zero? (system* "scons" "install"
-                               (string-append "DESTDIR=" dest)))))))))
+             #t)))))
     (home-page "http://www.gpick.org/")
     (synopsis "Color picker")
     (description "Gpick is an advanced color picker and palette editing tool.")

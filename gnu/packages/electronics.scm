@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2017 Theodoros Foradis <theodoros.for@openmailbox.org>
+;;; Copyright © 2017 Theodoros Foradis <theodoros@foradis.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -242,9 +242,10 @@ format support.")
      `(("boost" ,boost)
        ("glib" ,glib)
        ("glibmm" ,glibmm)
-       ("qt" ,qt)
        ("libsigrok" ,libsigrok)
-       ("libsigrokdecode" ,libsigrokdecode)))
+       ("libsigrokdecode" ,libsigrokdecode)
+       ("qtbase" ,qtbase)
+       ("qtsvg" ,qtsvg)))
     (build-system cmake-build-system)
     (home-page "http://www.sigrok.org/wiki/PulseView")
     (synopsis "Qt based logic analyzer, oscilloscope and MSO GUI for sigrok")

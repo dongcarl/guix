@@ -44,6 +44,8 @@
   #:use-module (gnu packages image)
   #:use-module (gnu packages imagemagick)
   #:use-module (gnu packages maths)
+  #:use-module (gnu packages perl)
+  #:use-module (gnu packages perl-check)
   #:use-module (gnu packages photo)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
@@ -54,7 +56,7 @@
 (define-public feh
   (package
     (name "feh")
-    (version "2.20")
+    (version "2.22.2")
     (home-page "https://feh.finalrewind.org/")
     (source (origin
               (method url-fetch)
@@ -62,19 +64,30 @@
                                   name "-" version ".tar.bz2"))
               (sha256
                (base32
-                "02vhdv16nf4kjna4inpbfy4k3p40bhl7xpc4kh4xvily14146l2b"))))
+                "1kcflv4jb4250g94nqn28i98xqvvci8w7vqpfr62gxlp16z1za05"))))
     (build-system gnu-build-system)
     (arguments
-      '(#:phases (alist-delete 'configure %standard-phases)
-        #:tests? #f ;FIXME: Requires 'perl-test-command'.
-        #:make-flags
-          (list "CC=gcc" (string-append "PREFIX=" (assoc-ref %outputs "out")))))
+     '(#:phases (modify-phases %standard-phases (delete 'configure))
+       #:test-target "test"
+       #:make-flags
+       (list "CC=gcc" (string-append "PREFIX=" (assoc-ref %outputs "out")))))
+    (native-inputs
+     `(("perl" ,perl)
+       ("perl-test-command" ,perl-test-command)))
     (inputs `(("imlib2" ,imlib2)
               ("curl" ,curl)
               ("libpng" ,libpng)
               ("libxt" ,libxt)
               ("libx11" ,libx11)
               ("libxinerama" ,libxinerama)))
+    (native-search-paths
+     ;; Feh allows overriding the libcurl builtin CA path (unset in Guix)
+     ;; with the same variable as the `curl` command line HTTP tool.
+     (list (search-path-specification
+            (variable "CURL_CA_BUNDLE")
+            (file-type 'regular)
+            (separator #f)                         ;single entry
+            (files '("etc/ssl/certs/ca-certificates.crt")))))
     (synopsis "Fast and light imlib2-based image viewer")
     (description
       "feh is an X11 image viewer aimed mostly at console users.
@@ -178,9 +191,8 @@ It is the default image viewer on LXDE desktop environment.")
      '(#:tests? #f                      ; no check target
        #:make-flags (list (string-append "PREFIX=" %output)
                           "CC=gcc")
-       #:phases (alist-delete
-                 'configure             ; no configure phase
-                 %standard-phases)))
+       ;; no configure phase
+       #:phases (modify-phases %standard-phases (delete 'configure))))
     (inputs
      `(("libx11" ,libx11)
        ("imlib2" ,imlib2)

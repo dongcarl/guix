@@ -6,6 +6,7 @@
 ;;; Copyright © 2017 Thomas Danckaert <post@thomasdanckaert.be>
 ;;; Copyright © 2017 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2017 Stefan Reichör <stefan@xsteve.at>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -27,6 +28,7 @@
   #:use-module (guix download)
   #:use-module ((guix licenses) #:prefix l:)
   #:use-module (guix build-system gnu)
+  #:use-module (guix build-system python)
   #:use-module (gnu packages)
   #:use-module (gnu packages algebra)
   #:use-module (gnu packages autotools)
@@ -119,7 +121,7 @@ rates.")
 (define-public pulseaudio
   (package
     (name "pulseaudio")
-    (version "10.0")
+    (version "11.0")
     (source (origin
              (method url-fetch)
              (uri (string-append
@@ -127,7 +129,7 @@ rates.")
                    name "-" version ".tar.xz"))
              (sha256
               (base32
-               "0mrg8qvpwm4ifarzphl3749p7p050kdx1l6mvsaj03czvqj6h653"))
+               "0sf92knqkvqmfhrbz4vlsagzqlps72wycpmln5dygicg07a0a8q7"))
              (modules '((guix build utils)))
              (snippet
               ;; Disable console-kit support by default since it's deprecated
@@ -258,4 +260,34 @@ easily control the volume of all clients, sinks, etc.")
     (description "Ponymix is a PulseAudio mixer and volume controller with a
 command-line interface.  In addition, it is possible to use named sources and
 sinks.")
+    (license l:expat)))
+
+(define-public pulsemixer
+  (package
+    (name "pulsemixer")
+    (version "1.4.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/GeorgeFilipkin/"
+                                  "pulsemixer/archive/" version ".tar.gz"))
+              (sha256
+               (base32
+                "1lpad90ifr2xfldyf39sbwx1v85rif2gm9w774gwwpjv53zfgk1g"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'patch-path
+           (lambda* (#:key inputs #:allow-other-keys)
+             (let ((pulse (assoc-ref inputs "pulseaudio")))
+               (substitute* "pulsemixer"
+                 (("libpulse.so.0")
+                  (string-append pulse "/lib/libpulse.so.0")))
+               #t))))))
+    (inputs
+     `(("pulseaudio" ,pulseaudio)))
+    (home-page "https://github.com/GeorgeFilipkin/pulsemixer/")
+    (synopsis "Command-line and curses mixer for PulseAudio")
+    (description "Pulsemixer is a PulseAudio mixer with command-line and
+curses-style interfaces.")
     (license l:expat)))

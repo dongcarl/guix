@@ -5,6 +5,8 @@
 ;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2017 Rene Saavedra <rennes@openmailbox.org>
 ;;; Copyright © 2017 Leo Famulari <leo@famulari.name>
+;;; Copyright © 2017 ng0 <ng0@n0.is>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -24,6 +26,7 @@
 (define-module (gnu packages fontutils)
   #:use-module (gnu packages)
   #:use-module (gnu packages compression)
+  #:use-module (gnu packages check)
   #:use-module (gnu packages ghostscript)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages pkg-config)
@@ -44,7 +47,8 @@
   #:use-module (guix svn-download)
   #:use-module (guix git-download)
   #:use-module (guix build-system cmake)
-  #:use-module (guix build-system gnu))
+  #:use-module (guix build-system gnu)
+  #:use-module (guix build-system python))
 
 (define-public freetype
   (package
@@ -299,9 +303,13 @@ high quality, anti-aliased and subpixel rendered text on a display.")
             (sha256 (base32
                      "0nbvjpnmcznib1nlgg8xckrmsw3haa154byds2h90y2g0nsjh4w2"))
             (patches (search-patches
-                       "t1lib-CVE-2010-2642.patch"
+                       "t1lib-CVE-2010-2642.patch" ; 2011-0443, 2011-5244
                        "t1lib-CVE-2011-0764.patch"
-                       "t1lib-CVE-2011-1552+CVE-2011-1553+CVE-2011-1554.patch"))))
+                       "t1lib-CVE-2011-1552+.patch")))) ; 2011-1553, 2011-1554
+   (properties `((lint-hidden-cve . ("CVE-2011-0433"
+                                     "CVE-2011-1553"
+                                     "CVE-2011-1554"
+                                     "CVE-2011-5244"))))
    (build-system gnu-build-system)
    (arguments
     ;; Making the documentation requires latex, but t1lib is also an input
@@ -325,33 +333,24 @@ X11-system or any other graphical user interface.")
 (define-public teckit
   (package
    (name "teckit")
-   (version "2.5.4")
+   (version "2.5.7")
    (source (origin
-            ;; Downloaded tarballs vary with each download, so we use an
-            ;; svn snapshot. The 2.5.4 release seems to be made in r128,
-            ;; but r132 updates additional files to contain the correct
-            ;; version number (r129 to r131 do not concern TRUNK).
-            (method svn-fetch)
-            (uri (svn-reference
-                   (url "https://scripts.sil.org/svn-public/teckit/TRUNK")
-                   (revision 132)))
-            (file-name (string-append name "-" version))
+            (method url-fetch)
+            (uri (string-append
+                  "https://github.com/silnrsi/teckit/releases/download/v"
+                  version "/teckit-" version ".tar.gz"))
             (sha256
               (base32
-                "1xqkqgw30pb24snh46srmjs2j4zhz2dfi5pf7znia0k34mrpwivz"))))
+                "1pbp97vcpj6x4yixx6ww0vsi1rrr99fksxdjafs6gdargzd24cj4"))))
    (build-system gnu-build-system)
-   (inputs `(("zlib" ,zlib)))
+   (inputs
+    `(("zlib" ,zlib)
+      ("expat" ,expat)))
    (native-inputs
     `(("autoconf" ,autoconf)
       ("automake" ,automake)
       ("libtool" ,libtool)
       ("perl" ,perl))) ; for the tests
-   (arguments
-    `(#:phases
-      (modify-phases %standard-phases
-        (add-after 'unpack 'autogen
-          (lambda _
-            (zero? (system* "sh" "autogen.sh")))))))
    (synopsis "Toolkit for encoding conversions")
    (description
     "TECkit is a low-level toolkit intended to be used by other applications
@@ -405,7 +404,7 @@ and returns a sequence of positioned glyphids from the font.")
 (define-public potrace
   (package
     (name "potrace")
-    (version "1.14")
+    (version "1.15")
     (source
      (origin
       (method url-fetch)
@@ -413,7 +412,7 @@ and returns a sequence of positioned glyphids from the font.")
                           "/potrace-" version ".tar.gz"))
       (sha256
        (base32
-        "0znr9i0ljb818qiwm22zw63g11a4v08gc5xkh0wbdp6g259vcwnv"))))
+        "17ajildjp14shsy339xarh1lw1p0k60la08ahl638a73mh23kcx9"))))
     (build-system gnu-build-system)
     (native-inputs `(("ghostscript" ,ghostscript))) ;for tests
     (inputs `(("zlib" ,zlib)))
@@ -477,7 +476,7 @@ smooth contours with constant curvature at the spline joins.")
 (define-public libuninameslist
   (package
     (name "libuninameslist")
-    (version "20160701")
+    (version "20170807")
     (source
      (origin
        (method url-fetch)
@@ -486,7 +485,7 @@ smooth contours with constant curvature at the spline joins.")
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
         (base32
-         "12xxb301a66dh282pywpy00wxiaq5z8z20qm3pr2vql04r2g8d0x"))))
+         "0axwxjgcrwms9682vmpsq1x4swdx6q6qk6997rkfr8xrgi124c6a"))))
     (build-system gnu-build-system)
     (native-inputs `(("autoconf" ,autoconf)
                      ("automake" ,automake)
@@ -507,26 +506,14 @@ definitions.")
 (define-public fontforge
   (package
    (name "fontforge")
-   (version "20160404")
+   (version "20170731")
    (source (origin
             (method url-fetch)
             (uri (string-append
                   "https://github.com/fontforge/fontforge/releases/download/"
-                  version "/fontforge-dist-" version ".tar.gz"))
+                  version "/fontforge-dist-" version ".tar.xz"))
             (sha256 (base32
-                     "1kavnhbkzc1hk6f39fynq9s0haama81ddrbld4b5x60d0dbaawvc"))
-            (modules '((guix build utils)))
-            (snippet
-             '(begin
-               ;; Make builds bit-reproducible by using fixed date strings.
-               (substitute* "configure"
-                 (("^FONTFORGE_MODTIME=.*$")
-                  "FONTFORGE_MODTIME=\"1459819518L\"\n")
-                 (("^FONTFORGE_MODTIME_STR=.*$")
-                  "FONTFORGE_MODTIME_STR=\"20:25 CDT  4-Apr-2016\"\n")
-                 (("^FONTFORGE_VERSIONDATE=.*$")
-                  "FONTFORGE_VERSIONDATE=\"20160404\"\n"))))
-            (patches (list (search-patch "fontforge-svg-modtime.patch")))))
+                     "08l8h3yvk4v7652jvmd3ls7nf5miybkx2fmkf1mpwwfixpxxw2l4"))))
    (build-system gnu-build-system)
    (native-inputs
     `(("pkg-config" ,pkg-config)))
@@ -550,20 +537,11 @@ definitions.")
              ("libxml2"         ,libxml2)
              ("pango"           ,pango)
              ("potrace"         ,potrace)
-             ("python"          ,python)
+             ("python"          ,python-wrapper)
              ("zlib"            ,zlib)))
    (arguments
-    '(#:tests? #f
-      #:phases
+    '(#:phases
       (modify-phases %standard-phases
-        (add-after 'build 'build-contrib
-          (lambda* (#:key outputs #:allow-other-keys)
-            (let* ((out (assoc-ref outputs "out"))
-                   (bin (string-append out "/bin")))
-              (and (zero? (system* "make" "-Ccontrib/fonttools"
-                                   "CC=gcc" "showttf"))
-                   (begin (install-file "contrib/fonttools/showttf" bin)
-                          #t)))))
         (add-after 'install 'set-library-path
           (lambda* (#:key inputs outputs #:allow-other-keys)
             (let ((out (assoc-ref outputs "out"))
@@ -585,4 +563,104 @@ definitions.")
 opentype fonts.  You can save fonts in many different outline formats, and
 generate bitmaps.")
    (license license:gpl3+)
-   (home-page "http://fontforge.org/")))
+   (home-page "https://fontforge.github.io/en-US/")))
+
+(define-public python2-ufolib
+  (package
+    (name "python2-ufolib")
+    (version "2.1.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "ufoLib" version ".zip"))
+       (sha256
+        (base32 "07qy6mx7z0wi9a30lc2hj5i9q1gnz1n8l40dmjz2c19mj9s6mz9l"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:python ,python-2))
+    (propagated-inputs
+     `(("python2-fonttools" ,python2-fonttools)))
+    (native-inputs
+     `(("unzip" ,unzip)
+       ("python2-pytest-3.0" ,python2-pytest-3.0)
+       ("python2-pytest-runner" ,python2-pytest-runner)))
+    (home-page "https://github.com/unified-font-object/ufoLib")
+    (synopsis "Low-level UFO reader and writer")
+    (description
+     "UfoLib reads and writes Unified Font Object (UFO)
+files.  UFO is a file format that stores fonts source files.")
+    (license license:bsd-3)))
+
+(define-public python2-defcon
+  (package
+    (name "python2-defcon")
+    (version "0.3.5")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "defcon" version ".zip"))
+       (sha256
+        (base32
+         "03jlm2gy9lvbwj68kfdm43yaddwd634jwkdg4wf0jxx2s8mwbg22"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:python ,python-2))
+    (native-inputs
+     `(("unzip" ,unzip)
+       ("python2-pytest-3.0" ,python2-pytest-3.0)
+       ("python2-pytest-runner" ,python2-pytest-runner)))
+    (propagated-inputs
+     `(("python2-fonttools" ,python2-fonttools)
+       ("python2-ufolib" ,python2-ufolib)))
+    (home-page "https://pypi.python.org/pypi/defcon")
+    (synopsis "Flexible objects for representing @acronym{UFO, unified font object} data")
+    (description
+     "Defcon is a set of @acronym{UFO, unified font object} based objects
+optimized for use in font editing applications.  The objects are built to
+be lightweight, fast and flexible.  The objects are very bare-bones and
+they are not meant to be end-all, be-all objects.  Rather, they are meant
+to provide base functionality so that you can focus on your application’s
+behavior, not object observing or maintaining cached data.  Defcon
+implements UFO3 as described by the UFO font format.")
+    (license license:expat)))
+
+(define-public nototools
+  (package
+    (name "nototools")
+    (version "20170925")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://github.com/googlei18n/nototools/"
+                           "archive/v2017-09-25-tooling-for-phase3-"
+                           "update.tar.gz"))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32
+         "1pvacw18cm9l4sb66pqyjc7hc74xhhfxc7kd5ald8lixf4wzg0s8"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:python ,python-2))
+    (propagated-inputs
+     `(("python2-booleanoperations" ,python2-booleanoperations)
+       ("python2-defcon" ,python2-defcon)
+       ("python2-fonttools" ,python2-fonttools)
+       ("python2-pillow" ,python2-pillow)
+       ("python2-pyclipper" ,python2-pyclipper)
+       ("python2-ufolib" ,python2-ufolib)))
+    (home-page "https://github.com/googlei18n/nototools")
+    (synopsis "Noto fonts support tools and scripts")
+    (description
+     "Nototools is a Python package containing Python scripts used to
+maintain the Noto Fonts project.")
+    (license (list license:asl2.0
+                   ;; Sample texts are attributed to UN and OHCHR.
+                   ;; The permissions on the UDHR are pretty lax:
+                   ;; http://www.ohchr.org/EN/UDHR/Pages/Introduction.aspx
+                   ;; "If UDHR translations or materials are reproduced, users
+                   ;; should make reference to this website as a source by
+                   ;; providing a link."
+                   license:public-domain
+                   (license:non-copyleft
+                    "file://sample_texts/attributions.txt"
+                    "See sample_texts/attributions.txt in the distribution.")))))

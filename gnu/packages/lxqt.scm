@@ -3,6 +3,7 @@
 ;;; Copyright © 2015 Sou Bunnbu <iyzsong@gmail.com>
 ;;; Copyright © 2016 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
+;;; Copyright © 2017 ng0 <ng0@infotropique.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -26,6 +27,7 @@
   #:use-module (guix utils)
   #:use-module (guix build-system cmake)
   #:use-module (gnu packages)
+  #:use-module (gnu packages glib)
   #:use-module (gnu packages kde-frameworks)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages qt))
@@ -88,62 +90,6 @@ in Qt.")
 components of the LXQt desktop environment.")
     (license lgpl2.1+)))
 
-
-(define-public lxqt-common
-  (package
-    (name "lxqt-common")
-    (version "0.9.1")
-    (source
-     (origin
-       (method url-fetch)
-       (uri
-         (string-append "https://github.com/lxde/" name
-                        "/archive/" version ".tar.gz"))
-       (file-name (string-append name "-" version ".tar.gz"))
-       (sha256
-        (base32
-         "1vd3zarvl44l3y6wn7kgxcd2f1bygsmk5bcfqwa3568cq3b57aw0"))))
-    (build-system cmake-build-system)
-    (arguments
-     `(#:tests? #f ; no check target
-       #:phases
-        (modify-phases %standard-phases
-          (add-before 'configure 'fix-installation-paths
-           (lambda _
-             ;; The variable LXQT_ETC_XDG_DIR is set in
-             ;; liblxqt-0.9.0/share/cmake/lxqt/lxqt-config.cmake
-             ;; to the Qt5 installation directory, followed by "/etc/xdg".
-             ;; We need to have it point to the current installation
-             ;; directory instead.
-             (substitute* '("config/CMakeLists.txt"
-                            "menu/CMakeLists.txt")
-               (("\\$\\{LXQT_ETC_XDG_DIR\\}")
-                "${CMAKE_INSTALL_PREFIX}/etc/xdg")
-               ;; In the same file, LXQT_SHARE_DIR is set to the installation
-               ;; directory of liblxqt, followed by "/share/lxqt".
-               (("\\$\\{LXQT_SHARE_DIR\\}")
-                "${CMAKE_INSTALL_PREFIX}/share/lxqt"))
-             ;; Replace absolute directories.
-             (substitute* "autostart/CMakeLists.txt"
-               (("/etc/xdg")
-                "${CMAKE_INSTALL_PREFIX}/etc/xdg"))
-             (substitute* "xsession/CMakeLists.txt"
-               (("/usr/share")
-                "${CMAKE_INSTALL_PREFIX}/share")))))))
-    (inputs
-     `(("kwindowsystem" ,kwindowsystem)
-       ("liblxqt" ,liblxqt)
-       ("libqtxdg" ,libqtxdg)
-       ("qtbase" ,qtbase)
-       ("qttools" ,qttools)
-       ("qtx11extras" ,qtx11extras)))
-    (home-page "http://lxqt.org/")
-    (synopsis "Common files for LXQt")
-    (description "lxqt-common provides the desktop integration files
-(themes, icons, configuration files etc.) for the LXQt
-desktop environment.")
-    (license lgpl2.1+)))
-
 (define-public lxqt-session
   (package
     (name "lxqt-session")
@@ -187,4 +133,32 @@ desktop environment.")
     (synopsis "Session manager for LXQt")
     (description "lxqt-session provides the standard session manager
 for the LXQt desktop environment.")
+    (license lgpl2.1+)))
+
+(define-public lxqt-build-tools
+  (package
+    (name "lxqt-build-tools")
+    (version "0.4.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://github.com/lxde/lxqt-build-tools/releases/"
+                           "download/" version "/" name "-" version ".tar.xz"))
+       (file-name (string-append name "-" version ".tar.xz"))
+       (sha256
+        (base32
+         "1llbrjbgabxlq933a8cpg03b3mdmvd8983csnd4f7vrcj51nv0xh"))))
+    (build-system cmake-build-system)
+    (arguments
+     `(#:tests? #f)) ;No tests
+    (native-inputs
+     `(("pkg-config" ,pkg-config)
+       ("glib" ,glib)))
+    (inputs
+     `(("qtbase" ,qtbase)))
+    (synopsis "LXQt Build tools")
+    (description
+     "Lxqt-build-tools is providing several tools needed to build LXQt
+itself as well as other components maintained by the LXQt project.")
+    (home-page "http://lxqt.org")
     (license lgpl2.1+)))

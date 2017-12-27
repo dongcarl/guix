@@ -61,7 +61,6 @@
 
             %gnu-updater
             %gnu-ftp-updater
-            %gnome-updater
             %kde-updater
             %xorg-updater
             %kernel.org-updater))
@@ -336,9 +335,6 @@ return the corresponding signature URL, or #f it signatures are unavailable."
     (if (version>? (upstream-source-version a) (upstream-source-version b))
         a b))
 
-  (define contains-digit?
-    (cut string-any char-set:digit <>))
-
   (define patch-directory-name?
     ;; Return #t for patch directory names such as 'bash-4.2-patches'.
     (cut string-suffix? "patches" <>))
@@ -362,8 +358,7 @@ return the corresponding signature URL, or #f it signatures are unavailable."
              (result    #f))
     (let* ((entries (ftp-list conn directory))
 
-           ;; Filter out sub-directories that do not contain digits---e.g.,
-           ;; /gnuzilla/lang and /gnupg/patches.  Filter out "w32"
+           ;; Filter out things like /gnupg/patches.  Filter out "w32"
            ;; directories as found on ftp.gnutls.org.
            (subdirs (filter-map (match-lambda
                                   (((? patch-directory-name? dir)
@@ -371,8 +366,11 @@ return the corresponding signature URL, or #f it signatures are unavailable."
                                    #f)
                                   (("w32" 'directory . _)
                                    #f)
-                                  (((? contains-digit? dir) 'directory . _)
-                                   (and (keep-file? dir) dir))
+                                  (("unstable" 'directory . _)
+                                   ;; As seen at ftp.gnupg.org/gcrypt/pinentry.
+                                   #f)
+                                  ((directory 'directory . _)
+                                   directory)
                                   (_ #f))
                                 entries))
 
@@ -454,7 +452,9 @@ hosted on ftp.gnu.org, or not under that name (this is the case for
     (define (string->lines str)
       (string-tokenize str (char-set-complement (char-set #\newline))))
 
-    (let ((port (http-fetch/cached %gnu-file-list-uri #:ttl (* 60 60))))
+    ;; Since https://ftp.gnu.org honors 'If-Modified-Since', the hard-coded
+    ;; TTL can be relatively short.
+    (let ((port (http-fetch/cached %gnu-file-list-uri #:ttl (* 15 60))))
       (map trim-leading-components
            (call-with-gzip-input-port port
              (compose string->lines get-string-all))))))
@@ -510,6 +510,9 @@ list available from %GNU-FILE-LIST-URI over HTTP(S)."
         (values name+version #f)
         (values (match:substring match 1) (match:substring match 2)))))
 
+(define gnome-package?
+  (url-prefix-predicate "mirror://gnome/"))
+
 (define (pure-gnu-package? package)
   "Return true if PACKAGE is a non-Emacs and non-GNOME GNU package.  This
 excludes AucTeX, for instance, whose releases are now uploaded to
@@ -520,69 +523,8 @@ releases are on gnu.org."
        (not (gnome-package? package))
        (gnu-package? package)))
 
-(define (url-prefix-predicate prefix)
-  "Return a predicate that returns true when passed a package where one of its
-source URLs starts with PREFIX."
-  (lambda (package)
-    (define matching-uri?
-      (match-lambda
-        ((? string? uri)
-         (string-prefix? prefix uri))
-        (_
-         #f)))
-
-    (match (package-source package)
-      ((? origin? origin)
-       (match (origin-uri origin)
-         ((? matching-uri?) #t)
-         (_                 #f)))
-      (_ #f))))
-
 (define gnu-hosted?
   (url-prefix-predicate "mirror://gnu/"))
-
-(define gnome-package?
-  (url-prefix-predicate "mirror://gnome/"))
-
-(define (latest-gnome-release package)
-  "Return the latest release of PACKAGE, the name of a GNOME package."
-  (define %not-dot
-    (char-set-complement (char-set #\.)))
-
-  (define (even-minor-version? version)
-    (match (string-tokenize version %not-dot)
-      (((= string->number major) (= string->number minor) . rest)
-       (and minor (even? minor)))
-      (_
-       #t)))                                      ;cross fingers
-
-  (define (even-numbered? file)
-    ;; Return true if FILE somehow denotes an even-numbered file name.  The
-    ;; trick here is that we want this to match both directories such as
-    ;; "3.18.6" and actual file names such as "gtk+-3.18.6.tar.bz2".
-    (let-values (((name version) (package-name->name+version file)))
-      (even-minor-version? (or version name))))
-
-  (define upstream-name
-    ;; Some packages like "NetworkManager" have camel-case names.
-    (package-upstream-name package))
-
-  (false-if-ftp-error
-   (latest-ftp-release upstream-name
-                       #:server "ftp.gnome.org"
-                       #:directory (string-append "/pub/gnome/sources/"
-                                                  upstream-name)
-
-
-                       ;; <https://www.gnome.org/gnome-3/source/> explains
-                       ;; that odd minor version numbers represent development
-                       ;; releases, which we are usually not interested in.
-                       #:keep-file? even-numbered?
-
-                       ;; ftp.gnome.org provides no signatures, only
-                       ;; checksums.
-                       #:file->signature (const #f))))
-
 
 (define (latest-kde-release package)
   "Return the latest release of PACKAGE, the name of an KDE.org package."
@@ -639,13 +581,6 @@ source URLs starts with PREFIX."
            (and (not (gnu-hosted? package))
                 (pure-gnu-package? package))))
    (latest latest-release*)))
-
-(define %gnome-updater
-  (upstream-updater
-   (name 'gnome)
-   (description "Updater for GNOME packages")
-   (pred gnome-package?)
-   (latest latest-gnome-release)))
 
 (define %kde-updater
   (upstream-updater

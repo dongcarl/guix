@@ -4,6 +4,8 @@
 ;;; Copyright © 2014 Andreas Enge <andreas@enge.fr>
 ;;; Copyright © 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2017 Sou Bunnbu <iyzsong@gmail.com>
+;;; Copyright © 2017 Marius Bakke <mbakke@fastmail.com>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -132,16 +134,16 @@ Qt-style API for Wayland clients.")
 (define-public sddm
   (package
     (name "sddm")
-    (version "0.15.0")
+    (version "0.17.0")
     (source (origin
               (method url-fetch)
               (uri (string-append
                     "https://github.com/sddm/sddm"
                     "/releases/download/v" version "/"
-                    "sddm-" version ".tar.gz"))
+                    "sddm-" version ".tar.xz"))
               (sha256
                (base32
-                "0x1igkjm3k8q26xbmg0qah1fc2pn2sfc675w0xg42x7ncrdiw8d4"))))
+                "0ch6rdppgy2vbzw0c2x9a4c6ry46vx7p6b76d8xbh2nvxh23xv0k"))))
     (build-system cmake-build-system)
     (native-inputs
      `(("extra-cmake-modules" ,extra-cmake-modules)
@@ -160,15 +162,15 @@ Qt-style API for Wayland clients.")
     (arguments
      `(#:configure-flags
        (list
-        ;; Currently doesn't do anything
-        ;; Option added by enable wayland greeters PR
+        ;; This option currently does nothing, but will presumably be enabled
+        ;; if/when <https://github.com/sddm/sddm/pull/616> is merged.
         "-DENABLE_WAYLAND=ON"
         "-DENABLE_PAM=ON"
         ;; Both flags are required for elogind support.
         "-DNO_SYSTEMD=ON" "-DUSE_ELOGIND=ON"
         "-DCONFIG_FILE=/etc/sddm.conf"
-        ;; Set path to /etc/login.defs
-        ;; Alternatively use -DUID_MIN and -DUID_MAX
+        ;; Set path to /etc/login.defs.
+        ;; An alternative would be to use -DUID_MIN and -DUID_MAX.
         (string-append "-DLOGIN_DEFS_PATH="
                        (assoc-ref %build-inputs "shadow")
                        "/etc/login.defs")
@@ -337,17 +339,18 @@ GTK+, lets you select a desktop session and log in to it.")
     (native-inputs
      `(("pkg-config" ,pkg-config)))
     (arguments
-     '(#:phases (alist-cons-before
-		 'configure 'set-new-etc-location
-		 (lambda _
-		   (substitute* "CMakeLists.txt"
-		     (("/etc")
-		      (string-append (assoc-ref %outputs "out") "/etc"))
-                     (("install.*systemd.*")
-                      ;; The build system's logic here is: if "Linux", then
-                      ;; "systemd".  Strip that.
-                      "")))
-		 %standard-phases)
+     '(#:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'set-new-etc-location
+           (lambda _
+             (substitute* "CMakeLists.txt"
+               (("/etc")
+                (string-append (assoc-ref %outputs "out") "/etc"))
+               (("install.*systemd.*")
+               ;; The build system's logic here is: if "Linux", then
+                ;; "systemd".  Strip that.
+                ""))
+             #t)))
        #:configure-flags '("-DUSE_PAM=yes"
                            "-DUSE_CONSOLEKIT=no")
        #:tests? #f))

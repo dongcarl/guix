@@ -25,7 +25,6 @@
   #:use-module (guix config)
   #:use-module (guix packages)
   #:use-module (guix derivations)
-  #:use-module (guix download)
   #:use-module (guix gexp)
   #:use-module (guix grafts)
   #:use-module (guix monads)
@@ -39,14 +38,9 @@
   #:use-module ((gnu packages bootstrap)
                 #:select (%bootstrap-guile))
   #:use-module ((gnu packages certs) #:select (le-certs))
-  #:use-module (gnu packages compression)
-  #:use-module (gnu packages gnupg)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-11)
-  #:use-module (srfi srfi-34)
-  #:use-module (srfi srfi-35)
   #:use-module (srfi srfi-37)
-  #:use-module (ice-9 ftw)
   #:use-module (ice-9 match)
   #:export (guix-pull))
 
@@ -82,7 +76,7 @@ Install it by running:
                (resolve-interface '(git))))
 
 (define %repository-url
-  "https://git.savannah.gnu.org/git/guix.git")
+  (or (getenv "GUIX_PULL_URL") "https://git.savannah.gnu.org/git/guix.git"))
 
 
 ;;;
@@ -95,6 +89,7 @@ Install it by running:
     (ref . (branch . "origin/master"))
     (system . ,(%current-system))
     (substitutes? . #t)
+    (build-hook? . #t)
     (graft? . #t)
     (verbosity . 0)))
 
@@ -281,7 +276,7 @@ certificates~%"))
                                 store
                                 (if (assoc-ref opts 'bootstrap?)
                                     %bootstrap-guile
-                                    (canonical-package guile-2.0)))))
+                                    (canonical-package guile-2.2)))))
                  (run-with-store store
                    (build-and-install checkout (config-directory)
                                       #:commit commit

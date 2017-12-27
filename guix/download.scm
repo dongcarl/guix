@@ -95,17 +95,17 @@
        "http://hackage.haskell.org/")
       (savannah
        "http://download.savannah.gnu.org/releases/"
-       "ftp://ftp.twaren.net/Unix/NonGNU/"
-       "ftp://mirror.csclub.uwaterloo.ca/nongnu/"
-       "ftp://mirror.publicns.net/pub/nongnu/"
-       "ftp://savannah.c3sl.ufpr.br/"
        "http://ftp.cc.uoc.gr/mirrors/nongnu.org/"
        "http://ftp.twaren.net/Unix/NonGNU/"
        "http://mirror.csclub.uwaterloo.ca/nongnu/"
        "http://nongnu.askapache.com/"
        "http://savannah.c3sl.ufpr.br/"
        "http://download.savannah.gnu.org/releases-noredirect/"
-       "http://download-mirror.savannah.gnu.org/releases/")
+       "http://download-mirror.savannah.gnu.org/releases/"
+       "ftp://ftp.twaren.net/Unix/NonGNU/"
+       "ftp://mirror.csclub.uwaterloo.ca/nongnu/"
+       "ftp://mirror.publicns.net/pub/nongnu/"
+       "ftp://savannah.c3sl.ufpr.br/")
       (sourceforge ; https://sourceforge.net/p/forge/documentation/Mirrors/
        "http://downloads.sourceforge.net/project/"
        "http://ufpr.dl.sourceforge.net/project/"
@@ -134,26 +134,26 @@
        "http://ramses.wh2.tu-dresden.de/pub/mirrors/kernel.org/"
        "http://linux-kernel.uio.no/pub/"
        "http://kernel.osuosl.org/pub/"
-       "ftp://ftp.funet.fi/pub/mirrors/ftp.kernel.org/pub/"
        "http://ftp.be.debian.org/pub/"
-       "http://mirror.linux.org.au/")
+       "http://mirror.linux.org.au/"
+       "ftp://ftp.funet.fi/pub/mirrors/ftp.kernel.org/pub/")
       (apache             ; from http://www.apache.org/mirrors/dist.html
        "http://www.eu.apache.org/dist/"
        "http://www.us.apache.org/dist/"
-       "ftp://gd.tuwien.ac.at/pub/infosys/servers/http/apache/dist/"
        "http://apache.belnet.be/"
        "http://mirrors.ircam.fr/pub/apache/"
        "http://apache-mirror.rbc.ru/pub/apache/"
+       "ftp://gd.tuwien.ac.at/pub/infosys/servers/http/apache/dist/"
 
        ;; As a last resort, try the archive.
        "http://archive.apache.org/dist/")
       (xorg               ; from http://www.x.org/wiki/Releases/Download
        "http://www.x.org/releases/" ; main mirrors
-       "ftp://mirror.csclub.uwaterloo.ca/x.org/" ; North America
-       "ftp://xorg.mirrors.pair.com/"
-       "http://mirror.csclub.uwaterloo.ca/x.org/"
+       "http://mirror.csclub.uwaterloo.ca/x.org/" ; North America
        "http://xorg.mirrors.pair.com/"
        "http://mirror.us.leaseweb.net/xorg/"
+       "ftp://mirror.csclub.uwaterloo.ca/x.org/"
+       "ftp://xorg.mirrors.pair.com/"
        "ftp://artfiles.org/x.org/" ; Europe
        "ftp://ftp.chg.ru/pub/X11/x.org/"
        "ftp://ftp.fu-berlin.de/unix/X11/FTP.X.ORG/"
@@ -169,35 +169,70 @@
        "ftp://mirror.switch.ch/mirror/X11/"
        "ftp://mirrors.ircam.fr/pub/x.org/"
        "ftp://x.mirrors.skynet.be/pub/ftp.x.org/"
-       "ftp://ftp.cs.cuhk.edu.hk/pub/X11" ; East Asia
+       "http://x.cs.pu.edu.tw/" ; East Asia
+       "ftp://ftp.cs.cuhk.edu.hk/pub/X11"
        "ftp://ftp.u-aizu.ac.jp/pub/x11/x.org/"
        "ftp://ftp.yz.yamagata-u.ac.jp/pub/X11/x.org/"
        "ftp://ftp.kaist.ac.kr/x.org/"
        "ftp://mirrors.go-part.com/xorg/"
-       "http://x.cs.pu.edu.tw/"
        "ftp://ftp.is.co.za/pub/x.org")            ; South Africa
-      (cpan                              ; from http://www.cpan.org/SITES.html
-       "http://mirror.ibcp.fr/pub/CPAN/"
-       "ftp://ftp.ciril.fr/pub/cpan/"
-       "ftp://artfiles.org/cpan.org/"
+      (cpan
        "http://www.cpan.org/"
-       "ftp://cpan.rinet.ru/pub/mirror/CPAN/"
-       "ftp://cpan.inode.at/"
-       "ftp://cpan.iht.co.il/"
-       "ftp://ftp.osuosl.org/pub/CPAN/"
-       "ftp://ftp.nara.wide.ad.jp/pub/CPAN/"
-       "http://mirrors.163.com/cpan/"
-       "ftp://cpan.mirror.ac.za/"
-       "http://cpan.mirrors.ionfish.org/"
-       "http://cpan.mirror.dkm.cz/pub/CPAN/"
-       "http://cpan.mirror.iphh.net/"
-       "http://mirrors.teentelecom.net/CPAN/"
-       "http://mirror.teklinks.com/CPAN/"
-       "http://cpan.weepeetelecom.be/"
-       "http://mirrors.xservers.ro/CPAN/"
-       "http://cpan.yimg.com/"
-       "http://mirror.yazd.ac.ir/cpan/"
-       "http://ftp.belnet.be/ftp.cpan.org/")
+       "http://cpan.metacpan.org/"
+       ;; A selection of HTTP mirrors from http://www.cpan.org/SITES.html.
+       ;; Europe.
+       "http://ftp.belnet.be/mirror/ftp.cpan.org/"
+       "http://mirrors.nic.cz/CPAN/"
+       "http://mirror.ibcp.fr/pub/CPAN/"
+       "http://ftp.ntua.gr/pub/lang/perl/"
+       "http://kvin.lv/pub/CPAN/"
+       "http://mirror.as43289.net/pub/CPAN/"
+       "http://cpan.cs.uu.nl/"
+       "http://cpan.uib.no/"
+       "http://cpan-mirror.rbc.ru/pub/CPAN/"
+       "http://mirror.sbb.rs/CPAN/"
+       "http://cpan.lnx.sk/"
+       "http://ftp.rediris.es/mirror/CPAN/"
+       "http://mirror.ox.ac.uk/sites/www.cpan.org/"
+       ;; Africa.
+       "http://mirror.liquidtelecom.com/CPAN/"
+       "http://cpan.mirror.ac.za/"
+       "http://mirror.is.co.za/pub/cpan/"
+       "http://cpan.saix.net/"
+       "http://mirror.ucu.ac.ug/cpan/"
+       ;; North America.
+       "http://mirrors.gossamer-threads.com/CPAN/"
+       "http://mirror.csclub.uwaterloo.ca/CPAN/"
+       "http://mirrors.ucr.ac.cr/CPAN/"
+       "http://www.msg.com.mx/CPAN/"
+       "http://mirrors.namecheap.com/CPAN/"
+       "http://mirror.uic.edu/CPAN/"
+       "http://mirror.datapipe.net/CPAN/"
+       "http://mirror.cc.columbia.edu/pub/software/cpan/"
+       "http://mirror.uta.edu/CPAN/"
+       ;; South America.
+       "http://cpan.mmgdesigns.com.ar/"
+       "http://mirror.nbtelecom.com.br/CPAN/"
+       "http://linorg.usp.br/CPAN/"
+       "http://cpan.dcc.uchile.cl/"
+       "http://mirror.cedia.org.ec/CPAN/"
+       ;; Oceania.
+       "http://cpan.mirror.serversaustralia.com.au/"
+       "http://mirror.waia.asn.au/pub/cpan/"
+       "http://mirror.as24220.net/pub/cpan/"
+       "http://cpan.lagoon.nc/pub/CPAN/"
+       "http://cpan.inspire.net.nz/"
+       ;; Asia.
+       "http://mirror.dhakacom.com/CPAN/"
+       "http://mirrors.ustc.edu.cn/CPAN/"
+       "http://ftp.cuhk.edu.hk/pub/packages/perl/CPAN/"
+       "http://kambing.ui.ac.id/cpan/"
+       "http://cpan.hostiran.ir/"
+       "http://ftp.nara.wide.ad.jp/pub/CPAN/"
+       "http://mirror.neolabs.kz/CPAN/"
+       "http://cpan.nctu.edu.tw/"
+       "http://cpan.ulak.net.tr/"
+       "http://mirrors.vinahost.vn/CPAN/")
       (cran
        ;; Arbitrary mirrors from http://cran.r-project.org/mirrors.html
        ;; This one automatically redirects to servers worldwide
@@ -212,20 +247,20 @@
        ;; from http://www.imagemagick.org/script/download.php
        ;; (without mirrors that are unavailable or not up to date)
        ;; mirrors keeping old versions at the top level
-       "ftp://sunsite.icm.edu.pl/packages/ImageMagick/"
+       "https://sunsite.icm.edu.pl/packages/ImageMagick/"
        ;; mirrors moving old versions to "legacy"
-       "ftp://mirror.aarnet.edu.au/pub/imagemagick/"
+       "http://mirrors-usa.go-parts.com/mirrors/ImageMagick/"
        "http://mirror.checkdomain.de/imagemagick/"
+       "http://ftp.surfnet.nl/pub/ImageMagick/"
+       "http://mirror.searchdaimon.com/ImageMagick"
+       "http://mirror.is.co.za/pub/imagemagick/"
+       "http://www.imagemagick.org/download/"
+       "ftp://mirror.aarnet.edu.au/pub/imagemagick/"
        "ftp://ftp.kddlabs.co.jp/graphics/ImageMagick/"
        "ftp://ftp.u-aizu.ac.jp/pub/graphics/image/ImageMagick/imagemagick.org/"
        "ftp://ftp.nluug.nl/pub/ImageMagick/"
-       "http://ftp.surfnet.nl/pub/ImageMagick/"
-       "http://mirror.searchdaimon.com/ImageMagick"
        "ftp://ftp.tpnet.pl/pub/graphics/ImageMagick/"
-       "http://mirror.is.co.za/pub/imagemagick/"
-       "http://mirrors-usa.go-parts.com/mirrors/ImageMagick/"
        "ftp://ftp.fifi.org/pub/ImageMagick/"
-       "http://www.imagemagick.org/download/"
        ;; one legacy location as a last resort
        "http://www.imagemagick.org/download/legacy/")
       (debian
@@ -235,6 +270,7 @@
        "http://archive.debian.org/debian/")
       (kde
        "http://download.kde.org"
+       "http://download.kde.org/Attic" ; for when it gets archived.
        ;; Mirrors from http://files.kde.org/extra/mirrors.html
        ;; Europe
        "http://mirror.easyname.at/kde"

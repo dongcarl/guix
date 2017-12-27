@@ -1,5 +1,5 @@
 # GNU Guix --- Functional package management for GNU
-# Copyright © 2013, 2015 Ludovic Courtès <ludo@gnu.org>
+# Copyright © 2013, 2015, 2017 Ludovic Courtès <ludo@gnu.org>
 #
 # This file is part of GNU Guix.
 #
@@ -25,11 +25,22 @@ guix gc --version
 trap "rm -f guix-gc-root" EXIT
 rm -f guix-gc-root
 
+# Below we are using 'drv' and 'out' to contain store file names.  If 'drv'
+# and 'out' are environment variables, 'list-runtime-roots' will "see" them
+# and thus prevent $drv and $out from being garbage-collected.  Using 'unset'
+# allows us to make sure these are truly local shell variables and not
+# environments variables.
+unset drv
+unset out
+
 # For some operations, passing extra arguments is an error.
 for option in "" "-C 500M" "--verify" "--optimize"
 do
     if guix gc $option whatever; then false; else true; fi
 done
+
+# This should fail.
+if guix gc --verify=foo; then false; else true; fi
 
 # Check the references of a .drv.
 drv="`guix build guile-bootstrap -d`"

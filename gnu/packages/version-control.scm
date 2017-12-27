@@ -17,6 +17,7 @@
 ;;; Copyright © 2017 André <eu@euandre.org>
 ;;; Copyright © 2017 Marius Bakke <mbakke@fastmail.com>
 ;;; Copyright © 2017 Stefan Reichör <stefan@xsteve.at>
+;;; Copyright © 2017 Oleg Pykhalov <go.wigust@gmail.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -50,6 +51,7 @@
   #:use-module (gnu packages documentation)
   #:use-module (gnu packages base)
   #:use-module (gnu packages bison)
+  #:use-module (gnu packages boost)
   #:use-module (gnu packages cook)
   #:use-module (gnu packages curl)
   #:use-module (gnu packages docbook)
@@ -57,26 +59,37 @@
   #:use-module (gnu packages file)
   #:use-module (gnu packages flex)
   #:use-module (gnu packages gettext)
+  #:use-module (gnu packages gl)
   #:use-module (gnu packages groff)
   #:use-module (gnu packages haskell)
+  #:use-module (gnu packages haskell-check)
+  #:use-module (gnu packages haskell-crypto)
+  #:use-module (gnu packages haskell-web)
+  #:use-module (gnu packages image)
   #:use-module (gnu packages java)
   #:use-module (gnu packages linux)
+  #:use-module (gnu packages maths)
   #:use-module (gnu packages nano)
   #:use-module (gnu packages ncurses)
   #:use-module (gnu packages ssh)
   #:use-module (gnu packages web)
   #:use-module (gnu packages openstack)
+  #:use-module (gnu packages pcre)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages perl-check)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-web)
   #:use-module (gnu packages readline)
   #:use-module (gnu packages databases)
   #:use-module (gnu packages admin)
   #:use-module (gnu packages xml)
   #:use-module (gnu packages emacs)
   #:use-module (gnu packages compression)
+  #:use-module (gnu packages sdl)
   #:use-module (gnu packages swig)
   #:use-module (gnu packages tcl)
+  #:use-module (gnu packages time)
   #:use-module (gnu packages tls)
   #:use-module (gnu packages)
   #:use-module (ice-9 match)
@@ -92,6 +105,7 @@
       (uri (string-append "https://launchpad.net/bzr/"
                           (version-major+minor version) "/" version
                           "/+download/bzr-" version ".tar.gz"))
+      (patches (search-patches "bazaar-CVE-2017-14176.patch"))
       (sha256
        (base32
         "1cysix5k3wa6y7jjck3ckq3abls4gvz570s0v0hxv805nwki4i8d"))))
@@ -124,14 +138,14 @@ as well as the classic centralized workflow.")
    (name "git")
    ;; XXX When updating Git, check if the special 'git:src' input to cgit needs
    ;; to be updated as well.
-   (version "2.14.1")
+   (version "2.15.1")
    (source (origin
             (method url-fetch)
             (uri (string-append "mirror://kernel.org/software/scm/git/git-"
                                 version ".tar.xz"))
             (sha256
              (base32
-              "1iic3wiihxp3l3k6d4z886v3869c3dzgddjxnd5124wy1rnlqwkg"))))
+              "0p04linqdywdf7m1hqa904fzqvgzplsxlzdqrn96j1j5gpyr174r"))))
    (build-system gnu-build-system)
    (native-inputs
     `(("native-perl" ,perl)
@@ -143,9 +157,8 @@ as well as the classic centralized workflow.")
                 "mirror://kernel.org/software/scm/git/git-manpages-"
                 version ".tar.xz"))
           (sha256
-
            (base32
-            "1whlsiicayalym4hkf01zdiqpw37gdf7c52gw9ki7bv2x3hf3g3y"))))))
+            "0mi609plzqqwx271hr9m5j4syggqx255bbzml6ca9j5fadywysvc"))))))
    (inputs
     `(("curl" ,curl)
       ("expat" ,expat)
@@ -181,6 +194,9 @@ as well as the classic centralized workflow.")
                      ;; nars; see <https://bugs.gnu.org/21949>.
                      "NO_INSTALL_HARDLINKS=indeed")
       #:test-target "test"
+
+      ;; Tests fail randomly when parallel: <https://bugs.gnu.org/29512>.
+      #:parallel-tests? #f
 
       ;; The explicit --with-tcltk forces the build system to hardcode the
       ;; absolute file name to 'wish'.
@@ -237,6 +253,13 @@ as well as the classic centralized workflow.")
             ;; FIXME: Some hooks fail with "basename: command not found".
             ;; See 't/trash directory.t9164.../svn-hook.log'.
             (delete-file "t/t9164-git-svn-dcommit-concurrent.sh")
+
+            ;; XXX: These tests fail intermittently for unknown reasons:
+            ;; <https://bugs.gnu.org/29546>.
+            (for-each delete-file
+                      '("t/t9128-git-svn-cmd-branch.sh"
+                        "t/t9167-git-svn-cmd-branch-subproject.sh"
+                        "t/t9141-git-svn-multiple-branches.sh"))
             #t))
         (add-after 'install 'install-shell-completion
           (lambda* (#:key outputs #:allow-other-keys)
@@ -363,8 +386,12 @@ everything from small to very large projects with speed and efficiency.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1fdk9yhwvl1w1z71ykzcvgh4nsf8scxcbclz5anh98zpplmhmisa"))
-              (patches (search-patches "libgit2-0.25.1-mtime-0.patch"))))
+                "1b3figbhp5l83vd37vq6j2narrq4yl9pfw6mw0px0dzb1hz3jqka"))
+              (patches (search-patches "libgit2-0.25.1-mtime-0.patch"))
+
+              ;; Remove bundled software.
+              (snippet '(delete-file-recursively "deps"))
+              (modules '((guix build utils)))))
     (build-system cmake-build-system)
     (outputs '("out" "debug"))
     (arguments
@@ -384,7 +411,7 @@ everything from small to very large projects with speed and efficiency.")
            (lambda _ (zero? (system* "./libgit2_clar" "-v" "-Q")))))))
     (inputs
      `(("libssh2" ,libssh2)
-       ("libcurl" ,curl)
+       ("http-parser" ,http-parser)
        ("python" ,python-wrapper)))
     (native-inputs
      `(("pkg-config" ,pkg-config)))
@@ -512,6 +539,18 @@ collaboration using typical untrusted file hosts or services.")
              (zero? (system*
                      "tar" "--strip-components=1" "-C" "git" "-xf"
                      (assoc-ref inputs "git:src")))))
+         (add-after 'unpack 'patch-absolute-file-names
+           (lambda* (#:key inputs #:allow-other-keys)
+             (define (quoted-file-name input path)
+               (string-append "\"" input path "\""))
+             (substitute* "ui-snapshot.c"
+               (("\"gzip\"")
+                (quoted-file-name (assoc-ref inputs "gzip") "/bin/gzip"))
+               (("\"bzip2\"")
+                (quoted-file-name (assoc-ref inputs "bzip2") "/bin/bzip2"))
+               (("\"xz\"")
+                (quoted-file-name (assoc-ref inputs "xz") "/bin/xz")))
+             #t))
          (delete 'configure) ; no configure script
          (add-after 'build 'build-man
            (lambda* (#:key make-flags #:allow-other-keys)
@@ -532,7 +571,10 @@ collaboration using typical untrusted file hosts or services.")
                     #t)))))))
     (native-inputs
      ;; For building manpage.
-     `(("asciidoc" ,asciidoc)))
+     `(("asciidoc" ,asciidoc)
+       ("gzip" ,gzip)
+       ("bzip2" ,bzip2)
+       ("xz" ,xz)))
     (inputs
      `(;; Cgit directly accesses some internal Git interfaces that changed in
        ;; Git 2.12.  Try removing this special input and using the source of the
@@ -713,6 +755,44 @@ Git repository as normal Git commits, and provides a number of commands to
 manipulate them in various ways.")
     (license license:gpl2)))
 
+(define-public vcsh
+  (package
+    (name "vcsh")
+    (version "1.20151229")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/RichiH/vcsh/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1ym3swkh738c3vciffvlr96vqzhwmzkb8ajqzap8f0j9n039a1mf"))))
+    (build-system gnu-build-system)
+    (native-inputs
+     `(("which" ,which)))
+    (inputs
+     `(("git" ,git)
+       ("perl" ,perl)
+       ("perl-test-harness" ,perl-test-harness)
+       ("perl-shell-command" ,perl-shell-command)
+       ("perl-test-most" ,perl-test-most)))
+    (arguments
+     '(#:phases (modify-phases %standard-phases
+                  (delete 'configure)
+                  (delete 'build))
+       #:make-flags (list (string-append "PREFIX="
+                                         (assoc-ref %outputs "out")))
+       #:test-target "test"))
+    (home-page "https://github.com/RichiH/vcsh")
+    (synopsis "Version control system for @code{$HOME}")
+    (description
+     "vcsh version-controls configuration files in several Git repositories,
+all in one single directory.  They all maintain their working trees without
+clobbering each other or interfering otherwise.  By default, all Git
+repositories maintained via vcsh store the actual files in @code{$HOME},
+though this can be overridden.")
+    (license license:gpl2+)))
+
 (define-public git-test-sequence
   (let ((commit "48e5a2f5a13a5f30452647237e23362b459b9c76"))
     (package
@@ -813,14 +893,14 @@ control to Git repositories.")
 (define-public mercurial
   (package
     (name "mercurial")
-    (version "4.2.3")
+    (version "4.4.1")
     (source (origin
              (method url-fetch)
              (uri (string-append "https://www.mercurial-scm.org/"
                                  "release/mercurial-" version ".tar.gz"))
              (sha256
               (base32
-               "1b7p3z8lin6hyyzkskskp065qnyfxid2yxnjygni0n4yv33qz404"))))
+               "0ik2ypzxjr6vpcghxvn39a73gw52629n7vwak04gnbycsq95aalg"))))
     (build-system python-build-system)
     (arguments
      `(;; Restrict to Python 2, as Python 3 would require
@@ -1290,15 +1370,15 @@ from Subversion to any supported Distributed Version Control System (DVCS).")
 (define-public tig
   (package
     (name "tig")
-    (version "2.2")
+    (version "2.3.0")
     (source (origin
               (method url-fetch)
               (uri (string-append
-                    "http://jonas.nitro.dk/tig/releases/tig-"
-                    version ".tar.gz"))
+                    "https://github.com/jonas/tig/releases/download/tig-"
+                    version "/tig-" version ".tar.gz"))
               (sha256
                (base32
-                "0k3m894vfkgkj7xbr0j6ph91351dl6id5f0hk2ksjp5lmg9i6llg"))))
+                "1vf02snz8qiiqiyqss1z63rzzmwbrc9agcgh21jdq13rja306vv8"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("asciidoc" ,asciidoc)
@@ -1313,8 +1393,8 @@ from Subversion to any supported Distributed Version Control System (DVCS).")
            (lambda _
              (zero? (system* "make" "install-doc")))))
        #:tests? #f)) ; tests require access to /dev/tty
-     ;;`(#:test-target "test"))
-    (home-page "http://jonas.nitro.dk/tig/")
+    ;; #:test-target "test"))
+    (home-page "https://jonas.github.io/tig/")
     (synopsis "Ncurses-based text user interface for Git")
     (description
      "Tig is an ncurses text user interface for Git, primarily intended as
@@ -1612,7 +1692,17 @@ unique algebra of patches called @url{http://darcs.net/Theory,Patchtheory}.
        ;; JGit must be built with a JDK supporting Java 8.
        #:jdk ,icedtea-8
        ;; Target our older default JDK.
-       #:make-flags (list "-Dtarget=1.7")))
+       #:make-flags (list "-Dtarget=1.7")
+       #:phases
+       (modify-phases %standard-phases
+         ;; The jar file generated by the default build.xml does not include
+         ;; the text properties files, so we need to add them.
+         (add-after 'build 'add-properties
+           (lambda* (#:key jar-name #:allow-other-keys)
+             (with-directory-excursion "src"
+               (zero? (apply system* "jar" "-uf"
+                             (string-append "../build/jar/" jar-name)
+                             (find-files "." "\\.properties$")))))))))
     (inputs
      `(("java-classpathx-servletapi" ,java-classpathx-servletapi)
        ("java-javaewah" ,java-javaewah)
@@ -1641,17 +1731,56 @@ network protocols, and core version control algorithms.")
                 "15gm537iivhnzlkjym4x3wn5jqdjdragsw9pdpzqqg21nrc817mm"))))
     (build-system ant-build-system)
     (arguments
-     `(#:phases
-       (modify-phases %standard-phases
-         (add-after 'unpack 'use-latest-javaewah-API
-           (lambda _
-             (substitute* "src/org/eclipse/jgit/internal/storage/file/BitmapIndexImpl.java"
-               (("wordinbits") "WORD_IN_BITS"))
-             #t)))
+     (substitute-keyword-arguments (package-arguments java-jgit)
        ;; Build for default JDK.
-       ,@(substitute-keyword-arguments (package-arguments java-jgit)
-           ((#:jdk _) icedtea-7))))
+       ((#:jdk _) icedtea-7)
+       ((#:phases phases)
+        `(modify-phases ,phases
+           (add-after 'unpack 'use-latest-javaewah-API
+             (lambda _
+               (substitute* "src/org/eclipse/jgit/internal/storage/file/BitmapIndexImpl.java"
+                 (("wordinbits") "WORD_IN_BITS"))
+               #t))))))
     (inputs
      `(("java-javaewah" ,java-javaewah)
        ("java-jsch" ,java-jsch)
        ("java-slf4j-api" ,java-slf4j-api)))))
+
+(define-public gource
+  (package
+    (name "gource")
+    (version "0.47")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "https://github.com/acaudwell/Gource/archive/"
+                    "gource-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1llqwdnfa1pff8bxk27qsqff1fcg0a9kfdib0rn7p28vl21n1cgj"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:configure-flags
+       (list (string-append "--with-boost-libdir="
+                            (assoc-ref %build-inputs "boost")
+                            "/lib"))))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (inputs
+     `(("boost"     ,boost)
+       ("ftgl"      ,ftgl)
+       ("glew"      ,glew)
+       ("glm"       ,glm)
+       ("glu"       ,glu)
+       ("libpng"    ,libpng)
+       ("mesa"      ,mesa)
+       ("pcre"      ,pcre)
+       ("sdl-union" ,(sdl-union (list sdl2 sdl2-image)))))
+    (home-page "http://gource.io/")
+    (synopsis "3D visualisation tool for source control repositories")
+    (description "@code{gource} provides a software version control
+visualization.  The repository is displayed as a tree where the root of the
+repository is the centre, directories are branches and files are leaves.
+Contributors to the source code appear and disappear as they contribute to
+specific files and directories.")
+    (license license:gpl3+)))

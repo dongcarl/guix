@@ -20,6 +20,7 @@
 (define-module (guix upstream)
   #:use-module (guix records)
   #:use-module (guix utils)
+  #:use-module (guix discovery)
   #:use-module ((guix download)
                 #:select (download-to-store))
   #:use-module (guix gnupg)
@@ -45,6 +46,7 @@
             upstream-source-signature-urls
             upstream-source-archive-types
 
+            url-prefix-predicate
             coalesce-sources
 
             upstream-updater
@@ -54,6 +56,7 @@
             upstream-updater-predicate
             upstream-updater-latest
 
+            %updaters
             lookup-updater
 
             download-tarball
@@ -80,6 +83,24 @@
   (urls           upstream-source-urls)           ;list of strings
   (signature-urls upstream-source-signature-urls  ;#f | list of strings
                   (default #f)))
+
+(define (url-prefix-predicate prefix)
+  "Return a predicate that returns true when passed a package where one of its
+source URLs starts with PREFIX."
+  (lambda (package)
+    (define matching-uri?
+      (match-lambda
+        ((? string? uri)
+         (string-prefix? prefix uri))
+        (_
+         #f)))
+
+    (match (package-source package)
+      ((? origin? origin)
+       (match (origin-uri origin)
+         ((? matching-uri?) #t)
+         (_                 #f)))
+      (_ #f))))
 
 (define (upstream-source-archive-types release)
   "Return the available types of archives for RELEASE---a list of strings such
@@ -126,6 +147,22 @@ correspond to the same version."
   (description upstream-updater-description)
   (pred        upstream-updater-predicate)
   (latest      upstream-updater-latest))
+
+(define (importer-modules)
+  "Return the list of importer modules."
+  (cons (resolve-interface '(guix gnu-maintenance))
+        (all-modules (map (lambda (entry)
+                            `(,entry . "guix/import"))
+                          %load-path))))
+
+(define %updaters
+  ;; The list of publically-known updaters.
+  (delay (fold-module-public-variables (lambda (obj result)
+                                         (if (upstream-updater? obj)
+                                             (cons obj result)
+                                             result))
+                                       '()
+                                       (importer-modules))))
 
 (define (lookup-updater package updaters)
   "Return an updater among UPDATERS that matches PACKAGE, or #f if none of
@@ -241,7 +278,13 @@ and 'interactive' (default)."
                    ((archive-type)
                     (match (and=> (package-source package) origin-uri)
                       ((? string? uri)
-                       (file-extension (basename uri)))
+                       (let ((type (file-extension (basename uri))))
+                         ;; Sometimes we have URLs such as
+                         ;; "https://github.com/…/tarball/v0.1", in which case
+                         ;; we must not consider "1" as the extension.
+                         (and (or (string-contains type "z")
+                                  (string=? type "tar"))
+                              type)))
                       (_
                        "gz")))
                    ((url signature-url)

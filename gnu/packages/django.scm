@@ -2,6 +2,7 @@
 ;;; Copyright © 2016 Hartmut Goebel <h.goebel@crazy-compilers.com>
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2017 ng0 <contact.ng0@cryptolab.net>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -26,7 +27,10 @@
   #:use-module (gnu packages)
   #:use-module (gnu packages base)
   #:use-module (gnu packages databases)
-  #:use-module (gnu packages python))
+  #:use-module (gnu packages check)
+  #:use-module (gnu packages python)
+  #:use-module (gnu packages python-web)
+  #:use-module (gnu packages time))
 
 (define-public python-django
   (package
@@ -150,7 +154,7 @@ with arguments to the field constructor.")
      `(("python-django" ,python-django)
        ("python-setuptools-scm" ,python-setuptools-scm)))
     (propagated-inputs
-     `(("python-pytest" ,python-pytest)))
+     `(("python-pytest" ,python-pytest-3.0)))
     (home-page "http://pytest-django.readthedocs.org/")
     (synopsis "Django plugin for py.test")
     (description "Pytest-django is a plugin for py.test that provides a set of
@@ -204,6 +208,26 @@ them do this.")
         (base32
          "1fslqc5qqb0b66yscvkyjwfv8cnbfx5nlkpnwimyb3pf1nc1w7r3"))))
     (build-system python-build-system)
+    (arguments
+     '(#:phases
+       (modify-phases %standard-phases
+         ;; TODO: Tagging the tests requiring the web could be done upstream.
+         (add-before 'check 'skip-test-requiring-network-access
+           (lambda _
+             (substitute* "allauth/socialaccount/providers/openid/tests.py"
+               (("def test_login")
+                "from django.test import tag
+    @tag('requires-web')
+    def test_login"))))
+         (replace 'check
+           (lambda _
+             (setenv "DJANGO_SETTINGS_MODULE" "test_settings")
+             (zero? (system*
+                     "django-admin"
+                     "test"
+                     "allauth"
+                     "--verbosity=2"
+                     "--exclude-tag=requires-web")))))))
     (propagated-inputs
      `(("python-openid" ,python-openid)
        ("python-requests" ,python-requests)

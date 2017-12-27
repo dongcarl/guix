@@ -17,14 +17,14 @@
 ;;; Copyright © 2015 Taylan Ulrich Bayırlı/Kammer <taylanbayirli@gmail.com>
 ;;; Copyright © 2016, 2017 Rodger Fox <thylakoid@openmailbox.org>
 ;;; Copyright © 2016 Manolis Fragkiskos Ragkousis <manolis837@gmail.com>
-;;; Copyright © 2016, 2017 ng0 <ng0@infotropique.org>
+;;; Copyright © 2016, 2017 ng0 <ng0@n0.is>
 ;;; Copyright © 2016 Albin Söderqvist <albin@fripost.org>
 ;;; Copyright © 2016, 2017 Kei Kebreau <kkebreau@posteo.net>
 ;;; Copyright © 2016 Alex Griffin <a@ajgrf.com>
 ;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 Jan Nieuwenhuizen <janneke@gnu.org>
 ;;; Copyright © 2016 Steve Webber <webber.sl@gmail.com>
-;;; Copyright © 2017 Adonay "adfeno" Felipe Nogueira <https://libreplanet.org/wiki/User:Adfeno> <adfeno@openmailbox.org>
+;;; Copyright © 2017 Adonay "adfeno" Felipe Nogueira <https://libreplanet.org/wiki/User:Adfeno> <adfeno@hyperbola.info>
 ;;; Copyright © 2017 Arun Isaac <arunisaac@systemreboot.net>
 ;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2017 nee <nee-git@hidamari.blue>
@@ -32,6 +32,7 @@
 ;;; Copyright © 2017 Marius Bakke <mbakke@fastmail.com>
 ;;; Copyright © 2017 Rutger Helling <rhelling@mykolab.com>
 ;;; Copyright © 2017 Roel Janssen <roel@gnu.org>
+;;; Copyright © 2017 Nicolas Goaziou <mail@nicolasgoaziou.fr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -70,6 +71,7 @@
   #:use-module (gnu packages documentation)
   #:use-module (gnu packages docbook)
   #:use-module (gnu packages fltk)
+  #:use-module (gnu packages freedesktop)
   #:use-module (gnu packages fribidi)
   #:use-module (gnu packages game-development)
   #:use-module (gnu packages gettext)
@@ -133,6 +135,7 @@
   #:use-module (gnu packages gnuzilla)
   #:use-module (gnu packages icu4c)
   #:use-module (gnu packages networking)
+  #:use-module (gnu packages web)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system haskell)
   #:use-module (guix build-system python)
@@ -247,26 +250,27 @@ the others like yourself, that want what you have.")
 (define-public cowsay
   (package
     (name "cowsay")
-    (version "3.03")
+    (version "3.04")
     (source (origin
               (method url-fetch)
-              (uri (string-append "https://web.archive.org/web/20071026043648/"
-                                  "http://www.nog.net:80/~tony/warez/"
-                                  "cowsay-" version ".tar.gz"))
+              (uri (string-append "https://github.com/tnalpgge/"
+                                  "rank-amateur-cowsay/archive/"
+                                  name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1bxj802na2si2bk5zh7n0b7c33mg8a5n2wnvh0vihl9bmjkp51hb"))))
+                "12w7apbf6a9qffk92r32b16w22na2fjcqbl32rn0n7zw5hrp3f6q"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
        (modify-phases %standard-phases
-         (delete 'configure)
-         (delete 'install)
-         (replace 'build
+         (delete 'configure)            ; no configure script
+         (delete 'build)                ; nothing to be built
+         (replace 'install
            (lambda* (#:key outputs #:allow-other-keys)
              (zero? (system* "sh" "install.sh"
                              (assoc-ref outputs "out")))))
-         (replace 'check
+         (delete 'check)
+         (add-after 'install 'check
            (lambda* (#:key outputs #:allow-other-keys)
              (zero? (system* (string-append (assoc-ref outputs "out")
                                             "/bin/cowsay")
@@ -274,12 +278,12 @@ the others like yourself, that want what you have.")
     (inputs
      `(("perl" ,perl)))
     (home-page (string-append "https://web.archive.org/web/20071026043648/"
-                              "http://www.nog.net:80/~tony/warez/"))
+                              "http://www.nog.net:80/~tony/warez/cowsay.shtml"))
     (synopsis "Speaking cow text filter")
     (description "Cowsay is basically a text filter.  Send some text into it,
 and you get a cow saying your text.  If you think a talking cow isn't enough,
-cows can think too.  All you have to do is run @code{cowthink}.")
-    ;; Any version of the GPL.
+cows can think too: all you have to do is run @command{cowthink}.  If you're
+tired of cows, a variety of other ASCII-art messengers are available.")
     (license license:gpl3+)))
 
 (define-public freedoom
@@ -350,6 +354,97 @@ be paired with a compatible game engine (such as @code{prboom-plus}) to be
 played.  Freedoom complements the Doom engine with free levels, artwork, sound
 effects and music to make a completely free game.")
    (license license:bsd-3)))
+
+(define-public meandmyshadow
+  (package
+    (name "meandmyshadow")
+    (version "0.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://sourceforge/meandmyshadow/"
+                                  version "/meandmyshadow-" version
+                                  "-src.tar.gz"))
+              (sha256
+               (base32
+                "1dpb7s32b2psj5w3nr5kqibib8nndi86mw8gxp4hmxwrfiisf86d"))))
+    (build-system cmake-build-system)
+    (arguments
+     '(#:tests? #f ; there are no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'set-sdl'paths
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "cmake/Modules/FindSDL_gfx.cmake"
+               (("/usr/local/include/SDL")
+                (string-append (assoc-ref inputs "sdl")
+                               "/include/SDL")))
+             ;; Because SDL provides lib/libX11.so.6 we need to explicitly
+             ;; link with libX11, even though we're using the GL backend.
+             (substitute* "CMakeLists.txt"
+               (("\\$\\{X11_LIBRARIES\\}") "-lX11"))
+             )))))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (inputs
+     `(("sdl" ,(sdl-union (list sdl
+                                sdl-image
+                                sdl-gfx
+                                sdl-mixer
+                                sdl-ttf)))
+       ("libx11" ,libx11) ; needed by sdl's libX11
+       ("libarchive" ,libarchive)
+       ("openssl" ,openssl)
+       ("mesa" ,mesa)
+       ("glu" ,glu)
+       ("curl" ,curl)))
+    (home-page "http://meandmyshadow.sourceforge.net/")
+    (synopsis "Puzzle/platform game")
+    (description "Me and My Shadow is a puzzle/platform game in which you try
+to reach the exit by solving puzzles.  Spikes, moving blocks, fragile blocks
+and much more stand between you and the exit.  Record your moves and let your
+shadow mimic them to reach blocks you couldn't reach alone.")
+    (license license:gpl3+)))
+
+(define-public knights
+  (package
+    (name "knights")
+    (version "025")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://www.knightsgame.org.uk/files/knights_"
+                                  version "_src.tar.gz"))
+              (sha256
+               (base32
+                "18vp2ygvn0s0jz8rm585jqf6hjqkam1ximq81k0r9hpmfj7wb88f"))))
+    (build-system gnu-build-system)
+    (arguments
+     '(#:make-flags
+       (list (string-append "PREFIX=" (assoc-ref %outputs "out")))
+       #:phases
+       (modify-phases %standard-phases
+         ;; No configure script.
+         (delete 'configure))
+       #:tests? #f)) ;; No check target.
+    (inputs
+     `(("boost" ,boost)
+       ("sdl-union" ,(sdl-union (list sdl sdl-image sdl-mixer)))
+       ("freetype" ,freetype)
+       ("fontconfig" ,fontconfig)
+       ("curl" ,curl)))
+    (home-page "http://www.knightsgame.org.uk/")
+    (synopsis "Multiplayer dungeon game involving knights and quests")
+    (description "Knights is a multiplayer game involving several knights who
+must run around a dungeon and complete various quests.  Each game revolves
+around a quest – for example, you might have to find some items and carry them
+back to your starting point.  This may sound easy, but as there are only
+enough items in the dungeon for one player to win, you may end up having to
+kill your opponents to get their stuff!  Other quests involve escaping from
+the dungeon, fighting a duel to the death against the enemy knights, or
+destroying an ancient book using a special wand.")
+    ;; This package includes modified sources of lua (X11), enet (Expat), and
+    ;; guichan (BSD-3).  The "Coercri" library is released under the Boost
+    ;; license.  The whole package is released under GPLv3+.
+    (license license:gpl3+)))
 
 (define-public gnubg
   (package
@@ -577,6 +672,92 @@ utilizing the art assets from the @code{SuperTux} project.")
                    license:gpl2+
                    license:gpl3+))))
 
+(define-public roguebox-adventures
+  (let ((commit "19a2c340b34d5b4e7cc89118c7aedc058babbd93")
+        (revision "1"))
+      (package
+        (name "roguebox-adventures")
+        (version (git-version "2.1.2" revision commit))
+        (source
+         (origin
+           (method git-fetch)
+           (uri
+            (git-reference
+             (url "https://git.postactiv.com/themightyglider/RogueBoxAdventures.git")
+                 (commit commit)))
+           (file-name (git-file-name name version))
+           (sha256
+            (base32
+             "0afmg8fjdcs3sqdp5rc7irgr7riil8jwysfjn1imfxslf1wcx5ah"))))
+        (build-system python-build-system)
+        (arguments
+         '(#:tests? #f ; no check target
+           #:phases
+           (modify-phases %standard-phases
+             ;; no setup.py script
+             (replace 'build
+               (lambda* (#:key outputs #:allow-other-keys)
+                 (let* ((out (assoc-ref outputs "out"))
+                        (data (string-append
+                               out "/share/games/roguebox-adventures")))
+                   ;; Use the correct data directory.
+                   (substitute* '("main.py" "LIB/getch.py" "LIB/getch_gcwz.py")
+                     (("basic_path + os\\.sep + 'DATA'")
+                      (string-append "'" data "'"))
+                     (("^basic_path.*$")
+                      (string-append "basic_path ='" data "'\n")))
+                   (substitute* "LIB/gra_files.py"
+                     (("basic_path = b_path\\.replace\\('/LIB',''\\)")
+                      (string-append "basic_path ='" data "'\n")))
+
+                   ;; The game must save in the user's home directory because
+                   ;; the store is read-only.
+                   (substitute* "main.py"
+                     (("home_save = False") "home_save = True")
+                     (("'icon_small.png'")
+                      (string-append "'" data "/icon_small.png'"))))
+                 #t))
+             (replace 'install
+               (lambda* (#:key outputs #:allow-other-keys)
+                 (let* ((out (assoc-ref outputs "out"))
+                        (bin (string-append out "/bin"))
+                        (data (string-append
+                               out "/share/games/roguebox-adventures"))
+                        (doc (string-append
+                              out "/share/doc/roguebox-adventures")))
+                   (mkdir-p bin)
+                   (mkdir-p doc)
+                   (copy-file "main.py"
+                              (string-append bin "/roguebox-adventures"))
+                   (chmod (string-append bin "/roguebox-adventures") #o555)
+
+                   (for-each (lambda (file)
+                               (copy-recursively file
+                                                 (string-append data "/" file)))
+                             '("AUDIO" "FONT" "GRAPHIC" "LIB" "LICENSE"
+                               "icon_big.png" "icon_small.png"))
+
+                   (copy-recursively "DOC" doc)
+
+                   (wrap-program (string-append bin "/roguebox-adventures")
+                     `("PYTHONPATH" ":" prefix (,(string-append data "/LIB")))))
+                 #t)))))
+        (inputs
+         `(("python-pygame" ,python-pygame)
+           ("python-tmx" ,python-tmx)))
+        (home-page "https://rogueboxadventures.tuxfamily.org")
+        (synopsis "A classical roguelike/sandbox game")
+        (description
+         "RogueBox Adventures is a graphical roguelike with strong influences
+from sandbox games like Minecraft or Terraria.  The main idea of RogueBox
+Adventures is to offer the player a kind of roguelike toy-world.  This world
+can be explored and changed freely.")
+        ;; The GPL3+ is for code, the rest are for art.
+        (license (list license:cc0
+                       license:cc-by3.0
+                       license:gpl3+
+                       license:silofl1.1)))))
+
 (define-public xshogi
   (package
     (name "xshogi")
@@ -719,7 +900,7 @@ fight Morgoth, the Lord of Darkness.")
        (patches (search-patches "pingus-sdl-libs-config.patch"))))
     (build-system gnu-build-system)
     (native-inputs `(("pkg-config" ,pkg-config)
-                     ("scons" ,scons)))
+                     ("scons-python2" ,scons-python2)))
     (inputs `(("sdl" ,sdl)
               ("sdl-image" ,sdl-image)
               ("sdl-mixer" ,sdl-mixer)
@@ -728,15 +909,11 @@ fight Morgoth, the Lord of Darkness.")
               ("libpng" ,libpng)
               ("boost" ,boost)))
     (arguments
-     '(#:tests? #f                      ; no check target
+     '(#:make-flags (list (string-append "PREFIX=" %output))
+       #:tests? #f                      ; no check target
        #:phases
        (modify-phases %standard-phases
-         (delete 'configure)            ; no configure script
-        (replace 'install
-          (lambda* (#:key outputs #:allow-other-keys)
-            (zero? (system* "make" "install"
-                            (string-append "PREFIX="
-                                           (assoc-ref outputs "out")))))))))
+         (delete 'configure)))) ; no configure script
     (home-page "http://pingus.seul.org/welcome.html")
     (synopsis "Lemmings clone")
     (description
@@ -945,7 +1122,8 @@ Portable Game Notation.")
        (uri (string-append "http://www.techrescue.org/xboing/xboing"
                            version ".tar.gz"))
        (sha256
-        (base32 "16m2si8wmshxpifk861vhpqviqxgcg8bxj6wfw8hpnm4r2w9q0b7"))))
+        (base32 "16m2si8wmshxpifk861vhpqviqxgcg8bxj6wfw8hpnm4r2w9q0b7"))
+       (patches (search-patches "xboing-CVE-2004-0149.patch"))))
     (arguments
      `(#:tests? #f
        #:phases
@@ -1343,7 +1521,7 @@ either by Infocom or created using the Inform compiler.")
 (define-public retroarch
   (package
     (name "retroarch")
-    (version "1.6.7")
+    (version "1.7.0")
     (source
      (origin
        (method url-fetch)
@@ -1351,7 +1529,7 @@ either by Infocom or created using the Inform compiler.")
                            version ".tar.gz"))
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
-        (base32 "13vp5skf95a4fla3dwdk2v48dgnmrvimvp9fgpr1vppb7wfjhbr1"))))
+        (base32 "1waskzf99947yqs40n38s86m41jf5v7prvzf8pzfjxzpgyis8bxk"))))
     (build-system gnu-build-system)
     (arguments
      '(#:tests? #f                      ; no tests
@@ -1383,6 +1561,7 @@ either by Infocom or created using the Inform compiler.")
        ("python" ,python)
        ("sdl" ,sdl2)
        ("udev" ,eudev)
+       ("wayland", wayland)
        ("zlib" ,zlib)))
     (native-inputs
      `(("pkg-config" ,pkg-config)
@@ -1457,7 +1636,7 @@ This game is based on the GPL version of the famous game TuxRacer.")
 (define-public supertuxkart
   (package
     (name "supertuxkart")
-    (version "0.9.2")
+    (version "0.9.3")
     (source
      (origin
        (method url-fetch)
@@ -1465,8 +1644,7 @@ This game is based on the GPL version of the famous game TuxRacer.")
                            version "/supertuxkart-" version "-src.tar.xz"))
        (sha256
         (base32
-         "10l2ljmd7mv8f9ylarqmxxryicdnph2qkm3g5maxnsm2k2q0n20b"))
-       (patches (search-patches "supertuxkart-angelscript-ftbfs.patch"))
+         "1c4w47ibj87lgwiqygq8qi7jiz6gklj4dwf5bs5zk15s0rqlw0fq"))
        (modules '((guix build utils)))
        (snippet
         ;; Delete bundled library sources
@@ -1491,6 +1669,8 @@ This game is based on the GPL version of the famous game TuxRacer.")
        (list "-DUSE_WIIUSE=0"
              ;; Do not use the bundled zlib
              "-DNO_IRR_COMPILE_WITH_ZLIB_=TRUE"
+             ;; FIXME: needs libopenglrecorder
+             "-DBUILD_RECORDER=0"
              ;; Irrlicht returns an integer instead of a boolean
              "-DCMAKE_C_FLAGS=-fpermissive")
        #:phases
@@ -2381,6 +2561,7 @@ emulation community.  It provides highly accurate emulation.")
                 (uri (git-reference
                       (url "https://github.com/Aloshi/EmulationStation.git")
                       (commit commit))) ; no version tag
+                (file-name (string-append name "-" version "-checkout"))
                 (sha256
                  (base32
                   "0cm0sq2wri2l9cvab1l0g02za59q7klj0h3p028vr96n6njj4w9v"))))
@@ -2427,17 +2608,19 @@ and a game metadata scraper.")
          ;; The build process fails if the configure script is passed the
          ;; option "--enable-fast-install".
          (replace 'configure
-           (lambda* (#:key inputs outputs #:allow-other-keys)
+           (lambda* (#:key inputs outputs (configure-flags '())
+                     #:allow-other-keys)
              (let ((out (assoc-ref outputs "out"))
                    (lzo (assoc-ref inputs "lzo")))
                (zero?
-                (system* "./configure"
-                         (string-append "--prefix=" out)
-                         ;; Provide the "lzo" path.
-                         (string-append "--with-liblzo2="
-                                        lzo "/lib/liblzo2.a")
-                         ;; Put the binary in 'bin' instead of 'games'.
-                         "--binary-dir=bin"))))))))
+                (apply system* "./configure"
+                       (string-append "--prefix=" out)
+                       ;; Provide the "lzo" path.
+                       (string-append "--with-liblzo2="
+                                      lzo "/lib/liblzo2.a")
+                       ;; Put the binary in 'bin' instead of 'games'.
+                       "--binary-dir=bin"
+                       configure-flags))))))))
     (native-inputs `(("pkg-config" ,pkg-config)))
     (inputs
      `(("allegro" ,allegro-4)
@@ -2464,10 +2647,6 @@ engine.  When you start it you will be prompted to download a graphics set.")
     ;; different terms.
     (license (list license:bsd-3 license:gpl2 license:lgpl2.1+ license:zlib))))
 
-;; TODO Add 'openttd-opengfx' and 'openttd-openmsx' packages and make
-;; 'openttd' a wrapper around them.  The engine is playable by itself,
-;; but it asks a user to download graphics if it's not found.
-
 (define openttd-opengfx
   (package
     (name "openttd-opengfx")
@@ -2485,7 +2664,7 @@ engine.  When you start it you will be prompted to download a graphics set.")
      '(#:make-flags (list "CC=gcc"
                           (string-append "INSTALL_DIR="
                                          (assoc-ref %outputs "out")
-                                         "/share/openttd/baseset"))
+                                         "/share/games/openttd/baseset/opengfx"))
        #:phases
        (modify-phases %standard-phases
          (replace 'configure
@@ -2503,7 +2682,8 @@ engine.  When you start it you will be prompted to download a graphics set.")
        ;; different software versions than upstream does, some of the md5sums
        ;; are different. However, the package is still reproducible, it's safe
        ;; to disable this test.
-       #:tests? #f))
+       #:tests? #f
+       #:parallel-build? #f))
     (native-inputs `(("dos2unix" ,dos2unix)
                      ("gimp" ,gimp)
                      ("grfcodec" ,grfcodec)
@@ -2525,28 +2705,168 @@ OpenGFX provides you with...
 @end enumerate")
     (license license:gpl2)))
 
+(define openttd-opensfx
+  (package
+    (name "openttd-opensfx")
+    (version "0.2.3")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "https://binaries.openttd.org/extra/opensfx/"
+             version "/opensfx-" version "-source.tar.gz"))
+       (sha256
+        (base32
+         "03jxgp02ks31hmsdh4xh0xcpkb70ds8jakc9pfc1y9vdrdavh4p5"))))
+    (build-system gnu-build-system)
+    (native-inputs
+     `(("catcodec" ,catcodec)
+       ("python" ,python2-minimal)))
+    (arguments
+     `(#:make-flags
+       (list (string-append "INSTALL_DIR=" %output
+                            "/share/games/openttd/baseset/opensfx"))
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'make-reproducible
+           (lambda _
+             ;; Remove the time dependency of the installed tarball by setting
+             ;; the modification times if its members to 0.
+             (substitute* "scripts/Makefile.def"
+               (("-cf") " --mtime=@0 -cf"))
+             #t))
+         (delete 'configure))))
+    (home-page "http://dev.openttdcoop.org/projects/opensfx")
+    (synopsis "Base sounds for OpenTTD")
+    (description "OpenSFX is a set of free base sounds for OpenTTD which make
+it possible to play OpenTTD without requiring the proprietary sound files from
+the original Transport Tycoon Deluxe.")
+    (license license:cc-sampling-plus-1.0)))
+
+(define openttd-openmsx
+  (package
+    (name "openttd-openmsx")
+    (version "0.3.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "https://binaries.openttd.org/extra/openmsx/"
+             version "/openmsx-" version "-source.tar.gz"))
+       (sha256
+        (base32
+         "0nskq97a6fsv1v6d62zf3yb8whzhqnlh3lap3va3nzvj7csjgf7c"))))
+    (build-system gnu-build-system)
+    (native-inputs
+     `(("python" ,python2-minimal)))
+    (arguments
+     `(#:make-flags
+       (list (string-append "INSTALL_DIR=" %output
+                            "/share/games/openttd/baseset"))
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (add-after 'install 'post-install
+           ;; Rename openmsx-version to openmsx
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((install-directory (string-append (assoc-ref outputs "out")
+                                                     "/share/games/openttd/baseset")))
+               (rename-file (string-append install-directory "/openmsx-" ,version)
+                            (string-append install-directory "/openmsx"))
+               #t))))))
+    (home-page "http://dev.openttdcoop.org/projects/openmsx")
+    (synopsis "Music set for OpenTTD")
+    (description "OpenMSX is a music set for OpenTTD which makes it possible
+to play OpenTTD without requiring the proprietary music from the original
+Transport Tycoon Deluxe.")
+    (license license:gpl2)))
+
 (define-public openttd
   (package
     (inherit openttd-engine)
     (name "openttd")
     (arguments
-     (substitute-keyword-arguments (package-arguments openttd-engine)
-       ((#:phases phases)
-        `(modify-phases ,phases
-           (add-after 'install 'install-data
-             (lambda* (#:key inputs outputs #:allow-other-keys)
-               (let*
-                   ((opengfx (assoc-ref inputs "opengfx"))
-                    (out (assoc-ref outputs "out"))
-                    (gfx-dir
-                     (string-append out
-                                    "/share/games/openttd/baseset/opengfx")))
-                 (mkdir-p gfx-dir)
-                 (copy-recursively opengfx gfx-dir))
-               #t))))))
+     `(#:configure-flags
+       (list (string-append "--with-midi=" (assoc-ref %build-inputs "timidity++")
+                            "/bin/timidity"))
+       ,@(substitute-keyword-arguments (package-arguments openttd-engine)
+           ((#:phases phases)
+            `(modify-phases ,phases
+               (add-after 'install 'install-data
+                 (lambda* (#:key inputs outputs #:allow-other-keys)
+                   (for-each
+                    (lambda (input)
+                      (copy-recursively (assoc-ref inputs input)
+                                        (assoc-ref outputs "out")))
+                    (list "opengfx" "openmsx" "opensfx"))
+                   #t)))))))
+    (inputs
+     `(("timidity++" ,timidity++)
+       ,@(package-inputs openttd-engine)))
     (native-inputs
      `(("opengfx" ,openttd-opengfx)
+       ("openmsx" ,openttd-openmsx)
+       ("opensfx" ,openttd-opensfx)
        ,@(package-native-inputs openttd-engine)))))
+
+(define-public openrct2
+  (package
+    (name "openrct2")
+    (version "0.1.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://github.com/OpenRCT2/OpenRCT2/archive/v"
+                           version ".tar.gz"))
+       (sha256
+        (base32
+         "1bahkzlf9k92cc4zs4nk4wy59323kiw8d3wm0vjps3kp7iznqyjx"))
+       (file-name (string-append name "-" version ".tar.gz"))))
+    (build-system cmake-build-system)
+    (arguments
+     `(#:tests? #f ;; no tests available
+       #:configure-flags
+        (list (string-append "-DCMAKE_INSTALL_LIBDIR="
+                       (assoc-ref %outputs "out") "/lib"))
+       #:phases
+        (modify-phases %standard-phases
+          (add-after 'unpack 'fix-usr-share-paths
+            (lambda* (#:key make-flags outputs #:allow-other-keys)
+              ;; Fix some references to /usr/share.
+              (substitute* "src/openrct2/platform/linux.c"
+                (("/usr/share")
+                (string-append (assoc-ref %outputs "out") "/share")))))
+          (add-after 'build 'fix-cmake-install-file
+            (lambda _
+              ;; The build system tries to download a file and compare hashes.
+              ;; Since we have no network, remove this so the install doesn't fail.
+              (substitute* "cmake_install.cmake"
+                (("EXPECTED_HASH SHA1=b587d83de508d0b104d14c599b76f8565900fce0")
+                "")))))))
+    (inputs `(("curl", curl)
+              ("fontconfig", fontconfig)
+              ("freetype", freetype)
+              ("jansson", jansson)
+              ("libpng", libpng)
+              ("libzip", libzip)
+              ("mesa", mesa)
+              ("openssl", openssl)
+              ("sdl2", sdl2)
+              ("speexdsp", speexdsp)
+              ("zlib", zlib)))
+    (native-inputs
+      `(("pkg-config", pkg-config)))
+    (home-page "https://github.com/OpenRCT2/OpenRCT2")
+    (synopsis "Free software re-implementation of RollerCoaster Tycoon 2")
+    (description "OpenRCT2 is a free software re-implementation of
+RollerCoaster Tycoon 2 (RCT2).  The gameplay revolves around building and
+maintaining an amusement park containing attractions, shops and facilities.
+
+Note that this package does @emph{not} provide the game assets (sounds,
+images, etc.)")
+    ;; See <https://github.com/OpenRCT2/OpenRCT2/wiki/Required-RCT2-files>
+    ;; regarding assets.
+    (license license:gpl3+)))
 
 (define-public pinball
   (package
@@ -2716,60 +3036,67 @@ http://lavachat.symlynx.com/unix/")
     (license license:gpl2+)))
 
 (define-public red-eclipse
-  (let ((data-sources
-         '(("acerspyro"   "0zmg78scrfdv33h7vszqvzylcqjwg7d5b0j2riav3rjfh326j8xx")
-           ("actors"      "0l00rsvppqzdpsikm5qpj38jiygirszxlzay2nxp4g4n2qjq0m4a")
-           ("appleflap"   "0jhfr7f13hk3nswwxqc4jajriipr6zz6j63v955nv4sgxs7lzbjd")
-           ("blendbrush"  "1nk0zaisbqf2khrivq8ls6z2lnh6d51m133m2ppxk7k4c9gq1imq")
-           ("caustics"    "1hq08k476wayi0kmk4ps8h6jr75yinq04f1r2p8r79xsdpxq9my5")
-           ("crosshairs"  "1gmrmjm7i7n9py0qrzamk7ygi63yx1mr2pp6iwz2vwngprl03n8m")
-           ("dziq"        "0gr36ydrv8syjxv7w9dw3ix8waaq201fzxr0klkqp260p8xp215s")
-           ("elyvisions"  "05syxlpsap6nfwxnnd0ls7qj1p4vhw2jxi41pi5inwpfifapfphz")
-           ("fonts"       "184syks602xc657q08973w5ji50x5zssvd4vp2q2ig8m68iyr51c")
+  (let ((release "1.5.8")
+        (revision 2)
+        (data-sources
+         '(("acerspyro" "0zmg78scrfdv33h7vszqvzylcqjwg7d5b0j2riav3rjfh326j8xx")
+           ("actors" "0l00rsvppqzdpsikm5qpj38jiygirszxlzay2nxp4g4n2qjq0m4a")
+           ("appleflap" "0jhfr7f13hk3nswwxqc4jajriipr6zz6j63v955nv4sgxs7lzbjd")
+           ("blendbrush" "1nk0zaisbqf2khrivq8ls6z2lnh6d51m133m2ppxk7k4c9gq1imq")
+           ("caustics" "1hq08k476wayi0kmk4ps8h6jr75yinq04f1r2p8r79xsdpxq9my5")
+           ("crosshairs" "1gmrmjm7i7n9py0qrzamk7ygi63yx1mr2pp6iwz2vwngprl03n8m")
+           ("dziq" "0gr36ydrv8syjxv7w9dw3ix8waaq201fzxr0klkqp260p8xp215s")
+           ("elyvisions" "05syxlpsap6nfwxnnd0ls7qj1p4vhw2jxi41pi5inwpfifapfphz")
+           ("fonts" "184syks602xc657q08973w5ji50x5zssvd4vp2q2ig8m68iyr51c")
            ("freezurbern" "020gpgcpy4rqjd9d18npfm96j8f02jcjnccbxcgzk1yb58y687ya")
-           ("john"        "0hj5kwlb2gb0gsnl9bk7dkqlk8r7vxcw8gxpgrb3kfn8d9cwcb7k")
-           ("jojo"        "0fij06040r7s5p7jksxm7wxi9jqwkhhm8iywys0dagk8j2wcbvsz")
-           ("jwin"        "0ysfynjvypc8dszf7rsvk02jgw8fmsli49vy2xpm83zpkrqpddgf")
+           ("john" "0hj5kwlb2gb0gsnl9bk7dkqlk8r7vxcw8gxpgrb3kfn8d9cwcb7k")
+           ("jojo" "0fij06040r7s5p7jksxm7wxi9jqwkhhm8iywys0dagk8j2wcbvsz")
+           ("jwin" "0ysfynjvypc8dszf7rsvk02jgw8fmsli49vy2xpm83zpkrqpddgf")
            ("luckystrike" "1bm0xdqjv35ry5xwbzw3a3v1xf2gj1jwfg29nyl6w3ch0h6crr11")
-           ("maps"        "0c9d1zxmpnngwhchzw6xb6cf84cx8xyycmdqcvyhamrd95d96qma")
-           ("mayhem"      "133pdql7ari159skd9qdmw0p1m73x32d1v6jswkz0xwk8vgxmkil")
-           ("mikeplus64"  "1d5npn9wlw0mviz9vhzzcsj98jvfh1wbvlh1nyqfj4ws5nfxhs7x")
-           ("misc"        "19x2ps6yxnfrz0xdhqdwncaq25ds7i4w2l8sdfi95yh2r7c5k1qn")
-           ("nieb"        "15029nipl92cb0jbh46z00k51hf3jk4v05pwx266b6b11bapdz0c")
-           ("nobiax"      "0k9apim5z4ihd5ajmnbq4gyh24w872dv0mr5v8wqn31a8gxzahhp")
-           ("particles"   "06827r9pnhzjil381xiwcbc93v9nxin7qlr59yrvk9gdzxmklk9m")
-           ("philipk"     "1l6fhl6qz471vjn05hvk29bm8dhwnzqbmi2hdylpa9k998nzkfc1")
+           ("maps" "0c9d1zxmpnngwhchzw6xb6cf84cx8xyycmdqcvyhamrd95d96qma")
+           ("mayhem" "133pdql7ari159skd9qdmw0p1m73x32d1v6jswkz0xwk8vgxmkil")
+           ("mikeplus64" "1d5npn9wlw0mviz9vhzzcsj98jvfh1wbvlh1nyqfj4ws5nfxhs7x")
+           ("misc" "19x2ps6yxnfrz0xdhqdwncaq25ds7i4w2l8sdfi95yh2r7c5k1qn")
+           ("nieb" "15029nipl92cb0jbh46z00k51hf3jk4v05pwx266b6b11bapdz0c")
+           ("nobiax" "0k9apim5z4ihd5ajmnbq4gyh24w872dv0mr5v8wqn31a8gxzahhp")
+           ("particles" "06827r9pnhzjil381xiwcbc93v9nxin7qlr59yrvk9gdzxmklk9m")
+           ("philipk" "1l6fhl6qz471vjn05hvk29bm8dhwnzqbmi2hdylpa9k998nzkfc1")
            ("projectiles" "03ay8ik52n3vx723swqlnl5gpkzf1v1gadwj3zcnh43ch7nd2bqh")
-           ("props"       "1yxz7gfmb79sqqrkyfdzp4ar9rf5f1kpfij4nrkk1l8vbw9liksc")
-           ("skyboxes"    "1mm98mhb6yhb006p1hlic91jcwjxhq79mblxciwbqqa9c5g4yki6")
-           ("snipergoth"  "1vlpmwlg71g6l5b706gp82bc07i5bbw2zphzynm2fx49za0zdi44")
-           ("sounds"      "156g5wh8cvdh6zr33haqm566sd28ylnzdf2h4pqzpxbb2i19vbfg")
-           ("textures"    "0wkhl5cgymr9kslzhksi83hs15rb0q01xvax5khi6b4dcl3mrmsh")
-           ("torley"      "1xlag6ndjyqafl984n6d9zi96dv9aif7vrc2nvikc3iwgjwlbxav")
-           ("trak"        "12x9ix8zkqn9svy56qmdgj4x2814qh25f4srplgq691lqn9qjhvd")
-           ("ulukai"      "0gz1hd8hca2biskc85hw4jjacpsmqg9x4w6cwrka8x987xmc92k5")
-           ("unnamed"     "09v8fjy6jqypm1i121kilg3z6zpw7dm0i4gxhd9b7ihprvzvy8r7")
-           ("vanities"    "0m3vfq9l71pbb80qz4s3k8r5azmm158chqbw8snch09ymxm6h462")
-           ("vegetation"  "07yzm9lbzr624j4i652ny5p762p83gadg40c1k8gwff4y7yk55gn")
-           ("weapons"     "05fsp17gdrhjqdwia7rwdw9gcijaqwcnny8lf6krms43xmn8cj0x")
-           ("wicked"      "0jjgwzdibr5my369gwvmvbklpjlwq939zgf643rv0168xc087xb2"))))
+           ("props" "1yxz7gfmb79sqqrkyfdzp4ar9rf5f1kpfij4nrkk1l8vbw9liksc")
+           ("skyboxes" "1mm98mhb6yhb006p1hlic91jcwjxhq79mblxciwbqqa9c5g4yki6")
+           ("snipergoth" "1vlpmwlg71g6l5b706gp82bc07i5bbw2zphzynm2fx49za0zdi44")
+           ("sounds" "156g5wh8cvdh6zr33haqm566sd28ylnzdf2h4pqzpxbb2i19vbfg")
+           ("textures" "0wkhl5cgymr9kslzhksi83hs15rb0q01xvax5khi6b4dcl3mrmsh")
+           ("torley" "1xlag6ndjyqafl984n6d9zi96dv9aif7vrc2nvikc3iwgjwlbxav")
+           ("trak" "12x9ix8zkqn9svy56qmdgj4x2814qh25f4srplgq691lqn9qjhvd")
+           ("ulukai" "0gz1hd8hca2biskc85hw4jjacpsmqg9x4w6cwrka8x987xmc92k5")
+           ("unnamed" "09v8fjy6jqypm1i121kilg3z6zpw7dm0i4gxhd9b7ihprvzvy8r7")
+           ("vanities" "0m3vfq9l71pbb80qz4s3k8r5azmm158chqbw8snch09ymxm6h462")
+           ("vegetation" "07yzm9lbzr624j4i652ny5p762p83gadg40c1k8gwff4y7yk55gn")
+           ("weapons" "05fsp17gdrhjqdwia7rwdw9gcijaqwcnny8lf6krms43xmn8cj0x")
+           ("wicked" "0jjgwzdibr5my369gwvmvbklpjlwq939zgf643rv0168xc087xb2"))))
     (package
       (name "red-eclipse")
-      (version "1.5.8")
+      (version (if (zero? revision)
+                   release
+                   (string-append release "-"
+                                  (number->string revision))))
       (source (origin
                 (method url-fetch)
                 (uri (string-append "https://github.com/red-eclipse/base"
-                                    "/archive/v" version ".tar.gz"))
+                                    "/archive/v" release ".tar.gz"))
                 (file-name (string-append name "-" version ".tar.gz"))
                 (sha256
                  (base32
-                  "1ah92axwcai0fhgm7pvfb2dxvfdiwwyh8iqyiffndh6782hxz3bc"))))
+                  "0r66rsqxvd7hxrhb0fahqqmf3r0cw2drhv5vndbswcq90l1bxfmf"))))
       (build-system gnu-build-system)
       (arguments
        `(#:tests? #f            ; no check target
          #:make-flags (list "CC=gcc" "-Csrc"
                             (string-append "INSTDIR="
-                                           (assoc-ref %outputs "out") "/bin"))
+                                           (assoc-ref %outputs "out") "/bin")
+                            (string-append "prefix="
+                                           (assoc-ref %outputs "out")))
          #:phases
          (modify-phases %standard-phases
            (add-after 'unpack 'unpack-data
@@ -2782,9 +3109,24 @@ http://lavachat.symlynx.com/unix/")
                                     "-Cdata"
                                     "--transform"
                                     (string-append "s/"
-                                                   name "-" ,version "/"
+                                                   name "-" ,release "/"
                                                    name "/")))
                          (list ,@(map car data-sources)))
+               #t))
+	   (add-after 'unpack-data 'add-store-data-package-path-as-default
+             (lambda* (#:key outputs #:allow-other-keys)
+               (substitute* "src/engine/server.cpp"
+                 (("(else[[:space:]]*)((addpackagedir\\()\"data\"(\\);))" _ else_part addpackagedir_original addpackagedir_open addpackagedir_close)
+                  (string-append else_part
+                                 "{ "
+                                 addpackagedir_open
+                                 "\""
+                                 (assoc-ref outputs "out")
+                                 "/share/redeclipse/data\""
+                                 addpackagedir_close
+                                 " "
+                                 addpackagedir_original
+                                 " }")))
                #t))
            (delete 'configure)  ; no configure script
            (add-after 'set-paths 'set-sdl-paths
@@ -2801,7 +3143,10 @@ http://lavachat.symlynx.com/unix/")
                  (copy-file "doc/examples/servinit.cfg"
                             (string-append out "/config/servinit.cfg"))
                  (copy-recursively "data"
-                                   (string-append out "/data")))
+                                   (string-append out "/share/redeclipse/data"))
+                 (mkdir-p (string-append out "/lib/redeclipse"))
+		 (symlink (string-append out "/share/redeclipse/data")
+			  (string-append out "/lib/redeclipse/data")))
                #t))
            (add-after 'copy-data 'wrap-program
              (lambda* (#:key inputs outputs #:allow-other-keys)
@@ -2848,7 +3193,7 @@ exec -a \"$0\" ~a/.redeclipse_server_linux-real~%"
                            (method url-fetch)
                            (uri (string-append
                                  "https://github.com/red-eclipse/"
-                                 name "/archive/v" version ".tar.gz"))
+                                 name "/archive/v" release ".tar.gz"))
                            (sha256 (base32 hash))
                            (file-name (string-append name "-" version
                                                      ".tar.gz"))))))
@@ -2870,7 +3215,7 @@ Red Eclipse provides fast paced and accessible gameplay.")
 (define-public higan
   (package
     (name "higan")
-    (version "104")
+    (version "106")
     (source
      (origin
        (method url-fetch)
@@ -2879,7 +3224,7 @@ Red Eclipse provides fast paced and accessible gameplay.")
              version))
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
-        (base32 "18by01ir2mvdi9hq571in1hk18gw2bd0ynq4avfs1qj0qra35fqb"))
+        (base32 "0y42pra0dxzlbkyzcp3r8a39pji2bj3p9fl40425f60af2igr4rw"))
        (patches (search-patches "higan-remove-march-native-flag.patch"))))
     (build-system gnu-build-system)
     (native-inputs
@@ -2965,7 +3310,7 @@ Super Game Boy, BS-X Satellaview, and Sufami Turbo.")
 (define-public mgba
   (package
     (name "mgba")
-    (version "0.6.0")
+    (version "0.6.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/mgba-emu/mgba/archive/"
@@ -2973,7 +3318,7 @@ Super Game Boy, BS-X Satellaview, and Sufami Turbo.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "01zy2w5pihlkrmbm51icgyff6iqyqa5ha6qrm4aj8ibzznz03kyq"))
+                "0xmq1q1j71hnpd49wm91cqq8w5zdhb921cm17jchp4qjmaqgwy3w"))
               (modules '((guix build utils)))
               (snippet
                ;; Make sure we don't use the bundled software.
@@ -3818,7 +4163,7 @@ to the Space Age.")
 (define-public no-more-secrets
   (package
     (name "no-more-secrets")
-    (version "0.3.2")
+    (version "0.3.3")
     (source
      (origin
        (method url-fetch)
@@ -3827,7 +4172,7 @@ to the Space Age.")
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
         (base32
-         "00mzdif859vm75n1igrffh8c07p1nr4rlm3yb7lrkwwxhrw8xzla"))))
+         "1kpx1rirc3i7fb4lymp0hx5rqr0s2ay4za261rw3bcy6d23l1kyg"))))
     (build-system gnu-build-system)
     (arguments
      `(#:tests? #f
@@ -3989,7 +4334,7 @@ emerges from a sewer hole and pulls her below ground.")
 (define-public cdogs-sdl
   (package
     (name "cdogs-sdl")
-    (version "0.6.5")
+    (version "0.6.6")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/cxong/cdogs-sdl/"
@@ -3997,7 +4342,7 @@ emerges from a sewer hole and pulls her below ground.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "17llrpdrrwi8h37vjpkxk2asj7h8qdfp2zy28wiwb7cjzribmz3k"))))
+                "08gbx6vqqir48xs6qdfa4kv70gj4j96wzs90pg7qldfasxz34ljm"))))
     (build-system cmake-build-system)
     (arguments
      `(#:configure-flags
@@ -4339,7 +4684,7 @@ fish.  The whole game is accompanied by quiet, comforting music.")
 (define-public crawl
   (package
     (name "crawl")
-    (version "0.20.0")
+    (version "0.20.1")
     (source
      (origin
        (method url-fetch)
@@ -4353,7 +4698,7 @@ fish.  The whole game is accompanied by quiet, comforting music.")
                             version "-nodeps.tar.xz")))
        (sha256
         (base32
-         "0127dgldij2h4m7cf32yy9ndv4vcz03g4km71lmxrsi5mw7ljgpd"))
+         "0cagx7687r5ln7pmzl60akjhjpyqd62z9zhfr2mqfk53wl9jbsbj"))
        (patches (search-patches "crawl-upgrade-saves.patch"))))
     (build-system gnu-build-system)
     (inputs
@@ -4438,7 +4783,7 @@ fabulous Orb of Zot.")
        ("sdl2-mixer" ,sdl2-mixer)))
     (native-inputs
      `(,@(package-native-inputs crawl)
-       ;; TODO: Add advpng or pngcrush for additional PNG optimization.
+       ("pngcrush" ,pngcrush)
        ("which" ,which)))
     (synopsis "Graphical roguelike dungeon crawler game")))
 
@@ -4687,9 +5032,8 @@ at their peak of economic growth and military prowess.
          (modify-phases %standard-phases
            (replace 'configure
              (lambda* (#:key inputs outputs #:allow-other-keys)
-               ;; At this point linenoise is meant to be included,
-               ;; so we have to really copy it into the working directory
-               ;; of s.
+               ;; Linenoise is meant to be included, so we have to
+               ;; copy it into the working directory.
                (let* ((linenoise (assoc-ref inputs "linenoise"))
                       (noisepath (string-append linenoise "/include/linenoise"))
                       (out (assoc-ref outputs "out")))
@@ -4847,3 +5191,160 @@ abilities and powers.  With a modern graphical and customisable interface,
 intuitive mouse control, streamlined mechanics and deep, challenging combat,
 Tales of Maj’Eyal offers engaging roguelike gameplay for the 21st century.")
     (license license:gpl3+)))
+
+(define-public quakespasm
+  (package
+    (name "quakespasm")
+    (version "0.93.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "mirror://sourceforge/quakespasm/Source/quakespasm-"
+                           version ".tgz"))
+       (sha256
+        (base32
+         "0b2nz7w4za32pc34r62ql270z692qcjs2pm0i3svkxkvfammhdfq"))))
+    (arguments
+     `(#:tests? #f
+       #:make-flags '("CC=gcc"
+                      "MP3LIB=mpg123"
+                      "USE_CODEC_FLAC=1"
+                      "USE_CODEC_MIKMOD=1"
+                      "USE_SDL2=1"
+                      "-CQuake")
+       #:phases (modify-phases %standard-phases
+                  (delete 'configure)
+                  (add-after 'unpack 'fix-makefile-paths
+                    (lambda* (#:key outputs #:allow-other-keys)
+                      (let ((out (assoc-ref outputs "out")))
+                        (mkdir-p (string-append out "/bin"))
+                        (substitute* "Quake/Makefile"
+                          (("/usr/local/games")
+                           (string-append out "/bin")))
+                        #t))))))
+    (build-system gnu-build-system)
+    (inputs `(("libmikmod" ,libmikmod)
+              ("libvorbis" ,libvorbis)
+              ("flac" ,flac)
+              ("mesa" ,mesa)
+              ("mpg123" ,mpg123)
+              ("sdl2" ,sdl2)))
+    (synopsis "First person shooter engine for Quake 1")
+    (description "Quakespasm is a modern engine for id software's Quake 1.
+It includes support for 64 bit CPUs, custom music playback, a new sound driver,
+some graphical niceities, and numerous bug-fixes and other improvements.")
+    (home-page "http://quakespasm.sourceforge.net/")
+    (license license:gpl2+)))
+
+(define-public yamagi-quake2
+  (package
+    (name "yamagi-quake2")
+    (version "7.10")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://deponie.yamagi.org/quake2/quake2-"
+                           version ".tar.xz"))
+       (sha256
+        (base32
+         "0psinbg25mysd58k99s1n34w31w5hj1vppb39gdjb0zqi6sl6cps"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f
+       #:make-flags
+       (list "CC=gcc"
+             ;; link openAL instead of using dlopen at runtime
+             "DLOPEN_OPENAL=\"no\""
+             ;; an optional directory where it will look for quake2 data files
+             ;; in addition to the current working directory
+             "WITH_SYSTEMWIDE=yes"
+             "WITH_SYSTEMDIR=\"/opt/quake2\"")
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out")))
+               (mkdir-p (string-append out "/lib"))
+               (mkdir-p (string-append out "/bin"))
+               ;; The yamagi-quake2 binary must be in the same directory
+               ;; as it's engine libraries, but symlinking it to /bin is okay
+               ;; https://github.com/yquake2/yquake2/blob/master/stuff/packaging.md
+               (copy-recursively "release"
+                                 (string-append out "/lib/yamagi-quake2"))
+               (symlink (string-append out "/lib/yamagi-quake2/quake2")
+                        (string-append out "/bin/yamagi-quake2"))
+               (symlink (string-append out "/lib/yamagi-quake2/q2ded")
+                        (string-append out "/bin/yamagi-q2ded"))))))))
+    (inputs `(("sdl2" ,sdl2)
+              ("mesa" ,mesa)
+              ("libvorbis" ,libvorbis)
+              ("zlib" ,zlib)
+              ("openal" ,openal)))
+    (native-inputs `(("pkg-config" ,pkg-config)))
+    (synopsis "First person shooter engine based on quake2")
+    (description "Yamagi Quake II is an enhanced client for id Software's Quake II.
+The main focus is an unchanged single player experience like back in 1997,
+thus the gameplay and the graphics are unaltered.  However the user may use one
+of the unofficial retexturing packs.  In comparison with the official client,
+over 1000 bugs were fixed and an extensive code audit done,
+making Yamagi Quake II one of the most solid Quake II implementations available.")
+    (home-page "https://www.yamagi.org/quake2/")
+    (license (list license:gpl2+         ; game and server
+                   (license:non-copyleft ; info-zip
+                    "file://LICENSE"
+                    "See Info-Zip section.")
+                   license:public-domain)))) ; stb
+
+(define-public the-butterfly-effect
+  (package
+    (name "the-butterfly-effect")
+    (version "0.9.3.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "https://github.com/the-butterfly-effect/tbe/archive/"
+             "v" version ".tar.gz"))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32
+         "18qkp7fgdvyl3haqqa693mgyic7afsznsxgz98z9wn4csaqxsnby"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         ;; There is no "install" phase.  By default, tbe is installed
+         ;; in the build directory.  Provide our own installation.
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (bin (string-append out "/bin"))
+                    (share (string-append out "/share")))
+               (install-file "usr/games/tbe" bin)
+               (mkdir-p share)
+               (copy-recursively "usr/share" share)
+               #t))))
+       ;; Test suite requires a running Xorg server. Even when
+       ;; provided, it fails with "D-Bus library appears to be
+       ;; incorrectly set up; failed to read machine uuid: Failed to
+       ;; open "/etc/machine-id": No such file or directory" along
+       ;; with multiple "QPainter:: ... Painter not active" warnings.
+       #:tests? #f))
+    (inputs
+     `(("qtbase" ,qtbase)
+       ("qtsvg" ,qtsvg)))
+    (native-inputs
+     `(("cmake" ,cmake)
+       ("gettext-minimal" ,gettext-minimal)
+       ("qttools" ,qttools)))
+    (synopsis "Realistic physics puzzle game")
+    (description "The Butterfly Effect (tbe) is a game that uses
+realistic physics simulations to combine lots of simple mechanical
+elements to achieve a simple goal in the most complex way possible.")
+    (home-page "http://the-butterfly-effect.org/")
+    ;; Main license is GPL2-only.  However, artwork is distributed
+    ;; under various licenses, listed here.
+    (license (list license:gpl2 license:public-domain license:expat
+                   license:cc-by-sa3.0 license:gpl3+ license:wtfpl2))))

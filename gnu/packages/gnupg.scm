@@ -1,17 +1,18 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2012, 2013, 2014, 2015, 2016 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2012, 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2013, 2015 Andreas Enge <andreas@enge.fr>
 ;;; Copyright © 2014 Eric Bavier <bavier@member.fsf.org>
 ;;; Copyright © 2014, 2015, 2016 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2015 Paul van der Walt <paul@denknerd.org>
 ;;; Copyright © 2015, 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
-;;; Copyright © 2015, 2016 Ricardo Wurmus <rekado@elephly.net>
+;;; Copyright © 2015, 2016, 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2016 Christopher Allan Webber <cwebber@dustycloud.org>
-;;; Copyright © 2016 ng0 <ng0@we.make.ritual.n0.is>
+;;; Copyright © 2016, 2017 ng0 <ng0@infotropique.org>
 ;;; Copyright © 2016 Christopher Baines <mail@cbaines.net>
 ;;; Copyright © 2016 Mike Gerwitz <mtg@gnu.org>
 ;;; Copyright © 2016 Troy Sankey <sankeytms@gmail.com>
 ;;; Copyright © 2017 Leo Famulari <leo@famulari.name>
+;;; Copyright © 2017 Petter <petter@mykolab.ch>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -38,6 +39,7 @@
   #:use-module (gnu packages crypto)
   #:use-module (gnu packages openldap)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages perl-check)
   #:use-module (gnu packages pth)
   #:use-module (gnu packages python)
   #:use-module (gnu packages qt)
@@ -52,6 +54,9 @@
   #:use-module (gnu packages security-token)
   #:use-module (gnu packages swig)
   #:use-module (gnu packages tls)
+  #:use-module (gnu packages tor)
+  #:use-module (gnu packages web)
+  #:use-module (gnu packages xml)
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix git-download)
@@ -135,7 +140,7 @@ generation.")
 (define-public libassuan
   (package
     (name "libassuan")
-    (version "2.4.3")
+    (version "2.5.1")
     (source
      (origin
       (method url-fetch)
@@ -143,10 +148,11 @@ generation.")
                           version ".tar.bz2"))
       (sha256
        (base32
-        "0w9bmasln4z8mn16s1is55a06w3nv8jbyal496z5jvr5vcxkm112"))))
+        "0jb4nb4nrjr949gd3lw8lh4v5d6qigxaq6xwy24w5apjnhvnrya7"))))
     (build-system gnu-build-system)
     (propagated-inputs
-     `(("libgpg-error" ,libgpg-error) ("pth" ,pth)))
+     `(("libgpg-error" ,libgpg-error)
+       ("pth" ,pth)))
     (home-page "https://gnupg.org")
     (synopsis
      "IPC library used by GnuPG and related software")
@@ -220,14 +226,14 @@ compatible to GNU Pth.")
 (define-public gnupg
   (package
     (name "gnupg")
-    (version "2.2.0")
+    (version "2.2.4")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://gnupg/gnupg/gnupg-" version
                                   ".tar.bz2"))
               (sha256
                (base32
-                "1rj538kp3wsdq7rhl8sy1wpwhlsbxcch0cwk64kgz8gpw05lllfl"))))
+                "1v7j8v2ww1knknbrhw3svfrqkmf9ll58iq0dczbsdpqgg1j3w6j0"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("pkg-config" ,pkg-config)))
@@ -335,7 +341,8 @@ libskba (working with X.509 certificates and CMS data).")
                 ;; Keep the old name around to ease transition.
                 (symlink "gpgv" "gpgv2")
                 (symlink "gpg" "gpg2")
-                #t)))))))))
+                #t)))))))
+   (properties `((superseded . ,gnupg)))))
 
 (define-public gnupg-1
   (package (inherit gnupg)
@@ -375,12 +382,13 @@ libskba (working with X.509 certificates and CMS data).")
        (base32
         "1ssc0gs02r4fasabk7c6v6r865k2j02mpb5g1vkpbmzsigdzwa8v"))))
     (build-system gnu-build-system)
+    (native-inputs
+     `(("gnupg" ,gnupg)))
     (propagated-inputs
      ;; Needs to be propagated because gpgme.h includes gpg-error.h.
      `(("libgpg-error" ,libgpg-error)))
     (inputs
-     `(("gnupg" ,gnupg-2.0)
-       ("libassuan" ,libassuan)))
+     `(("libassuan" ,libassuan)))
     (arguments
      `(#:phases
        (modify-phases %standard-phases
@@ -486,9 +494,10 @@ distributed separately.")
            (lambda _
              (zero? (system* "make" "check")))))))
     (build-system python-build-system)
+    (native-inputs
+     `(("gnupg" ,gnupg-1)))
     (inputs
-     `(("gnupg" ,gnupg-2.0)
-       ("gpgme" ,gpgme)))
+     `(("gpgme" ,gpgme)))
     (home-page "https://launchpad.net/pygpgme")
     (synopsis "Python module for working with OpenPGP messages")
     (description
@@ -543,37 +552,37 @@ and signature functionality from Python programs.")
   (package
     (name "perl-gnupg-interface")
     (version "0.52")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append
-             "mirror://cpan/authors/id/A/AL/ALEXMV/GnuPG-Interface-"
-             version
-             ".tar.gz"))
-       (sha256
-        (base32
-         "0dgx8yhdsmhkazcrz14n4flrk1afv7azgl003hl4arxvi1d9yyi4"))))
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://cpan/authors/id/A/AL/ALEXMV/"
+                                  "GnuPG-Interface-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0dgx8yhdsmhkazcrz14n4flrk1afv7azgl003hl4arxvi1d9yyi4"))))
     (build-system perl-build-system)
     (arguments
-     '(;; Result: FAIL
-       ;; Failed 10/20 test programs. 21/52 subtests failed.
-       #:tests? #f))
-    (native-inputs
-     `(("perl-module-install" ,perl-module-install)
-       ("which" ,which)))
+     `(#:phases
+       (modify-phases %standard-phases
+         ;; FIXME: This test fails for unknown reasons
+         (add-after 'unpack 'delete-broken-test
+           (lambda _
+             (delete-file "t/encrypt_symmetrically.t")
+             #t)))))
     (inputs
-     `(("gnupg" ,gnupg)))
+     `(("gnupg" ,gnupg-1)))
     (propagated-inputs
      `(("perl-moo" ,perl-moo)
-       ("perl-moox-late" ,perl-moox-late)
-       ("perl-moox-handlesvia" ,perl-moox-handlesvia)))
-    (home-page "http://search.cpan.org/~alexmv/GnuPG-Interface/")
+       ("perl-moox-handlesvia" ,perl-moox-handlesvia)
+       ("perl-moox-late" ,perl-moox-late)))
+    (native-inputs
+     `(("which" ,which)
+       ("perl-module-install" ,perl-module-install)))
+    (home-page "http://search.cpan.org/dist/GnuPG-Interface/")
     (synopsis "Perl interface to GnuPG")
-    (description
-     "@code{GnuPG::Interface} and its associated modules are designed to
-provide an object-oriented method for interacting with GnuPG, being able to
-perform functions such as but not limited to encrypting, signing, decryption,
-verification, and key-listing parsing.")
+    (description "@code{GnuPG::Interface} and its associated modules are
+designed to provide an object-oriented method for interacting with GnuPG,
+being able to perform functions such as but not limited to encrypting,
+signing, decryption, verification, and key-listing parsing.")
     (license license:perl-license)))
 
 (define-public pius
@@ -722,14 +731,14 @@ including tools for signing keys, keyring analysis, and party preparation.
 (define-public pinentry-tty
   (package
     (name "pinentry-tty")
-    (version "1.0.0")
+    (version "1.1.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://gnupg/pinentry/pinentry-"
                                   version ".tar.bz2"))
               (sha256
                (base32
-                "0ni7g4plq6x78p32al7m8h2zsakvg1rhfz0qbc3kdc7yq7nw4whn"))))
+                "0w35ypl960pczg5kp6km3dyr000m1hf0vpwwlh72jjkjza36c1v8"))))
     (build-system gnu-build-system)
     (arguments
      `(#:configure-flags '("--enable-pinentry-tty")))
@@ -744,7 +753,10 @@ including tools for signing keys, keyring analysis, and party preparation.
     (description
      "Pinentry provides a console that allows users to enter a passphrase when
 @code{gpg} is run and needs it.")
-    (license license:gpl2+)))
+    (license license:gpl2+)
+    (properties '((ftp-server . "ftp.gnupg.org")
+                  (ftp-directory . "/gcrypt/pinentry")
+                  (upstream-name . "pinentry")))))
 
 (define-public pinentry-gtk2
   (package
@@ -822,3 +834,118 @@ qualities.  To reconstruct a secret key, you re-enter those
 bytes (whether by hand, OCR, QR code, or the like) and paperkey can use
 them to transform your existing public key into a secret key.")
     (license license:gpl2+)))
+
+(define-public gpa
+  (package
+    (name "gpa")
+    (version "0.9.10")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://gnupg/gpa/"
+                                  name "-" version ".tar.bz2"))
+              (sha256
+               (base32
+                "09xphbi2456qynwqq5n0yh0zdmdi2ggrj3wk4hsyh5lrzlvcrff3"))))
+    (build-system gnu-build-system)
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (inputs
+     `(("gnupg" ,gnupg)
+       ("gpgme" ,gpgme)
+       ("libassuan" ,libassuan)
+       ("libgpg-error" ,libgpg-error)
+       ("gtk+-2" ,gtk+-2)))
+    (home-page "https://gnupg.org/software/gpa/")
+    (synopsis "Graphical user interface for GnuPG")
+    (description
+     "GPA, the GNU Privacy Assistant, is a graphical user interface for
+@uref{https://gnupg.org, GnuPG}.  It can be used to encrypt, decrypt, and sign
+files, to verify signatures, and to manage the private and public keys.")
+    (license license:gpl3+)))
+
+(define-public parcimonie
+  (package
+    (name "parcimonie")
+    (version "0.10.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://gaffer.ptitcanardnoir.org/"
+                                  "intrigeri/files/parcimonie/App-Parcimonie-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1kf891117s1f3k6lxvbjdb21va9gxh29vlp9bd664ssgw266rcyb"))))
+    (build-system perl-build-system)
+    (inputs
+     `(("gnupg" ,gnupg-1)    ; This is the version used by perl-gnupg-interface
+       ("perl-config-general" ,perl-config-general)
+       ("perl-clone" ,perl-clone)
+       ("perl-data" ,perl-data)
+       ("perl-exporter-tiny" ,perl-exporter-tiny)
+       ("perl-file-homedir" ,perl-file-homedir)
+       ("perl-file-sharedir" ,perl-file-sharedir)
+       ("perl-file-which" ,perl-file-which)
+       ("perl-getopt-long-descriptive" ,perl-getopt-long-descriptive)
+       ("perl-gnupg-interface" ,perl-gnupg-interface)
+       ("perl-ipc-system-simple" ,perl-ipc-system-simple)
+       ("perl-list-moreutils" ,perl-list-moreutils)
+       ("perl-libintl-perl" ,perl-libintl-perl) ; Locale::TextDomain
+       ("perl-lwp-online" ,perl-lwp-online)
+       ("perl-module-build" ,perl-module-build)
+       ("perl-module-pluggable-object" ,perl-module-pluggable)
+       ("perl-moo" ,perl-moo)
+       ("perl-moox-handlesvia" ,perl-moox-handlesvia)
+       ("perl-moox-late" ,perl-moox-late)
+       ("perl-moox-options" ,perl-moox-options)
+       ("perl-namespace-clean" ,perl-namespace-clean)
+       ("perl-net-dbus" ,perl-net-dbus)
+       ("perl-net-dbus-glib" ,perl-net-dbus-glib)
+       ("perl-path-tiny" ,perl-path-tiny)
+       ("perl-test-most" ,perl-test-most)
+       ("perl-test-trap" ,perl-test-trap)
+       ("perl-time-duration" ,perl-time-duration)
+       ("perl-time-duration-parse" ,perl-time-duration-parse)
+       ("perl-try-tiny" ,perl-try-tiny)
+       ("perl-type-tiny" ,perl-type-tiny)
+       ("perl-types-path-tiny" ,perl-types-path-tiny)
+       ("perl-unicode-linebreak" ,perl-unicode-linebreak)
+       ("perl-xml-parser" ,perl-xml-parser)
+       ("perl-xml-twig" ,perl-xml-twig)
+       ("torsocks" ,torsocks)))
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         ;; Needed for using gpg-connect-agent during tests.
+         (add-before 'check 'set-HOME
+           (lambda _ (setenv "HOME" "/tmp") #t))
+         (add-before 'install 'fix-references
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (substitute* "lib/App/Parcimonie/GnuPG/Interface.pm"
+               (("gpg2") "gpg")
+               ;; Skip check whether dependencies are in the PATH
+               (("defined which.*") "")
+               (("call\\('parcimonie-torified-gpg'\\)")
+                (string-append "call('" (assoc-ref outputs "out")
+                               "/bin/parcimonie-torified-gpg')")))
+             (substitute* "bin/parcimonie-torified-gpg"
+               (("torsocks") (string-append (assoc-ref inputs "torsocks")
+                                            "/bin/torsocks")))
+             #t))
+         (add-after 'install 'wrap-program
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (perllib (string-append out "/lib/perl5/site_perl/"
+                                            ,(package-version perl))))
+               (wrap-program (string-append out "/bin/parcimonie")
+                 `("PERL5LIB" ":"
+                   prefix (,(string-append perllib ":" (getenv "PERL5LIB")))))
+               #t))))))
+    (home-page "https://gaffer.ptitcanardnoir.org/intrigeri/code/parcimonie/")
+    (synopsis "Incrementally refreshes a GnuPG keyring")
+    (description "Parcimonie incrementaly refreshes a GnuPG keyring in a way
+that makes it hard to correlate the keyring content to an individual, and
+makes it hard to locate an individual based on an identifying subset of her
+keyring content.  Parcimonie is a daemon that fetches one key at a time using
+the Tor network, waits a bit, changes the Tor circuit being used, and starts
+over.")
+    (license license:gpl1+)))

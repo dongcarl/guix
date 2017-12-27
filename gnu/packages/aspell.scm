@@ -2,9 +2,9 @@
 ;;; Copyright © 2013, 2014, 2015, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2015, 2016 Alex Kost <alezost@gmail.com>
 ;;; Copyright © 2016 John Darrington <jmd@gnu.org>
-;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
+;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 Christopher Andersson <christopher@8bits.nu>
-;;; Copyright © 2016 Theodoros Foradis <theodoros.for@openmailbox.org>
+;;; Copyright © 2016 Theodoros Foradis <theodoros@foradis.org>
 ;;; Copyright © 2016, 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
@@ -28,8 +28,9 @@
   #:use-module (guix build-system gnu)
   #:use-module (guix licenses)
   #:use-module (gnu packages)
-  #:use-module (gnu packages perl)
-  #:use-module (gnu packages base))
+  #:use-module (gnu packages base)
+  #:use-module (gnu packages compression)
+  #:use-module (gnu packages perl))
 
 (define-public aspell
   (package
@@ -115,6 +116,13 @@ dictionaries, including personal ones.")
     (home-page "http://aspell.net/")))
 
 
+(define-public aspell-dict-ca
+  (aspell-dictionary "ca" "Catalan"
+                     #:version "2.1.5-1"
+                     #:sha256
+                     (base32
+                      "1fb5y5kgvk25nlsfvc8cai978hg66x3pbp9py56pldc7vxzf9npb")))
+
 (define-public aspell-dict-de
   (aspell-dictionary "de" "German"
                      #:version "20030222-1"
@@ -122,12 +130,20 @@ dictionaries, including personal ones.")
                      (base32
                       "01p92qj66cqb346gk7hjfynaap5sbcn85xz07kjfdq623ghr8v5s")))
 
-(define-public aspell-dict-en
-  (aspell-dictionary "en" "English"
-                     #:version "2017.01.22-0"
+(define-public aspell-dict-el
+  (aspell-dictionary "el" "Greek"
+                     #:version "0.08-0"
+                     #:prefix "aspell6-"
                      #:sha256
                      (base32
-                      "1qamzpw1fsnn5n9jpsnnnzqj1a0m0xvsikmkdp5a6pmb7sp3ziwk")))
+                      "1ljcc30zg2v2h3w5h5jr5im41mw8jbsgvvhdd2cii2yzi8d0zxja")))
+
+(define-public aspell-dict-en
+  (aspell-dictionary "en" "English"
+                     #:version "2017.08.24-0"
+                     #:sha256
+                     (base32
+                      "0z2vvm1by485cm0sna21cmw6zb771c2l2lnn676zmrwm46q65d89")))
 
 (define-public aspell-dict-eo
   (aspell-dictionary "eo" "Esperanto"
@@ -151,12 +167,19 @@ dictionaries, including personal ones.")
                      (base32
                       "14ffy9mn5jqqpp437kannc3559bfdrpk7r36ljkzjalxa53i0hpr")))
 
-(define-public aspell-dict-ru
-  (aspell-dictionary "ru" "Russian"
-                     #:version "0.99f7-1"
+(define-public aspell-dict-grc
+  (aspell-dictionary "grc" "Ancient Greek"
+                     #:version "0.02-0"
                      #:sha256
                      (base32
-                      "0ip6nq43hcr7vvzbv4lwwmlwgfa60hrhsldh9xy3zg2prv6bcaaw")))
+                      "1zxr8958v37v260fkqd4pg37ns5h5kyqm54hn1hg70wq5cz8h512")))
+
+(define-public aspell-dict-he
+  (aspell-dictionary "he" "Hebrew"
+                     #:version "1.0-0"
+                     #:sha256
+                     (base32
+                      "13bhbghx5b8g0119g3wxd4n8mlf707y41vlf59irxjj0kynankfn")))
 
 (define-public aspell-dict-it
   (aspell-dictionary "it" "Italian"
@@ -173,12 +196,20 @@ dictionaries, including personal ones.")
                      (base32
                       "0ffb87yjsh211hllpc4b9khqqrblial4pzi1h9r3v465z1yhn3j4")))
 
-(define-public aspell-dict-he
-  (aspell-dictionary "he" "Hebrew"
-                     #:version "1.0-0"
+(define-public aspell-dict-pt-br
+  (aspell-dictionary "pt-br" "Brazilian Portuguese"
+                     #:version "20090702-0"
+                     #:prefix "aspell6-"
                      #:sha256
                      (base32
-                      "13bhbghx5b8g0119g3wxd4n8mlf707y41vlf59irxjj0kynankfn")))
+                      "1y09lx9zf2rnp55r16b2vgj953l3538z1vaqgflg9mdvm555bz3p")))
+
+(define-public aspell-dict-ru
+  (aspell-dictionary "ru" "Russian"
+                     #:version "0.99f7-1"
+                     #:sha256
+                     (base32
+                      "0ip6nq43hcr7vvzbv4lwwmlwgfa60hrhsldh9xy3zg2prv6bcaaw")))
 
 (define-public aspell-dict-sv
   (aspell-dictionary "sv" "Swedish"
@@ -188,25 +219,105 @@ dictionaries, including personal ones.")
                      (base32
                       "02jwkjhr32kvyibnyzgx3smbnm576jwdzg3avdf6zxwckhy5fw4v")))
 
-(define-public aspell-dict-el
-  (aspell-dictionary "el" "Greek"
-                     #:version "0.08-0"
-                     #:prefix "aspell6-"
-                     #:sha256
-                     (base32
-                      "1ljcc30zg2v2h3w5h5jr5im41mw8jbsgvvhdd2cii2yzi8d0zxja")))
+
+;;;
+;;; Hunspell packages made from the Aspell word lists.
+;;;
 
-(define-public aspell-dict-grc
-  (aspell-dictionary "grc" "Ancient Greek"
-                     #:version "0.02-0"
-                     #:sha256
-                     (base32
-                      "1zxr8958v37v260fkqd4pg37ns5h5kyqm54hn1hg70wq5cz8h512")))
+(define* (aspell-word-list language synopsis
+                           #:optional
+                           (nick (string-map (lambda (chr)
+                                               (if (char=? #\_ chr)
+                                                   #\-
+                                                   chr))
+                                             (string-downcase language))))
+  (package
+    (name (string-append "hunspell-dict-" nick))
+    (version "2017.08.24")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "http://downloads.sourceforge.net/wordlist/scowl-"
+                    version ".tar.gz"))
+              (sha256
+               (base32
+                "1kdhydzg5z5x20ad2j1x5hbdhvy08ljkfdi2v3gbyvghbagxm15s"))))
+    (native-inputs
+     `(("tar" ,tar)
+       ("gzip" ,gzip)
+       ("perl" ,perl)
+       ("aspell" ,aspell)))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (delete 'check)
+         (replace 'build
+           (lambda _
+             (substitute* "speller/make-hunspell-dict"
+               (("zip -9 .*$")
+                "return\n"))
+             (mkdir "speller/hunspell")
 
-(define-public aspell-dict-pt-br
-  (aspell-dictionary "pt-br" "Brazilian Portuguese"
-                     #:version "20090702-0"
-                     #:prefix "aspell6-"
-                     #:sha256
-                     (base32
-                      "1y09lx9zf2rnp55r16b2vgj953l3538z1vaqgflg9mdvm555bz3p")))
+             ;; XXX: This actually builds all the dictionary variants.
+             (zero? (system* "make" "-C" "speller" "hunspell"))))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out      (assoc-ref %outputs "out"))
+                    (hunspell (string-append out "/share/hunspell"))
+                    (myspell  (string-append out "/share/myspell"))
+                    (doc      (string-append out "/share/doc/"
+                                             ,name)))
+               (mkdir-p myspell)
+               (install-file ,(string-append "speller/" language ".dic")
+                             hunspell)
+               (install-file ,(string-append "speller/" language ".aff")
+                             hunspell)
+               (symlink hunspell (string-append myspell "/dicts"))
+               (for-each (lambda (file)
+                           (install-file file doc))
+                         (find-files "."
+                                     "^(Copyright|.*\\.(txt|org|md))$"))
+               #t))))))
+    (synopsis synopsis)
+    (description
+     "This package provides a dictionary for the Hunspell spell-checking
+library.")
+    (home-page "http://wordlist.aspell.net/")
+    (license (non-copyleft "file://Copyright"
+                           "Word lists come from several sources, all
+under permissive licensing terms.  See the 'Copyright' file."))))
+
+(define-syntax define-word-list-dictionary
+  (syntax-rules (synopsis)
+    ((_ name language (synopsis text))
+     (define-public name
+       (aspell-word-list language text)))
+    ((_ name language nick (synopsis text))
+     (define-public name
+       (aspell-word-list language text nick)))))
+
+(define-word-list-dictionary hunspell-dict-en
+  "en"
+  (synopsis "Hunspell dictionary for English"))
+
+(define-word-list-dictionary hunspell-dict-en-au
+  "en_AU"
+  (synopsis "Hunspell dictionary for Australian English"))
+
+(define-word-list-dictionary hunspell-dict-en-ca
+  "en_CA"
+  (synopsis "Hunspell dictionary for Canadian English"))
+
+(define-word-list-dictionary hunspell-dict-en-gb
+  "en_GB-ise" "en-gb"
+  (synopsis "Hunspell dictionary for British English, with -ise endings"))
+
+(define-word-list-dictionary hunspell-dict-en-gb-ize
+  "en_GB-ize"
+  (synopsis "Hunspell dictionary for British English, with -ize endings"))
+
+(define-word-list-dictionary hunspell-dict-en-us
+  "en_US"
+  (synopsis "Hunspell dictionary for United States English"))

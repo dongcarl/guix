@@ -34,6 +34,7 @@
   #:use-module (gnu packages crypto)
   #:use-module (gnu packages cups)
   #:use-module (gnu packages databases)
+  #:use-module (gnu packages docbook)
   #:use-module (gnu packages tls)
   #:use-module (gnu packages popt)
   #:use-module (gnu packages pkg-config)
@@ -42,7 +43,8 @@
   #:use-module (gnu packages kerberos)
   #:use-module (gnu packages linux)
   #:use-module (gnu packages perl)
-  #:use-module (gnu packages python))
+  #:use-module (gnu packages python)
+  #:use-module (gnu packages xml))
 
 (define-public cifs-utils
   (package
@@ -149,18 +151,29 @@ anywhere.")
 (define-public samba
   (package
     (name "samba")
-    (version "4.6.7")
+    (version "4.7.3")
     (source (origin
              (method url-fetch)
              (uri (string-append "https://download.samba.org/pub/samba/stable/"
                                  "samba-" version ".tar.gz"))
              (sha256
               (base32
-               "1ynxndfk45zkkylz3jsrx42a7kmm42jddk5bdhihyf88vs9l7wly"))))
+               "0b7xbfjpg7l1lz13gvj4ifcp9j3cvfp6pswjbq03z06bl4n1br06"))))
     (build-system gnu-build-system)
     (arguments
-     '(#:phases
+     `(#:phases
        (modify-phases %standard-phases
+         (add-before 'configure 'locate-docbook-stylesheets
+           (lambda* (#:key inputs #:allow-other-keys)
+             ;; XXX for some reason XML_CATALOG_FILES is not respected.
+             (substitute* '("buildtools/wafsamba/samba_conftests.py"
+                            "buildtools/wafsamba/wafsamba.py"
+                            "docs-xml/xslt/man.xsl")
+               (("http://docbook.sourceforge.net/release/xsl/current/")
+                (string-append (assoc-ref inputs "docbook-xsl")
+                               "/xml/xsl/docbook-xsl-"
+                               ,(package-version docbook-xsl) "/")))
+             #t))
          (replace 'configure
            ;; samba uses a custom configuration script that runs waf.
            (lambda* (#:key outputs #:allow-other-keys)
@@ -203,7 +216,9 @@ anywhere.")
        ("tevent" ,tevent)
        ("tdb" ,tdb)))
     (native-inputs
-     `(("perl" ,perl)
+     `(("docbook-xsl" ,docbook-xsl)    ;for generating manpages
+       ("xsltproc" ,libxslt)           ;ditto
+       ("perl" ,perl)
        ("pkg-config" ,pkg-config)
        ("python" ,python-2))) ; incompatible with Python 3
     (home-page "https://www.samba.org/")
@@ -296,14 +311,14 @@ destructors.  It is the core memory allocator used in Samba.")
 (define-public tevent
   (package
     (name "tevent")
-    (version "0.9.33")
+    (version "0.9.34")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://www.samba.org/ftp/tevent/tevent-"
                                   version ".tar.gz"))
               (sha256
                (base32
-                "1p0vxmldk99xpp7i4y6kpb75f8m7hxyv5bzkspy9hhpxh7ljww92"))))
+                "12kvfjs0dwi4iqbz740a37z0c7kmg8bhl53mwdj02jkznbw3w8bk"))))
     (build-system gnu-build-system)
     (arguments
      '(#:phases
@@ -331,14 +346,14 @@ many event types, including timers, signals, and the classic file descriptor eve
 (define-public ldb
   (package
     (name "ldb")
-    (version "1.1.31")
+    (version "1.3.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://www.samba.org/ftp/ldb/ldb-"
                                   version ".tar.gz"))
               (sha256
                (base32
-                "0ipbz9m50dkancq0dbz12q815nkknbsp2i3sxpsqhmmknlm3xm84"))))
+                "03arsnsbkxb2d811pbarb7d12yg8g05f1q576z48sp647dd3xda4"))))
     (build-system gnu-build-system)
     (arguments
      '(#:phases

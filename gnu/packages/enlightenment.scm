@@ -2,7 +2,7 @@
 ;;; Copyright © 2015 Tomáš Čech <sleep_walker@suse.cz>
 ;;; Copyright © 2015 Daniel Pimentel <d4n1@member.fsf.org>
 ;;; Copyright © 2015, 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
-;;; Copyright © 2017 ng0 <ng0@no-reply.pragmatique.xyz>
+;;; Copyright © 2017 ng0 <ng0@infotropique.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -59,7 +59,7 @@
 (define-public efl
   (package
     (name "efl")
-    (version "1.20.3")
+    (version "1.20.6")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -67,7 +67,7 @@
                     version ".tar.xz"))
               (sha256
                (base32
-                "148i8awjdrqzd0xqfc6q4qvhhs46jl15nx7n2nii7lrwzx502wqj"))))
+                "1h9jkb1pkp2g6ld7ra9mxgblx3x5id4162ja697klx9mfjkpxijn"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("pkg-config" ,pkg-config)))
@@ -255,7 +255,7 @@ Libraries with some extra bells and whistles.")
 (define-public enlightenment
   (package
     (name "enlightenment")
-    (version "0.21.9")
+    (version "0.22.1")
     (source (origin
               (method url-fetch)
               (uri
@@ -263,7 +263,7 @@ Libraries with some extra bells and whistles.")
                               name "/" name "-" version ".tar.xz"))
               (sha256
                (base32
-                "0w5f3707hyfc20i6xqh4jlr5p2yhy1z794061mjsz2rp4w00qmpb"))))
+                "1q57fz57d0b26z06m1wiq7c1sniwh885b0vs02mk4jgwva46nyr0"))))
     (build-system gnu-build-system)
     (arguments
      `(#:configure-flags '("--enable-mount-eeze")

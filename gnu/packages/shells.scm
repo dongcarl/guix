@@ -3,10 +3,10 @@
 ;;; Copyright © 2014, 2015 David Thompson <davet@gnu.org>
 ;;; Copyright © 2014 Kevin Lemonnier <lemonnierk@ulrar.net>
 ;;; Copyright © 2015 Jeff Mickey <j@codemac.net>
-;;; Copyright © 2016 Tobias Geerinckx-Rice <me@tobias.gr>
+;;; Copyright © 2016, 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2016 Stefan Reichör <stefan@xsteve.at>
 ;;; Copyright © 2017 Ricardo Wurmus <rekado@elephly.net>
-;;; Copyright © 2017 ng0 <ng0@infotropique.org>
+;;; Copyright © 2017 ng0 <ng0@n0.is>
 ;;; Copyright © 2017 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2017 Arun Isaac <arunisaac@systemreboot.net>
 ;;;
@@ -88,14 +88,19 @@ direct descendant of NetBSD's Almquist Shell (@command{ash}).")
 (define-public fish
   (package
     (name "fish")
-    (version "2.6.0")
+    (version "2.7.1")
     (source (origin
               (method url-fetch)
-              (uri (string-append "https://fishshell.com/files/"
-                                  version "/fish-" version ".tar.gz"))
+              (uri
+               (list
+                (string-append "https://fishshell.com/files/"
+                               version "/fish-" version ".tar.gz")
+                (string-append "https://github.com/fish-shell/fish-shell/"
+                               "releases/download/" version "/"
+                               name "-" version ".tar.gz")))
               (sha256
                (base32
-                "1yzx73kg5ng5ivhi68756sl5hpb8869110l9fwim6gn7f7bbprby"))
+                "0nhc3yc5lnnan7zmxqqxm07rdpwjww5ijy45ll2njdc6fnfb2az4"))
               (modules '((guix build utils)))
               ;; Don't try to install /etc/fish/config.fish.
               (snippet
@@ -134,25 +139,25 @@ direct descendant of NetBSD's Almquist Shell (@command{ash}).")
 discoverability, and friendliness.  Fish has very user-friendly and powerful
 tab-completion, including descriptions of every completion, completion of
 strings with wildcards, and many completions for specific commands.  It also
-has extensive and discoverable help.  A special help command gives access to
-all the fish documentation in your web browser.  Other features include smart
-terminal handling based on terminfo, an easy to search history, and syntax
-highlighting.")
+has extensive and discoverable help.  A special @command{help} command gives
+access to all the fish documentation in your web browser.  Other features
+include smart terminal handling based on terminfo, an easy to search history,
+and syntax highlighting.")
     (home-page "https://fishshell.com/")
     (license gpl2)))
 
 (define-public fish-guix
   (package
     (name "fish-guix")
-    (version "0.1.1")
+    (version "0.1.2.1")
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "https://dist.infotropique.org/fish-guix/"
+       (uri (string-append "https://d.n0.is/releases/fish-guix/"
                            name "-" version ".tar.xz"))
        (sha256
         (base32
-         "0xi0j9lvzh43lrj82gz52n2cjln0i0pgayngrg4hy5w4449biy0z"))))
+         "0k71hcn7nr523w74jw2i68x52s9hv6vmasnvnn7yr3xxvzn4kqgf"))))
     (build-system gnu-build-system)
     (arguments
      `(#:tests? #f ; No checks.
@@ -161,11 +166,11 @@ highlighting.")
        #:phases
        (modify-phases %standard-phases
          (delete 'configure)))) ; No configure script.
-    (home-page "https://www.infotropique.org/projects/fish-guix/")
+    (home-page "https://n0.is/s/fish-guix/")
     (synopsis "Fish completions for Guix")
     (description
      "Fish-guix provides completions for Guix for users of the fish shell.")
-    (license public-domain)))
+    (license bsd-3)))
 
 (define-public rc
   (package
@@ -312,7 +317,7 @@ history mechanism, job control and a C-like syntax.")
 (define-public zsh
   (package
     (name "zsh")
-    (version "5.2")
+    (version "5.4.2")
     (source (origin
               (method url-fetch)
               (uri (list (string-append
@@ -323,7 +328,7 @@ history mechanism, job control and a C-like syntax.")
                            ".tar.gz")))
               (sha256
                (base32
-                "0dsr450v8nydvpk8ry276fvbznlrjgddgp7zvhcw4cv69i9lr4ps"))))
+                "1jdcfinzmki2w963msvsanv29vqqfmdfm4rncwpw0r3zqnrcsywm"))))
     (build-system gnu-build-system)
     (arguments `(#:configure-flags '("--with-tcsetpgrp" "--enable-pcre")
                  #:phases
@@ -346,7 +351,17 @@ history mechanism, job control and a C-like syntax.")
                                           "Test/B02typeset.ztst"
                                           "Completion/Unix/Command/_init_d"
                                           "Util/preconfig")
-                                      (("/bin/sh") (which "sh")))))))))
+                                      (("/bin/sh") (which "sh"))))))
+                   (add-before 'check 'patch-test
+                     (lambda _
+                       ;; In Zsh, `command -p` searches a predefined set of
+                       ;; paths that don't exist in the build environment. See
+                       ;; the assignment of 'path' in Src/init.c'
+                       (substitute* "Test/A01grammar.ztst"
+                         (("command -pv") "command -v")
+                         (("command -p") "command ")
+                         (("'command' -p") "'command' "))
+                       #t)))))
     (native-inputs `(("autoconf" ,autoconf)))
     (inputs `(("ncurses" ,ncurses)
               ("pcre" ,pcre)
@@ -496,11 +511,11 @@ Its features include:
       (license bsd-2))))
 
 (define-public s-shell
-  (let ((commit "6604341edb3a775ff94415762af3ee9bd86bfb3c")
-        (revision "1"))
+  (let ((commit "da2e5c20c0c5f477ec3426dc2584889a789b1659")
+        (revision "2"))
     (package
       (name "s-shell")
-      (version (string-append "0.0.0-" revision "." (string-take commit 7)))
+      (version (git-version "0.0.0" revision commit))
       (source
        (origin
          (method git-fetch)
@@ -510,13 +525,15 @@ Its features include:
          (file-name (string-append name "-" version "-checkout"))
          (sha256
           (base32
-           "1075cml6dl15d770j3m12yz90cjacsdslbv3gank1nxd76vmpdcr"))))
+           "0qiny71ww5nhzy4mnc8652hn0mlxyb67h333gbdxp4j4qxsi13q4"))))
       (build-system gnu-build-system)
       (inputs
        `(("linenoise" ,linenoise)))
       (arguments
        `(#:tests? #f
-         #:make-flags (list "CC=gcc")
+         #:make-flags (list "CC=gcc"
+                            (string-append "PREFIX="
+                                           (assoc-ref %outputs "out")))
          #:phases
          (modify-phases %standard-phases
            (add-after 'unpack 'install-directory-fix

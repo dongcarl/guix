@@ -3,6 +3,7 @@
 ;;; Copyright © 2015 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2016 Andreas Enge <andreas@enge.fr>
 ;;; Copyright © 2017 Marius Bakke <mbakke@fastmail.com>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -21,6 +22,7 @@
 
 (define-module (gnu system install)
   #:use-module (gnu)
+  #:use-module (gnu bootloader u-boot)
   #:use-module (guix gexp)
   #:use-module (guix store)
   #:use-module (guix monads)
@@ -42,7 +44,8 @@
   #:use-module (gnu packages nvi)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-26)
-  #:export (installation-os))
+  #:export (installation-os
+            beaglebone-black-installation-os))
 
 ;;; Commentary:
 ;;;
@@ -109,19 +112,6 @@ manual."
   "Return a gexp that makes the store copy-on-write, using TARGET as the
 backing store.  This is useful when TARGET is on a hard disk, whereas the
 current store is on a RAM disk."
-  (define (unionfs read-only read-write mount-point)
-    ;; Make MOUNT-POINT the union of READ-ONLY and READ-WRITE.
-
-    ;; Note: in the command below, READ-WRITE appears before READ-ONLY so that
-    ;; it is considered a "higher-level branch", as per unionfs-fuse(8),
-    ;; thereby allowing files existing on READ-ONLY to be copied over to
-    ;; READ-WRITE.
-    #~(fork+exec-command
-       (list (string-append #$unionfs-fuse "/bin/unionfs")
-             "-o"
-             "cow,allow_other,use_ino,max_files=65536,nonempty"
-             (string-append #$read-write "=RW:" #$read-only "=RO")
-             #$mount-point)))
 
   (define (set-store-permissions directory)
     ;; Set the right perms on DIRECTORY to use it as the store.
@@ -135,23 +125,21 @@ current store is on a RAM disk."
         (mkdir-p tmpdir)
         (mount tmpdir "/tmp" "none" MS_BIND))
 
-      (unless (file-exists? "/.ro-store")
-        (mkdir "/.ro-store")
-        (mount #$(%store-prefix) "/.ro-store" "none"
-               (logior MS_BIND MS_RDONLY)))
-
-      (let ((rw-dir (string-append target #$%backing-directory)))
+      (let* ((rw-dir (string-append target #$%backing-directory))
+             (work-dir (string-append rw-dir "/../.overlayfs-workdir")))
         (mkdir-p rw-dir)
+        (mkdir-p work-dir)
         (mkdir-p "/.rw-store")
         #$(set-store-permissions #~rw-dir)
         #$(set-store-permissions "/.rw-store")
 
-        ;; Mount the union, then atomically make it the store.
-        (and #$(unionfs "/.ro-store" #~rw-dir "/.rw-store")
-             (begin
-               (sleep 1) ;XXX: wait for unionfs to be ready
-               (mount "/.rw-store" #$(%store-prefix) "" MS_MOVE)
-               (rmdir "/.rw-store"))))))
+        ;; Mount the overlay, then atomically make it the store.
+        (mount "none" "/.rw-store" "overlay" 0
+               (string-append "lowerdir=" #$(%store-prefix) ","
+                              "upperdir=" rw-dir ","
+                              "workdir=" work-dir))
+        (mount "/.rw-store" #$(%store-prefix) "" MS_MOVE)
+        (rmdir "/.rw-store"))))
 
 (define cow-store-service-type
   (shepherd-service-type
@@ -205,9 +193,11 @@ the user's target storage device rather than on the RAM disk."
                                                 (string-append #$output "/"
                                                                target)))
                                    '(#$(file "bare-bones.tmpl")
+                                     #$(file "beaglebone-black.tmpl")
                                      #$(file "desktop.tmpl")
                                      #$(file "lightweight-desktop.tmpl"))
                                    '("bare-bones.scm"
+                                     "beaglebone-black.scm"
                                      "desktop.scm"
                                      "lightweight-desktop.scm"))
                          #t))))
@@ -240,13 +230,13 @@ the user's target storage device rather than on the RAM disk."
 (define %installation-services
   ;; List of services of the installation system.
   (let ((motd (plain-file "motd" "
-Welcome to the installation of the Guix System Distribution!
+\x1b[1;37mWelcome to the installation of the Guix System Distribution!\x1b[0m
 
-There is NO WARRANTY, to the extent permitted by law.  In particular, you may
+\x1b[2mThere is NO WARRANTY, to the extent permitted by law.  In particular, you may
 LOSE ALL YOUR DATA as a side effect of the installation process.  Furthermore,
 it is 'beta' software, so it may contain bugs.
 
-You have been warned.  Thanks for being so brave.
+You have been warned.  Thanks for being so brave.\x1b[0m
 ")))
     (define (normal-tty tty)
       (mingetty-service (mingetty-configuration (tty tty)
@@ -298,10 +288,12 @@ You have been warned.  Thanks for being so brave.
           ;; since it takes the installation directory as an argument.
           (cow-store-service)
 
-          ;; Install Unicode support and a suitable font.
+          ;; Install Unicode support and a suitable font.  Use a font that
+          ;; doesn't have more than 256 glyphs so that we can use colors with
+          ;; varying brightness levels (see note in setfont(8)).
           (service console-font-service-type
                    (map (lambda (tty)
-                          (cons tty %default-console-font))
+                          (cons tty "lat9u-16"))
                         '("tty1" "tty2" "tty3" "tty4" "tty5" "tty6")))
 
           ;; To facilitate copy/paste.
@@ -315,9 +307,12 @@ You have been warned.  Thanks for being so brave.
                     ;; The root account is passwordless, so make sure
                     ;; a password is set before allowing logins.
                     (allow-empty-passwords? #f)
-                    (password-authentication? #t)))
+                    (password-authentication? #t)
 
-          ;; Since this is running on a USB stick with a unionfs as the root
+                    ;; Don't start it upfront.
+                    (%auto-start? #f)))
+
+          ;; Since this is running on a USB stick with a overlayfs as the root
           ;; file system, use an appropriate cache configuration.
           (nscd-service (nscd-configuration
                          (caches %nscd-minimal-caches)))
@@ -329,15 +324,21 @@ You have been warned.  Thanks for being so brave.
                                               "/bin/sh"))))
 
           ;; Keep a reference to BARE-BONES-OS to make sure it can be
-          ;; installed without downloading/building anything.
-          (service gc-root-service-type (list bare-bones-os)))))
+          ;; installed without downloading/building anything.  Also keep the
+          ;; things needed by 'profile-derivation' to minimize the amount of
+          ;; download.
+          (service gc-root-service-type
+                   (list bare-bones-os
+                         glibc-utf8-locales
+                         texinfo
+                         (canonical-package guile-2.2))))))
 
 (define %issue
   ;; Greeting.
   "
-This is an installation image of the GNU system.  Welcome.
+\x1b[1;37mThis is an installation image of the GNU system.  Welcome.\x1b[0m
 
-Use Alt-F2 for documentation.
+\x1b[1;33mUse Alt-F2 for documentation.\x1b[0m
 ")
 
 (define installation-os
@@ -346,7 +347,9 @@ Use Alt-F2 for documentation.
     (host-name "gnu")
     (timezone "Europe/Paris")
     (locale "en_US.utf8")
-    (bootloader (grub-configuration (target "/dev/sda")))
+    (bootloader (bootloader-configuration
+                 (bootloader grub-bootloader)
+                 (target "/dev/sda")))
     (file-systems
      ;; Note: the disk image build code overrides this root file system with
      ;; the appropriate one.
@@ -356,10 +359,12 @@ Use Alt-F2 for documentation.
               (title 'label)
               (type "ext4"))
 
-            ;; Make /tmp a tmpfs instead of keeping the unionfs.  This is
-            ;; because FUSE creates '.fuse_hiddenXYZ' files for each open file,
-            ;; and this confuses Guix's test suite, for instance.  See
-            ;; <http://bugs.gnu.org/23056>.
+            ;; Make /tmp a tmpfs instead of keeping the overlayfs.  This
+            ;; originally was used for unionfs because FUSE creates
+            ;; '.fuse_hiddenXYZ' files for each open file, and this confuses
+            ;; Guix's test suite, for instance (see
+            ;; <http://bugs.gnu.org/23056>).  We keep this for overlayfs to be
+            ;; on the safe side.
             (file-system
               (mount-point "/tmp")
               (device "none")
@@ -409,7 +414,30 @@ Use Alt-F2 for documentation.
                      nvi                          ;:wq!
                      %base-packages))))
 
-;; Return it here so 'guix system' can consume it directly.
+(define beaglebone-black-installation-os
+  (operating-system
+    (inherit installation-os)
+    (bootloader (bootloader-configuration
+                 (bootloader u-boot-beaglebone-black-bootloader)
+                 (target "/dev/sda")))
+    (kernel linux-libre)
+    (initrd (lambda (fs . rest)
+              (apply base-initrd fs
+                     ;; This module is required to mount the sd card.
+                     #:extra-modules (list "omap_hsmmc")
+                     rest)))
+    (services (append
+               ;; mingetty does not work on serial lines.
+               ;; Use agetty with board-specific serial parameters.
+               (list (agetty-service
+                      (agetty-configuration
+                       (extra-options '("-L"))
+                       (baud-rate "115200")
+                       (term "vt100")
+                       (tty "ttyO0"))))
+               (operating-system-user-services installation-os)))))
+
+;; Return the default os here so 'guix system' can consume it directly.
 installation-os
 
 ;;; install.scm ends here

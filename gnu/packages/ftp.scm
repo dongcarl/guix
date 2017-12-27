@@ -2,7 +2,7 @@
 ;;; Copyright © 2014, 2015 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2015 Andreas Enge <andreas@enge.fr>
 ;;; Copyright © 2015 Mark H Weaver <mhw@netris.org>
-;;; Copyright © 2016 Tobias Geerinckx-Rice <me@tobias.gr>
+;;; Copyright © 2016, 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2017 Rene Saavedra <rennes@openmailbox.org>
 ;;;
 ;;; This file is part of GNU Guix.
@@ -46,7 +46,7 @@
 (define-public lftp
   (package
     (name "lftp")
-    (version "4.8.1")
+    (version "4.8.3")
     (source (origin
               (method url-fetch)
               ;; See https://lftp.tech/get.html for mirrors.
@@ -58,7 +58,7 @@
                                         "ftp/lftp/lftp-" version ".tar.xz")))
               (sha256
                (base32
-                "09vvwn5w3n8ahx57b7n6qvg1abnw9w7mm4d8p381pliab6jxlw77"))))
+                "12y77jlfs4x4zvcah92mw2h2sb4j0bvbaxkh3wwsm8gs392ywyny"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("pkg-config" ,pkg-config)))
@@ -173,7 +173,7 @@ as required.")
 (define-public libfilezilla
   (package
     (name "libfilezilla")
-    (version "0.10.1")
+    (version "0.11.1")
     (source
      (origin
        (method url-fetch)
@@ -181,7 +181,7 @@ as required.")
                            name "/" name "-" version ".tar.bz2"))
        (sha256
         (base32
-         "1yi9db0hpxh3giyjhkbz7ajmf95qw27xdvh3xvw208zri5k575x0"))))
+         "1xv4is3zaz66h6iblj9pikapsjasjcbxx31bhkgn62xdq1sadfpc"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("cppunit" ,cppunit)

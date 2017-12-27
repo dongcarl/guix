@@ -4,6 +4,7 @@
 ;;; Copyright © 2015, 2017 Sou Bunnbu <iyzsong@member.fsf.org>
 ;;; Copyright © 2015 Alex Kost <alezost@gmail.com>
 ;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
+;;; Copyright © 2017 Rutger Helling <rhelling@mykolab.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -28,11 +29,13 @@
   #:use-module ((guix licenses) #:hide (freetype))
   #:use-module (guix packages)
   #:use-module (guix download)
+  #:use-module (guix utils)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system trivial)
   #:use-module (gnu packages audio)
   #:use-module (gnu packages fcitx)
   #:use-module (gnu packages fontutils)
+  #:use-module (gnu packages freedesktop)
   #:use-module (gnu packages glib)
   #:use-module (gnu packages guile)
   #:use-module (gnu packages ibus)
@@ -42,6 +45,7 @@
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages pulseaudio)
   #:use-module (gnu packages gl)
+  #:use-module (gnu packages xdisorg)
   #:use-module (gnu packages xiph)
   #:use-module (gnu packages xorg)
   #:export (sdl-union))
@@ -83,6 +87,7 @@
               ("glu" ,glu)
               ("alsa-lib" ,alsa-lib)
               ("pulseaudio" ,pulseaudio)))
+    (outputs '("out" "debug"))
     (synopsis "Cross platform game development library")
     (description "Simple DirectMedia Layer is a cross-platform development
 library designed to provide low level access to audio, keyboard, mouse,
@@ -93,7 +98,7 @@ joystick, and graphics hardware.")
 (define-public sdl2
   (package (inherit sdl)
     (name "sdl2")
-    (version "2.0.5")
+    (version "2.0.7")
     (source (origin
              (method url-fetch)
              (uri
@@ -101,7 +106,12 @@ joystick, and graphics hardware.")
                              version ".tar.gz"))
              (sha256
               (base32
-               "11c75qj1qxmx67iwkvf9z4x69phk301pdn86zzr6jncnap7kh824"))))
+               "0pjdpxla5kh1w1b0shxrx97a116vyy31njxi0jhyvqhk8d6cfdgf"))))
+    (arguments
+     (substitute-keyword-arguments (package-arguments sdl)
+       ((#:configure-flags flags)
+        `(append '("--disable-wayland-shared")
+                 ,flags))))
     (inputs
      ;; SDL2 needs to be built with ibus support otherwise some systems
      ;; experience a bug where input events are doubled.
@@ -110,7 +120,10 @@ joystick, and graphics hardware.")
      (append `(("dbus" ,dbus)
                ("fcitx" ,fcitx) ; helps with CJK input
                ("glib" ,glib)
-               ("ibus" ,ibus))
+               ("ibus" ,ibus)
+               ("libxkbcommon", libxkbcommon)
+               ("wayland", wayland)
+               ("wayland-protocols", wayland-protocols))
              (package-inputs sdl)))
     (license bsd-3)))
 
@@ -157,6 +170,7 @@ system, such as sound redirection over the network.")
                (base32
                 "0ijljhs0v99dj6y27hc10z6qchyp8gdp4199y6jzngy6dzxlzsvw"))))
     (build-system gnu-build-system)
+    (outputs '("out" "debug"))
     (arguments
      `(,@(if (any (cute string-prefix? <> (or (%current-system)
                                               (%current-target-system)))
@@ -184,6 +198,7 @@ other supporting functions for SDL.")
               (base32
                "16an9slbb8ci7d89wakkmyfvp7c0cval8xw4hkg0842nhhlp540b"))))
     (build-system gnu-build-system)
+    (outputs '("out" "debug"))
     (arguments
      ;; Explicitly link against shared libraries instead of dlopening them.
      '(#:configure-flags '("--disable-jpg-shared"
@@ -220,6 +235,7 @@ WEBP, XCF, XPM, and XV.")
                (base32
                 "0alrhqgm40p4c92s26mimg9cm1y7rzr6m0p49687jxd9g6130i0n"))))
     (build-system gnu-build-system)
+    (outputs '("out" "debug"))
     ;; no check target
     ;; use libmad instead of smpeg
     ;; explicitly link against shared libraries instead of dlopening them
@@ -260,6 +276,7 @@ MIDI, Ogg Vorbis, and MP3.")
     (build-system gnu-build-system)
     (propagated-inputs `(("sdl" ,sdl)))
     (native-inputs `(("pkg-config" ,pkg-config)))
+    (outputs '("out" "debug"))
     (synopsis "SDL networking library")
     (description "SDL_net is a small, cross-platform networking library for
 SDL.")
@@ -283,6 +300,7 @@ SDL.")
     (inputs `(("freetype" ,freetype)
               ("mesa" ,mesa)))
     (native-inputs `(("pkg-config" ,pkg-config)))
+    (outputs '("out" "debug"))
     (synopsis "SDL TrueType font library")
     (description "SDL_ttf is a TrueType font rendering library for SDL.")
     (home-page "https://www.libsdl.org/projects/SDL_ttf/")
@@ -397,38 +415,60 @@ directory.")
        ("xorg-server" ,xorg-server)
        ("libjpeg" ,libjpeg)))
     (inputs
-     `(("guile" ,guile-2.0)
+     `(("guile" ,guile-2.2)
        ("sdl-union" ,(sdl-union))))
     (arguments
      '(#:configure-flags
        (list (string-append "--with-sdl-prefix="
                             (assoc-ref %build-inputs "sdl-union")))
-       #:parallel-build? #f ; parallel build fails
-       #:phases
-       (alist-cons-before
-        'configure 'fix-env-and-patch
-        (lambda* (#:key inputs #:allow-other-keys)
-          (setenv "GUILE_AUTO_COMPILE" "0")
-          ;; SDL_image needs to dlopen libjpeg in the test suite.
-          (setenv "LD_LIBRARY_PATH"
-                  (string-append (assoc-ref inputs "libjpeg") "/lib"))
-          ;; Change the site directory /site/2.0 like Guile expects.
-          (substitute* "build-aux/guile-baux/re-prefixed-site-dirs"
-            (("\"/site\"") "\"/site/2.0\""))
+       #:modules ((ice-9 popen)
+                  (guix build utils)
+                  (guix build gnu-build-system))
 
-          ;; Skip tests that rely on sound support, which is unavailable in
-          ;; the build environment.
-          (substitute* "test/Makefile.in"
-            (("HAVE_MIXER = .*$")
-             "HAVE_MIXER = 0\n")))
-        (alist-cons-before
-         'check 'start-xorg-server
-         (lambda* (#:key inputs #:allow-other-keys)
-           ;; The test suite requires a running X server.
-           (system (format #f "~a/bin/Xvfb :1 &"
-                           (assoc-ref inputs "xorg-server")))
-           (setenv "DISPLAY" ":1"))
-         %standard-phases))))
+       #:parallel-build? #f ; parallel build fails
+
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'fix-env-and-patch
+           (lambda* (#:key inputs #:allow-other-keys)
+             (setenv "GUILE_AUTO_COMPILE" "0")
+             ;; SDL_image needs to dlopen libjpeg in the test suite.
+             (setenv "LD_LIBRARY_PATH"
+                     (string-append (assoc-ref inputs "libjpeg") "/lib"))
+
+             ;; Change the site directory /site/X.Y like Guile expects.
+             (substitute* "build-aux/guile-baux/re-prefixed-site-dirs"
+               (("\"/site\"")
+                (let ((effective
+                       (read
+                        (open-pipe* OPEN_READ
+                                    "guile" "-c"
+                                    "(write (effective-version))"))))
+                  (string-append "\"/site/" effective "\""))))
+
+             ;; Skip tests that rely on sound support, which is unavailable in
+             ;; the build environment.
+             (substitute* "test/Makefile.in"
+               (("HAVE_MIXER = .*$")
+                "HAVE_MIXER = 0\n"))
+             #t))
+         (add-before 'check 'start-xorg-server
+           (lambda* (#:key inputs #:allow-other-keys)
+             ;; The test suite requires a running X server.
+             (system (format #f "~a/bin/Xvfb :1 &"
+                             (assoc-ref inputs "xorg-server")))
+             (setenv "DISPLAY" ":1")
+             #t))
+         (add-before 'check 'skip-cursor-test
+           (lambda _
+             ;; XXX: This test sometimes enters an endless loop, and sometimes
+             ;; crashes with:
+             ;;   guile: xcb_io.c:147: append_pending_request: Assertion `!xcb_xlib_unknown_seq_number' failed.
+             ;; Skip it.
+             (substitute* "test/cursor.scm"
+               (("\\(SDL:init .*" all)
+                (string-append "(exit 77)  ;" all "\n")))
+             #t)))))
     (synopsis "Guile interface for SDL (Simple DirectMedia Layer)")
     (description "Guile-SDL is a set of bindings to the Simple DirectMedia
 Layer (SDL).  With them, Guile programmers can have easy access to graphics,

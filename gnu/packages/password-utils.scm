@@ -12,6 +12,9 @@
 ;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2017 Jelle Licht <jlicht@fsfe.org>
 ;;; Copyright © 2017 Eric Bavier <bavier@member.fsf.org>
+;;; Copyright © 2017 Nicolas Goaziou <mail@nicolasgoaziou.fr>
+;;; Copyright © 2017 Manolis Fragkiskos Ragkousis <manolis837@gmail.com>
+;;; Copyright © 2017 Rutger Helling <rhelling@mykolab.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -38,6 +41,7 @@
   #:use-module (gnu packages admin)
   #:use-module (gnu packages aidc)
   #:use-module (gnu packages base)
+  #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages freedesktop)
   #:use-module (gnu packages glib)
@@ -46,12 +50,14 @@
   #:use-module (gnu packages gtk)
   #:use-module (gnu packages guile)
   #:use-module (gnu packages kerberos)
+  #:use-module (gnu packages libffi)
   #:use-module (gnu packages linux)
   #:use-module (gnu packages man)
   #:use-module (gnu packages multiprecision)
   #:use-module (gnu packages ncurses)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages suckless)
   #:use-module (gnu packages tls)
   #:use-module (gnu packages qt)
   #:use-module (gnu packages version-control)
@@ -82,7 +88,7 @@ human.")
 (define-public keepassxc
   (package
     (name "keepassxc")
-    (version "2.2.0")
+    (version "2.2.4")
     (source
      (origin
        (method url-fetch)
@@ -91,8 +97,12 @@ human.")
                            version "-src.tar.xz"))
        (sha256
         (base32
-         "0nby6aq6w8g7c9slzahf7i34sbj8majf8rhmqqww87v6kaypxi3i"))))
+         "1pfkq1m5vb90kx67vyw70s1hc4ivjsvq2535vm6wdwwsncna6bz5"))))
     (build-system cmake-build-system)
+    (arguments
+     `(#:configure-flags
+       (list (string-append "-DCMAKE_INSTALL_LIBDIR="
+                            (assoc-ref %outputs "out") "/lib"))))
     (inputs
      `(("libgcrypt" ,libgcrypt)
        ("libxi" ,libxi)
@@ -342,6 +352,20 @@ any X11 window.")
        (modify-phases %standard-phases
          (delete 'configure)
          (delete 'build)
+         (add-before 'install 'patch-passmenu-path
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "contrib/dmenu/passmenu"
+               (("dmenu") (string-append (assoc-ref inputs "dmenu")
+                                         "/bin/dmenu"))
+               (("xdotool") (string-append (assoc-ref inputs "xdotool")
+                                           "/bin/xdotool")))
+             #t))
+         (add-after 'install 'install-passmenu
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out")))
+               (copy-file "contrib/dmenu/passmenu"
+                          (string-append out "/bin/passmenu"))
+               #t)))
          (add-after 'install 'wrap-path
            (lambda* (#:key inputs outputs #:allow-other-keys)
              (let ((out (assoc-ref outputs "out"))
@@ -367,14 +391,16 @@ any X11 window.")
        #:parallel-tests? #f
        #:test-target "test"))
     (inputs
-     `(("getopt" ,util-linux)
+     `(("dmenu" ,dmenu)
+       ("getopt" ,util-linux)
        ("git" ,git)
        ("gnupg" ,gnupg)
        ("qrencode" ,qrencode)
        ("sed" ,sed)
        ("tree" ,tree)
        ("which" ,which)
-       ("xclip" ,xclip)))
+       ("xclip" ,xclip)
+       ("xdotool" ,xdotool)))
     (home-page "http://www.passwordstore.org/")
     (synopsis "Encrypted password manager")
     (description "Password-store is a password manager which uses GnuPG to

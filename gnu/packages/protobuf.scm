@@ -2,6 +2,8 @@
 ;;; Copyright © 2014 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2016 Daniel Pimentel <d4n1@d4n1.org>
 ;;; Copyright © 2016 Leo Famulari <leo@famulari.name>
+;;; Copyright © 2017 Ricardo Wurmus <rekado@elephly.net>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -23,15 +25,92 @@
   #:use-module (guix download)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system python)
-  #:use-module ((guix licenses)
-                #:select (bsd-3))
+  #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages gcc)
+  #:use-module (gnu packages libevent)
+  #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python))
+
+(define-public fstrm
+  (package
+    (name "fstrm")
+    (version "0.3.2")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://dl.farsightsecurity.com/dist/" name "/"
+                           name "-" version ".tar.gz"))
+       (sha256
+        (base32
+         "1i9y8a1712aj80p5a1kcp378bnjrg3s2127q7304hklhmjcrjl1d"))))
+    (build-system gnu-build-system)
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (inputs
+     `(("libevent" ,libevent)))
+    (home-page "https://github.com/farsightsec/fstrm")
+    (synopsis "Implementation of the Frame Streams data transport protocol")
+    (description
+     "fstrm is an optimised implementation of Frame Streams as a C library and
+several tools built on top of it.
+
+@dfn{Frame Streams} is a light-weight, binary-clean protocol that allows for
+the transport of arbitrarily-encoded data payload sequences with minimal
+framing overhead---just four bytes per data frame.  It does not specify an
+encoding format for these data frames and can be used with any data
+serialisation format that produces byte sequences, such as Protocol Buffers,
+XML, JSON, MessagePack, YAML, etc.
+
+Frame Streams can be used either as a streaming transport over a reliable byte
+stream socket (TCP sockets, TLS connections, @code{AF_UNIX} sockets, etc.) for
+data in motion, or as a file format for data at rest.")
+    (license (list license:asl2.0
+                   (license:non-copyleft #f "See libmy/argv*")))))
 
 (define-public protobuf
   (package
     (name "protobuf")
+    (version "3.5.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/google/protobuf/releases/"
+                                  "download/v" version "/protobuf-cpp-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "14j0427ykjzrd9a66c2mpk0sjcccjlsx6q8ww6hzwb6sha3vm3f2"))))
+    (build-system gnu-build-system)
+    (inputs `(("zlib" ,zlib)))
+    (outputs (list "out"
+                   "static"))           ; ~12 MiB of .a files
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-after 'install 'move-static-libraries
+           (lambda* (#:key outputs #:allow-other-keys)
+             ;; Move static libraries to the "static" output.
+             (let* ((out    (assoc-ref outputs "out"))
+                    (lib    (string-append out "/lib"))
+                    (static (assoc-ref outputs "static"))
+                    (slib   (string-append static "/lib")))
+               (mkdir-p slib)
+               (for-each (lambda (file)
+                           (install-file file slib)
+                           (delete-file file))
+                         (find-files lib "\\.a$"))
+               #t))))))
+    (home-page "https://github.com/google/protobuf")
+    (synopsis "Data encoding for remote procedure calls (RPCs)")
+    (description
+     "Protocol Buffers are a way of encoding structured data in an efficient
+yet extensible format.  Google uses Protocol Buffers for almost all of its
+internal RPC protocols and file formats.")
+    (license license:bsd-3)))
+
+;; XXX Remove this old version when no other packages depend on it.
+(define-public protobuf-2
+  (package (inherit protobuf)
     (version "2.6.1")
     (source (origin
               (method url-fetch)
@@ -40,28 +119,44 @@
                                   version ".tar.bz2"))
               (sha256
                (base32
-                "040rcs9fpv4bslhiy43v7dcrzakz4vwwpyqg4jp8bn24sl95ci7f"))))
+                "040rcs9fpv4bslhiy43v7dcrzakz4vwwpyqg4jp8bn24sl95ci7f"))))))
+
+(define-public protobuf-c
+  (package
+    (name "protobuf-c")
+    (version "1.3.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/protobuf-c/protobuf-c/"
+                                  "releases/download/v" version
+                                  "/protobuf-c-" version ".tar.gz"))
+              (sha256
+               (base32
+                "18aj4xfv26zjmj44zbb01wk90jl7y4aj5xvbzz4gg748kdxavjax"))))
     (build-system gnu-build-system)
-    (inputs `(("zlib" ,zlib)))
-    (home-page "https://github.com/google/protobuf")
-    (synopsis "Data encoding for remote procedure calls (RPCs)")
+    (inputs `(("protobuf" ,protobuf)))
+    (native-inputs `(("pkg-config" ,pkg-config)))
+    (home-page "https://github.com/protobuf-c/protobuf-c")
+    (synopsis "Protocol Buffers implementation in C")
     (description
-     "Protocol Buffers are a way of encoding structured data in an efficient
-yet extensible format.  Google uses Protocol Buffers for almost all of its
-internal RPC protocols and file formats.")
-    (license bsd-3)))
+     "This is protobuf-c, a C implementation of the Google Protocol Buffers
+data serialization format.  It includes @code{libprotobuf-c}, a pure C library
+that implements protobuf encoding and decoding, and @code{protoc-c}, a code
+generator that converts Protocol Buffer @code{.proto} files to C descriptor
+code.")
+    (license license:bsd-2)))
 
 (define-public python-protobuf
   (package
     (name "python-protobuf")
-    (version "3.0.0")
+    (version "3.4.0")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri "protobuf" version))
        (sha256
         (base32
-         "1xbgbfg4g43bihkyw1a2giqa2gxmqc5wkh0fzqcb90qi1z1hpi7c"))))
+         "0x33xz85cy5ilg1n2rn92l4qwlcw25vzysx2ldv7k625yjg600pg"))))
     (build-system python-build-system)
     (propagated-inputs
      `(("python-six" ,python-six)))
@@ -70,7 +165,7 @@ internal RPC protocols and file formats.")
     (description
      "Protocol buffers are a language-neutral, platform-neutral extensible
 mechanism for serializing structured data.")
-    (license bsd-3)))
+    (license license:bsd-3)))
 
 (define-public python2-protobuf
   (package-with-python2 python-protobuf))

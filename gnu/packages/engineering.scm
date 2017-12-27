@@ -4,7 +4,7 @@
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 David Thompson <davet@gnu.org>
 ;;; Copyright © 2016, 2017 Ludovic Courtès <ludo@gnu.org>
-;;; Copyright © 2016, 2017 Theodoros Foradis <theodoros.for@openmailbox.org>
+;;; Copyright © 2016, 2017 Theodoros Foradis <theodoros@foradis.org>
 ;;; Copyright © 2017 Julien Lepiller <julien@lepiller.eu>
 ;;;
 ;;; This file is part of GNU Guix.
@@ -30,6 +30,7 @@
   #:use-module (guix monads)
   #:use-module (guix store)
   #:use-module (guix utils)
+  #:use-module ((srfi srfi-1) #:hide (zip))
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix build-system cmake)
   #:use-module (guix build-system gnu)
@@ -41,10 +42,12 @@
   #:use-module (gnu packages bison)
   #:use-module (gnu packages boost)
   #:use-module (gnu packages check)
+  #:use-module (gnu packages commencement)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages curl)
   #:use-module (gnu packages flex)
   #:use-module (gnu packages fontutils)
+  #:use-module (gnu packages fpga)
   #:use-module (gnu packages freedesktop)
   #:use-module (gnu packages gcc)
   #:use-module (gnu packages gd)
@@ -53,6 +56,7 @@
   #:use-module (gnu packages gl)
   #:use-module (gnu packages glib)
   #:use-module (gnu packages gnome)
+  #:use-module (gnu packages gperf)
   #:use-module (gnu packages gtk)
   #:use-module (gnu packages guile)
   #:use-module (gnu packages image)
@@ -61,6 +65,7 @@
   #:use-module (gnu packages m4)
   #:use-module (gnu packages maths)
   #:use-module (gnu packages multiprecision)
+  #:use-module (gnu packages mpi)
   #:use-module (gnu packages ncurses)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages pkg-config)
@@ -91,24 +96,50 @@
     (arguments
      '(#:phases
        (modify-phases %standard-phases
-        (add-after 'unpack 'patch-paths
-         (lambda* (#:key outputs #:allow-other-keys)
-           (let ((out (assoc-ref outputs "out")))
-             (substitute* "librecad/src/lib/engine/rs_system.cpp"
-               (("/usr/share") (string-append out "/share"))))))
-        (replace 'configure
-         (lambda* (#:key inputs #:allow-other-keys)
-           (system* "qmake" (string-append "BOOST_DIR="
-                                           (assoc-ref inputs "boost")))))
-        (replace 'install
-         (lambda* (#:key outputs #:allow-other-keys)
-           (let* ((out   (assoc-ref outputs "out"))
-                  (bin   (string-append out "/bin"))
-                  (share (string-append out "/share/librecad")))
-             (mkdir-p bin)
-             (install-file "unix/librecad" bin)
-             (mkdir-p share)
-             (copy-recursively "unix/resources" share)))))))
+         ;; Without this patch boost complains that "make_array" is not a
+         ;; member of "boost::serialization".
+         (add-after 'unpack 'patch-boost-error
+           (lambda _
+             (substitute* "librecad/src/lib/math/lc_quadratic.h"
+               (("#include \"rs_vector.h\"" line)
+                (string-append line
+                               "\n#include <boost/serialization/array_wrapper.hpp>")))
+             (substitute* "librecad/src/lib/math/rs_math.cpp"
+               (("#include <boost/numeric/ublas/matrix.hpp>" line)
+                (string-append "#include <boost/serialization/array_wrapper.hpp>\n"
+                               line)))
+             #t))
+         (add-after 'unpack 'patch-paths
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out")))
+               (substitute* "librecad/src/lib/engine/rs_system.cpp"
+                 (("/usr/share") (string-append out "/share"))))))
+         (replace 'configure
+           (lambda* (#:key inputs #:allow-other-keys)
+             (system* "qmake" (string-append "BOOST_DIR="
+                                             (assoc-ref inputs "boost")))))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out   (assoc-ref outputs "out"))
+                    (bin   (string-append out "/bin"))
+                    (share (string-append out "/share/librecad")))
+               (mkdir-p bin)
+               (install-file "unix/librecad" bin)
+               (mkdir-p share)
+               (copy-recursively "unix/resources" share))
+             #t))
+         ;; Ensure that icons are found at runtime
+         (add-after 'install 'wrap-executable
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (qt '("qtbase" "qtsvg")))
+               (wrap-program (string-append out "/bin/librecad")
+                 `("QT_PLUGIN_PATH" ":" prefix
+                   ,(map (lambda (label)
+                           (string-append (assoc-ref inputs label)
+                                          "/lib/qt5/plugins/"))
+                         qt)))
+               #t))))))
     (inputs
      `(("boost" ,boost)
        ("muparser" ,muparser)
@@ -180,39 +211,46 @@ utilities.")
 (define-public pcb
   (package
     (name "pcb")
-    (version "4.0.0")
+    (version "4.0.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://sourceforge/pcb/pcb/pcb-" version
                                   "/pcb-" version ".tar.gz"))
               (sha256
                (base32
-                "1i6sk8g8h9avms142wl07yv20m1cm4c3fq3v6hybrhdxs2n17plf"))))
+                "1a7rilp75faidny0r4fdwdxkflyrqp6svxv9lbg7h868293962iz"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
-       (alist-cons-after
-        'unpack 'use-wish8.6
-        (lambda _
-          (substitute* "configure"
-            (("wish85") "wish8.6")))
-        (alist-cons-after
-         'install 'wrap
-         (lambda* (#:key inputs outputs #:allow-other-keys)
-           ;; FIXME: Mesa tries to dlopen libudev.so.0 and fails.  Pending a
-           ;; fix of the mesa package we wrap the pcb executable such that
-           ;; Mesa can find libudev.so.0 through LD_LIBRARY_PATH.
-           (let* ((out (assoc-ref outputs "out"))
-                  (path (string-append (assoc-ref inputs "udev") "/lib")))
-             (wrap-program (string-append out "/bin/pcb")
-               `("LD_LIBRARY_PATH" ":" prefix (,path)))))
-         (alist-cons-before
-          'check 'pre-check
-          (lambda _
-            (system "Xvfb :1 &")
-            (setenv "DISPLAY" ":1")
-            #t)
-          %standard-phases)))))
+       (modify-phases %standard-phases
+         (add-after 'unpack 'use-wish8.6
+           (lambda _
+             (substitute* "configure"
+               (("wish85") "wish8.6"))
+             #t))
+         ;; It checks for "xhost", which we don't have.  This shouldn't
+         ;; matter, because the test is supposed to be skipped, but it causes
+         ;; "run_tests.sh" (and thus the "check" phase) to fail.
+         (add-after 'unpack 'fix-check-for-display
+           (lambda _
+             (substitute* "tests/run_tests.sh"
+               (("have_display=no") "have_display=yes"))
+             #t))
+         (add-after 'install 'wrap
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             ;; FIXME: Mesa tries to dlopen libudev.so.0 and fails.  Pending a
+             ;; fix of the mesa package we wrap the pcb executable such that
+             ;; Mesa can find libudev.so.0 through LD_LIBRARY_PATH.
+             (let* ((out (assoc-ref outputs "out"))
+                    (path (string-append (assoc-ref inputs "udev") "/lib")))
+               (wrap-program (string-append out "/bin/pcb")
+                 `("LD_LIBRARY_PATH" ":" prefix (,path))))
+             #t))
+         (add-before 'check 'pre-check
+           (lambda _
+             (system "Xvfb :1 &")
+             (setenv "DISPLAY" ":1")
+             #t)))))
     (inputs
      `(("dbus" ,dbus)
        ("mesa" ,mesa)
@@ -288,7 +326,10 @@ featuring various improvements and bug fixes.")))
                                        "fastcap-mulGlobal.patch"))))
     (build-system gnu-build-system)
     (native-inputs
-     `(("texlive" ,texlive)
+     ;; FIXME: with texlive-tiny citation references are rendered as question
+     ;; marks.  During the build warnings like these are printed:
+     ;; LaTeX Warning: Citation `nabors91' on page 2 undefined on input line 3.
+     `(("texlive" ,texlive-tiny)
        ("ghostscript" ,ghostscript)))
     (arguments
      `(#:make-flags '("CC=gcc" "RM=rm" "SHELL=sh" "all")
@@ -299,69 +340,70 @@ featuring various improvements and bug fixes.")))
        #:phases
        (modify-phases %standard-phases
          (add-after 'build 'make-doc
-                    (lambda _
-                      (zero? (system* "make" "CC=gcc" "RM=rm" "SHELL=sh"
-                                      "manual"))))
+           (lambda _
+             (zero? (system* "make" "CC=gcc" "RM=rm" "SHELL=sh"
+                             "manual"))))
          (add-before 'make-doc 'fix-doc
-                     (lambda _
-                       (substitute* "doc/Makefile" (("/bin/rm") (which "rm")))
-                       (substitute* (find-files "doc" "\\.tex")
-                         (("\\\\special\\{psfile=([^,]*),.*scale=([#0-9.]*).*\\}"
-                           all file scale)
-                          (string-append "\\includegraphics[scale=" scale "]{"
-                                         file "}"))
-                         (("\\\\psfig\\{figure=([^,]*),.*width=([#0-9.]*in).*\\}"
-                           all file width)
-                          (string-append "\\includegraphics[width=" width "]{"
-                                         file "}"))
-                         (("\\\\psfig\\{figure=([^,]*),.*height=([#0-9.]*in).*\\}"
-                           all file height)
-                          (string-append "\\includegraphics[height=" height "]{"
-                                         file "}"))
-                         (("\\\\psfig\\{figure=([^,]*)\\}" all file)
-                          (string-append "\\includegraphics{" file "}")))
-                       (substitute* '("doc/mtt.tex" "doc/tcad.tex" "doc/ug.tex")
-                         (("^\\\\documentstyle\\[(.*)\\]\\{(.*)\\}"
-                           all options class)
-                          (string-append "\\documentclass[" options "]{"
-                                         class "}\n"
-                                         "\\usepackage{graphicx}\n"
-                                         "\\usepackage{robinspace}"))
-                         (("\\\\setlength\\{\\\\footheight\\}\\{.*\\}" all)
-                          (string-append "%" all))
-                         (("\\\\setstretch\\{.*\\}" all)
-                          (string-append "%" all)))
-                       #t))
+           (lambda _
+             (substitute* "doc/Makefile" (("/bin/rm") (which "rm")))
+             (substitute* (find-files "doc" "\\.tex")
+               (("\\\\special\\{psfile=([^,]*),.*scale=([#0-9.]*).*\\}"
+                 all file scale)
+                (string-append "\\includegraphics[scale=" scale "]{"
+                               file "}"))
+               (("\\\\psfig\\{figure=([^,]*),.*width=([#0-9.]*in).*\\}"
+                 all file width)
+                (string-append "\\includegraphics[width=" width "]{"
+                               file "}"))
+               (("\\\\psfig\\{figure=([^,]*),.*height=([#0-9.]*in).*\\}"
+                 all file height)
+                (string-append "\\includegraphics[height=" height "]{"
+                               file "}"))
+               (("\\\\psfig\\{figure=([^,]*)\\}" all file)
+                (string-append "\\includegraphics{" file "}")))
+             (substitute* '("doc/mtt.tex" "doc/tcad.tex" "doc/ug.tex")
+               (("^\\\\documentstyle\\[(.*)\\]\\{(.*)\\}"
+                 all options class)
+                (string-append "\\documentclass[" options "]{"
+                               class "}\n"
+                               "\\usepackage{graphicx}\n"
+                               "\\usepackage{robinspace}"))
+               (("\\\\setlength\\{\\\\footheight\\}\\{.*\\}" all)
+                (string-append "%" all))
+               (("\\\\setstretch\\{.*\\}" all)
+                (string-append "%" all)))
+             #t))
          (delete 'configure)
          (add-before 'install 'clean-bin
-                     (lambda _
-                       (delete-file (string-append (getcwd) "/bin/README"))
-                       #t))
+           (lambda _
+             (delete-file (string-append (getcwd) "/bin/README"))
+             #t))
          (add-before 'install 'make-pdf
-                     (lambda _
-                       (with-directory-excursion "doc"
-                         (and
-                          (every (lambda (file)
-                                   (zero? (system* "dvips" file "-o")))
-                                 (find-files "." "\\.dvi"))
-                          (every (lambda (file)
-                                   (zero? (system* "ps2pdf" file)))
-                                 '("mtt.ps" "ug.ps" "tcad.ps"))
-                          (zero? (system* "make" "clean"))))))
+           (lambda _
+             (setenv "HOME" "/tmp")     ; FIXME: for texlive font cache
+             (with-directory-excursion "doc"
+               (and
+                (every (lambda (file)
+                         (zero? (system* "dvips" file "-o")))
+                       (find-files "." "\\.dvi"))
+                (every (lambda (file)
+                         (zero? (system* "ps2pdf" file)))
+                       '("mtt.ps" "ug.ps" "tcad.ps"))
+                (zero? (system* "make" "clean"))))))
          (replace 'install
-                  (lambda* (#:key outputs #:allow-other-keys)
-                    (let* ((out (assoc-ref outputs "out"))
-                           (data (string-append out "/share"))
-                           (bin (string-append out "/bin"))
-                           (doc (string-append data "/doc/" ,name "-" ,version))
-                           (examples (string-append doc "/examples")))
-                      (with-directory-excursion "bin"
-                        (for-each (lambda (f)
-                                    (install-file f bin))
-                                  (find-files "." ".*")))
-                      (copy-recursively "doc" doc)
-                      (copy-recursively "examples" examples)
-                      #t))))))
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (data (string-append out "/share"))
+                    (bin (string-append out "/bin"))
+                    (doc (string-append data "/doc/" ,name "-" ,version))
+                    (examples (string-append doc "/examples")))
+               (with-directory-excursion "bin"
+                 (for-each (lambda (f)
+                             (install-file f bin))
+                           (find-files "." ".*")))
+               (copy-recursively "doc" doc)
+               (copy-recursively "examples" examples)
+               #t))))))
     (home-page "http://www.rle.mit.edu/cpg/research_codes.htm")
     (synopsis "Multipole-accelerated capacitance extraction program")
     (description
@@ -428,7 +470,7 @@ multipole-accelerated algorithm.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0pvk57z2pxz89pcwwm61lkpvj4w9qxqz8mi0zkpj6pnaljabp7bf"))))
+                "15rwjp4xdj9w1z9f709rz9p0k2mi9k9idma9hvzkj5j8p04mg7yd"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
@@ -625,8 +667,8 @@ language.")
 ;; We use kicad from a git commit, because support for boost 1.61.0 has been
 ;; recently added.
 (define-public kicad
-  (let ((commit "4ee344e150bfaf3a6f3f7bf935fb96ae07c423fa")
-        (revision "1"))
+  (let ((commit "5f4599fb56da4dd748845ab10abec02961d477f3")
+        (revision "2"))
     (package
       (name "kicad")
       (version (string-append "4.0-" revision "."
@@ -638,7 +680,7 @@ language.")
                (url "https://git.launchpad.net/kicad")
                (commit commit)))
          (sha256
-          (base32 "0kf6r92nps0658i9n3p9vp5dzbssmc22lvjv5flyvnlf83l63s4n"))
+          (base32 "1833pln2975gmc5s18xf7s8m9vg834lmxxdjk0wlk3lq7bvjjnff"))
          (file-name (string-append name "-" version "-checkout"))))
       (build-system cmake-build-system)
       (arguments
@@ -651,6 +693,8 @@ language.")
                                (string-take commit 7))
                "-DCMAKE_BUILD_TYPE=Release"
                "-DKICAD_SKIP_BOOST=ON"; Use our system's boost library.
+               (string-append "-DCMAKE_INSTALL_LIBDIR="
+                              (assoc-ref %outputs "out") "/lib")
                "-DKICAD_SCRIPTING=ON"
                "-DKICAD_SCRIPTING_MODULES=ON"
                "-DKICAD_SCRIPTING_WXPYTHON=ON"
@@ -660,6 +704,7 @@ language.")
                               (assoc-ref %build-inputs "wxpython")
                               "/include/wx-3.0")
                "-DCMAKE_BUILD_WITH_INSTALL_RPATH=TRUE"
+               "-DKICAD_SPICE=TRUE"
                ;; TODO: Enable this when CA certs are working with curl.
                "-DBUILD_GITHUB_PLUGIN=OFF")
          #:phases
@@ -692,6 +737,7 @@ language.")
          ("glew" ,glew)
          ("glm" ,glm)
          ("hicolor-icon-theme" ,hicolor-icon-theme)
+         ("libngspice" ,libngspice)
          ("libsm" ,libsm)
          ("mesa" ,mesa)
          ("openssl" ,openssl)
@@ -707,7 +753,7 @@ electrical diagrams), gerbview (viewing Gerber files) and others.")
       (license license:gpl3+))))
 
 (define-public kicad-library
-  (let ((version "4.0.4"))
+  (let ((version "4.0.6"))
     (package
       (name "kicad-library")
       (version version)
@@ -718,7 +764,7 @@ electrical diagrams), gerbview (viewing Gerber files) and others.")
                       version ".tar.gz"))
                 (sha256
                  (base32
-                  "1wyda58y39lhxml0xv1ngvddi0nqihx9bnlza46ajzms38ajvh12"))))
+                  "16f47pd6f0ddsdxdrp327nr9v05gl8c24d0qypq2aqx5hdjmkp7f"))))
       (build-system cmake-build-system)
       (arguments
        `(#:out-of-source? #t
@@ -761,7 +807,7 @@ electrical diagrams), gerbview (viewing Gerber files) and others.")
                    version ".tar.gz"))
              (sha256
               (base32
-               "0ya4gg6clz3vp2wrb67xwg0bhwh5q8ag39jjmpcp4zjcqs1f48rb"))))))
+               "0vmgqhdw05k5fdnqv42grnvlz7v75g9md82jp2d3dvw2zw050lfb"))))))
       (home-page "http://kicad-pcb.org/")
       (synopsis "Libraries for kicad")
       (description "This package provides Kicad component, footprint and 3D
@@ -1128,3 +1174,614 @@ hexadecimal editor able to open disk files, but later support for analyzing
 binaries, disassembling code, debugging programs, attaching to remote gdb
 servers, ...")
     (license license:lgpl3)))
+
+(define-public asco
+  (package
+    (name "asco")
+    (version "0.4.10")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://sourceforge/asco/asco/" version "/ASCO-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "119rbc2dc8xzwxvykgji0v0nrzvymjmlizr1bc2mihspj686kxsl"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f                                ; no tests
+       #:make-flags '("all" "asco-mpi")
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (add-before 'build 'fix-paths
+           (lambda* (#:key inputs #:allow-other-keys)
+             (let ((coreutils (assoc-ref inputs "coreutils-minimal")))
+               (substitute* '("errfunc.c" "asco.c")
+                 (("cp ")
+                  (string-append coreutils "/bin/cp "))
+                 (("nice")
+                  (string-append coreutils "/bin/nice")))
+               (substitute* "Makefile"
+                 (("<FULL_PATH_TO_MPICH>/bin/mpicc") (which "mpicc")))
+               #t)))
+         (replace 'install                        ; no install target
+           (lambda* (#:key outputs #:allow-other-keys)
+             (for-each (lambda (file)
+                         (install-file file (string-append
+                                             (assoc-ref outputs "out")
+                                             "/bin")))
+                       '("asco" "asco-mpi" "asco-test"
+                         "tools/alter/alter" "tools/log/log"))
+             #t)))))
+    (native-inputs
+     `(("mpi" ,openmpi)))
+    (inputs
+     `(("coreutils-minimal" ,coreutils-minimal)))
+    (home-page "http://asco.sourceforge.net/")
+    (synopsis "SPICE circuit optimizer")
+    (description
+     "ASCO brings circuit optimization capabilities to existing SPICE simulators using a
+high-performance parallel differential evolution (DE) optimization algorithm.")
+    (license license:gpl2+)))
+
+(define-public libngspice
+  ;; Note: The ngspice's build system does not allow us to build both the
+  ;; library and the executables in one go.  Thus, we have two packages.
+  ;; See <https://debbugs.gnu.org/cgi/bugreport.cgi?bug=27344#236>.
+  (package
+    (name "libngspice")
+    (version "26")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://sourceforge/ngspice/ng-spice-rework/"
+                                  version "/ngspice-" version ".tar.gz"))
+              (sha256
+               (base32
+                "02019ndcl057nq9z41nxycqba7wxlb081ibvfj9jv010nz431qji"))
+              (modules '((guix build utils)))
+              ;; We remove the non-free cider and build without it.
+              (snippet
+               '(begin
+                  (delete-file-recursively "src/ciderlib")
+                  (delete-file "src/ciderinit")
+                  (substitute* "configure"
+                    (("src/ciderlib/Makefile") "")
+                    (("src/ciderlib/input/Makefile") "")
+                    (("src/ciderlib/support/Makefile") "")
+                    (("src/ciderlib/oned/Makefile") "")
+                    (("src/ciderlib/twod/Makefile") ""))))))
+    (build-system gnu-build-system)
+    (arguments
+     `(;; No tests for libngspice exist.
+       ;; The transient tests for ngspice fail.
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'patch-timestamps
+           (lambda _
+             (substitute* "configure"
+               (("`date`") "Do 1. Jan 00:00:00 UTC 1970"))
+             #t))
+         (add-after 'unpack 'delete-program-manuals
+           (lambda _
+             (substitute* "man/man1/Makefile.in"
+               (("^man_MANS = ngspice\\.1 ngnutmeg\\.1 ngsconvert\\.1 ngmultidec\\.1")
+                "man_MANS = "))
+             #t))
+         (add-after 'install 'delete-script-files
+           (lambda* (#:key outputs #:allow-other-keys)
+             (delete-file-recursively
+              (string-append (assoc-ref outputs "out")
+                             "/share/ngspice/scripts")))))
+       #:configure-flags
+       (list "--enable-openmp"
+             "--enable-xspice"
+             "--with-ngshared"
+             "--with-readline=yes")))
+    (native-inputs
+     `(("bison" ,bison)
+       ("flex" ,flex)))
+    (inputs
+     `(("libxaw" ,libxaw)
+       ("mpi" ,openmpi)
+       ("readline" ,readline)))
+    (home-page "http://ngspice.sourceforge.net/")
+    (synopsis "Mixed-level/mixed-signal circuit simulator")
+    (description
+     "Ngspice is a mixed-level/mixed-signal circuit simulator.  It includes
+@code{Spice3f5}, a circuit simulator, and @code{Xspice}, an extension that
+provides code modeling support and simulation of digital components through
+an embedded event driven algorithm.")
+    (license (list license:lgpl2.0+ ; code in frontend/numparam
+                   (license:non-copyleft "file:///COPYING") ; spice3 bsd-style
+                   license:public-domain)))) ; xspice
+
+(define-public ngspice
+  ;; The ngspice executables (see libngpsice above.)
+  (package (inherit libngspice)
+    (name "ngspice")
+    (arguments
+     (substitute-keyword-arguments (package-arguments libngspice)
+       ((#:configure-flags flags)
+        `(delete "--with-ngshared" ,flags))
+       ((#:phases phases)
+        `(modify-phases ,phases
+           (add-after 'unpack 'delete-include-files
+             (lambda _
+               (substitute* "src/Makefile.in"
+                 (("^SUBDIRS = misc maths frontend spicelib include/ngspice")
+                  "SUBDIRS = misc maths frontend spicelib"))
+               #t))
+           (add-after 'install 'delete-cmpp-dlmain
+             (lambda* (#:key outputs #:allow-other-keys)
+               (for-each (lambda (file)
+                           (delete-file
+                            (string-append (assoc-ref outputs "out")
+                                           file)))
+                         '("/bin/cmpp" "/share/ngspice/dlmain.c"))
+               #t))
+           (delete 'delete-program-manuals)
+           (delete 'delete-script-files)))))
+    (inputs
+     `(("libngspice" ,libngspice)
+       ("readline" ,readline)))))
+
+(define trilinos-serial-xyce
+  ;; Note: This is a Trilinos containing only the packages Xyce needs, so we
+  ;; keep it private.  See
+  ;; <https://debbugs.gnu.org/cgi/bugreport.cgi?bug=27344#248>.
+  ;; TODO: Remove when we have modular Trilinos packages?
+  (package
+    (name "trilinos-serial-xyce")
+    (version "12.6.3")
+    (source
+     (origin (method url-fetch)
+             (uri (string-append "https://trilinos.org/oldsite/download/files/trilinos-"
+                                 version "-Source.tar.gz"))
+             (sha256
+              (base32
+               "07jd1qpsbf31cmbyyngr4l67xzwyan24dyx5wlcahgbw7x6my3wn"))))
+    (build-system cmake-build-system)
+    (arguments
+     `(#:out-of-source? #t
+       #:configure-flags
+       (list "-DCMAKE_CXX_FLAGS=-O3 -fPIC"
+             "-DCMAKE_C_FLAGS=-O3 -fPIC"
+             "-DCMAKE_Fortran_FLAGS=-O3 -fPIC"
+             "-DTrilinos_ENABLE_NOX=ON"
+             "-DNOX_ENABLE_LOCA=ON"
+             "-DTrilinos_ENABLE_EpetraExt=ON"
+             "-DEpetraExt_BUILD_BTF=ON"
+             "-DEpetraExt_BUILD_EXPERIMENTAL=ON"
+             "-DEpetraExt_BUILD_GRAPH_REORDERINGS=ON"
+             "-DTrilinos_ENABLE_TrilinosCouplings=ON"
+             "-DTrilinos_ENABLE_Ifpack=ON"
+             "-DTrilinos_ENABLE_Isorropia=ON"
+             "-DTrilinos_ENABLE_AztecOO=ON"
+             "-DTrilinos_ENABLE_Belos=ON"
+             "-DTrilinos_ENABLE_Teuchos=ON"
+             "-DTeuchos_ENABLE_COMPLEX=ON"
+             "-DTrilinos_ENABLE_Amesos=ON"
+             "-DAmesos_ENABLE_KLU=ON"
+             "-DAmesos_ENABLE_UMFPACK=ON"
+             "-DTrilinos_ENABLE_Sacado=ON"
+             "-DTrilinos_ENABLE_Kokkos=OFF"
+             "-DTrilinos_ENABLE_ALL_OPTIONAL_PACKAGES=OFF"
+             "-DTPL_ENABLE_AMD=ON"
+             "-DTPL_ENABLE_UMFPACK=ON"
+             "-DTPL_ENABLE_BLAS=ON"
+             "-DTPL_ENABLE_LAPACK=ON")))
+    (native-inputs
+     `(("fortran" ,gfortran)
+       ("swig" ,swig)))
+    (inputs
+     `(("boost" ,boost)
+       ("lapack" ,lapack-3.5)
+       ("suitesparse" ,suitesparse)))
+    (home-page "https://trilinos.org")
+    (synopsis "Engineering and scientific problems algorithms")
+    (description
+     "The Trilinos Project is an effort to develop algorithms and enabling
+technologies within an object-oriented software framework for the solution of
+large-scale, complex multi-physics engineering and scientific problems.  A
+unique design feature of Trilinos is its focus on packages.")
+    (license (list license:lgpl2.1+
+                   license:bsd-3))))
+
+(define-public xyce-serial
+  (package
+    (name "xyce-serial")
+    (version "6.7")
+    (source
+     (origin (method url-fetch)
+             (uri (string-append "https://archive.org/download/Xyce-"
+                                 version "/Xyce-" version ".tar.gz"))
+             (sha256
+              (base32
+               "02k952mnvrnc5kv7r65fdrn7khwq1lbyhwyvd7jznafzdpsvgm4x"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f
+       #:configure-flags
+       (list
+        "CXXFLAGS=-O3 -std=c++11"
+        (string-append "ARCHDIR="
+                       (assoc-ref %build-inputs "trilinos")))))
+    (native-inputs
+     `(("bison" ,bison)
+       ("flex" ,flex)
+       ("fortran" ,gfortran)))
+    (inputs
+     `(("fftw" ,fftw)
+       ("suitesparse" ,suitesparse)
+       ("lapack" ,lapack-3.5)
+       ("trilinos" ,trilinos-serial-xyce)))
+    (home-page "https://xyce.sandia.gov/")
+    (synopsis "High-performance analog circuit simulator")
+    (description
+     "Xyce is a SPICE-compatible, high-performance analog circuit simulator,
+capable of solving extremely large circuit problems by supporting large-scale
+parallel computing platforms.  It also supports serial execution.")
+    (license license:gpl3+)))
+
+(define trilinos-parallel-xyce
+  (package (inherit trilinos-serial-xyce)
+    (name "trilinos-parallel-xyce")
+    (arguments
+     `(,@(substitute-keyword-arguments (package-arguments trilinos-serial-xyce)
+           ((#:configure-flags flags)
+            `(append (list "-DTrilinos_ENABLE_ShyLU=ON"
+                           "-DTrilinos_ENABLE_Zoltan=ON"
+                           "-DTPL_ENABLE_MPI=ON")
+                     ,flags)))))
+    (inputs
+     `(("mpi" ,openmpi)
+       ,@(package-inputs trilinos-serial-xyce)))))
+
+(define-public xyce-parallel
+  (package (inherit xyce-serial)
+    (name "xyce-parallel")
+    (arguments
+     `(,@(substitute-keyword-arguments (package-arguments xyce-serial)
+           ((#:configure-flags flags)
+            `(list "CXXFLAGS=-O3 -std=c++11"
+                   "CXX=mpiCC"
+                   "CC=mpicc"
+                   "F77=mpif77"
+                   "--enable-mpi"
+                   "--enable-isorropia=no"
+                   "--enable-zoltan=no"
+                   (string-append
+                    "ARCHDIR="
+                    (assoc-ref %build-inputs "trilinos")))))))
+    (propagated-inputs
+     `(("mpi" ,openmpi)))
+    (inputs
+     `(("trilinos" ,trilinos-parallel-xyce)
+       ,@(alist-delete "trilinos"
+                       (package-inputs xyce-serial))))))
+
+(define-public freehdl
+  (package
+    (name "freehdl")
+    (version "0.0.8")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://downloads.sourceforge.net/qucs/freehdl-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "117dqs0d4pcgbzvr3jn5ppra7n7x2m6c161ywh6laa934pw7h2bz"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'patch-pkg-config
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "freehdl/freehdl-config"
+               (("pkg-config")
+                (string-append (assoc-ref inputs "pkg-config")
+                               "/bin/pkg-config"))
+               (("cat")
+                (string-append (assoc-ref inputs "coreutils")
+                               "/bin/cat")))
+             #t))
+         (add-after 'patch-pkg-config 'setenv
+           (lambda* (#:key inputs #:allow-other-keys)
+             (setenv "CXX" (string-append (assoc-ref inputs "gcc")
+                                          "/bin/g++"))
+             (setenv "SYSTEM_LIBTOOL" (string-append (assoc-ref inputs "libtool")
+                                                     "/bin/libtool"))
+             #t))
+         (add-after 'setenv 'patch-gvhdl
+           (lambda _
+             (substitute* "v2cc/gvhdl.in"
+               (("--mode=link") "--mode=link --tag=CXX")
+               (("-lm") "-lm FREEHDL/lib/freehdl/libieee.la"))
+             #t))
+         (add-after 'patch-gvhdl 'patch-freehdl-gennodes
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "freehdl/freehdl-gennodes.in"
+               (("guile")
+                (string-append (assoc-ref inputs "guile") "/bin/guile"))
+               (("\\(debug") ";(debug")
+               (("\\(@ ") "(apply-emit")
+               (("\\(@@ ") "(apply-mini-format"))
+             #t))
+         (add-after 'configure 'patch-freehdl-pc
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "freehdl.pc"
+               (("=g\\+\\+")
+                (string-append "=" (assoc-ref inputs "gcc-toolchain")
+                               "/bin/g++"))
+               (("=libtool")
+                (string-append "=" (assoc-ref inputs "libtool")
+                               "/bin/libtool")))
+             #t))
+         (add-after 'install-scripts 'make-wrapper
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out")))
+               ;; 'gvhdl' invokes the C compiler directly, so hard-code its
+               ;; file name.
+               (wrap-program (string-append out "/bin/gvhdl")
+                 `("CPLUS_INCLUDE_PATH" ":" prefix
+                   (,(string-append (assoc-ref inputs "gcc-toolchain")
+                                    "/include")))
+                 `("LIBRARY_PATH" ":" prefix
+                   (,(string-append (assoc-ref inputs "gcc-toolchain")
+                                    "/lib")))
+                 `("PATH" ":" prefix
+                   (,(string-append (assoc-ref inputs "gcc-toolchain")
+                                    "/bin")
+                    ,(string-append (assoc-ref inputs "coreutils")
+                                    "/bin"))))
+               (wrap-program (string-append out "/bin/freehdl-config")
+                 `("PKG_CONFIG_PATH" ":" prefix (,(string-append out "/lib/pkgconfig")))))
+             #t)))))
+    (inputs
+     `(("coreutils" ,coreutils)
+       ("gcc-toolchain" ,gcc-toolchain)
+       ("guile" ,guile-2.2)
+       ("perl" ,perl)
+       ("pkg-config" ,pkg-config)
+       ("libtool" ,libtool)))
+    (native-inputs
+     `(("pkg-config-native" ,pkg-config)
+       ("libtool-native" ,libtool)))
+    (home-page "http://www.freehdl.seul.org/")
+    (synopsis "VHDL simulator")
+    (description
+     "FreeHDL is a compiler/simulator suite for the hardware description language VHDL.
+  VHDL'93 as well as VHDL'87 standards are supported.")
+    (license (list license:gpl2+
+                   license:lgpl2.0+)))) ; freehdl's libraries
+
+(define-public qucs
+  (package
+    (name "qucs")
+    (version "0.0.19")
+    (source (origin
+              (method url-fetch)
+              (uri
+               (string-append
+                "https://sourceforge.net/projects/qucs/files/qucs/" version
+                "/qucs-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0giv9gfyfdizvjhq56x2pdncrlyv3k15lrsh6pk37i94vr7l7ij5"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'patch-configure
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "qucs/configure"
+               (("\\$QTDIR") (assoc-ref inputs "qt4")))
+             #t))
+         (add-after 'patch-configure 'patch-scripts
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (substitute* '("qucs/qucs/qucsdigi"
+                            "qucs/qucs/qucsdigilib"
+                            "qucs/qucs/qucsveri")
+               (("\\$BINDIR")
+                (string-append (assoc-ref outputs "out") "/bin"))
+               (("freehdl-config")
+                (string-append (assoc-ref inputs "freehdl") "/bin/freehdl-config"))
+               (("freehdl-v2cc")
+                (string-append (assoc-ref inputs "freehdl") "/bin/freehdl-v2cc"))
+               (("cp ")
+                (string-append (assoc-ref inputs "coreutils") "/bin/cp "))
+               (("glibtool")
+                (string-append (assoc-ref inputs "libtool") "/bin/libtool"))
+               (("sed")
+                (string-append (assoc-ref inputs "sed") "/bin/sed"))
+               (("iverilog")
+                (string-append (assoc-ref inputs "iverilog") "/bin/iverilog"))
+               (("vvp")
+                (string-append (assoc-ref inputs "iverilog") "/bin/vvp")))
+             #t))
+         (add-before 'check 'pre-check
+           (lambda _
+             ;; The test suite requires a running X server.
+             (system "Xvfb :1 &")
+             (setenv "DISPLAY" ":1")
+             #t))
+         (add-after 'install 'make-wrapper
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out")))
+               ;; 'qucs' directly invokes gcc, hence this wrapping.
+               (wrap-program (string-append out "/bin/qucs")
+                 `("CPLUS_INCLUDE_PATH" ":" prefix
+                   (,(string-append (assoc-ref inputs "gcc-toolchain")
+                                    "/include")))
+                 `("PATH" ":" prefix
+                   (,(string-append (assoc-ref inputs "gcc-toolchain")
+                                    "/bin")))
+                 `("LIBRARY_PATH" ":" prefix
+                   (,(string-append (assoc-ref inputs "gcc-toolchain")
+                                    "/lib")))
+                 `("ADMSXMLBINDIR" ":" prefix
+                   (,(string-append (assoc-ref inputs "adms") "/bin")))
+                 `("ASCOBINDIR" ":" prefix
+                   (,(string-append (assoc-ref inputs "asco") "/bin")))
+                 `("QUCS_OCTAVE" ":" prefix
+                   (,(string-append (assoc-ref inputs "octave") "/bin/octave")))))
+             #t)))
+       #:parallel-build? #f ; race condition
+       #:configure-flags '("--disable-doc"))) ; we need octave-epstk
+    (native-inputs
+     `(("gperf" ,gperf)
+       ("libtool-native" ,libtool)
+       ("python" ,python-2) ; for tests
+       ("matplotlib" ,python2-matplotlib) ; for tests
+       ("numpy" ,python2-numpy) ; for tests
+       ("xorg-server" ,xorg-server))) ; for tests
+    (inputs
+     `(("adms" ,adms)
+       ("asco" ,asco)
+       ("coreutils" ,coreutils)
+       ("freehdl" ,freehdl)
+       ("gcc-toolchain" ,gcc-toolchain)
+       ("iverilog" ,iverilog)
+       ("libtool" ,libtool)
+       ("octave" ,octave)
+       ("qt4" ,qt-4)
+       ("sed" ,sed)))
+    (home-page "http://qucs.sourceforge.net/")
+    (synopsis "Circuit simulator with graphical user interface")
+    (description
+     "Qucs is a circuit simulator with graphical user interface.  The software
+aims to support all kinds of circuit simulation types---e.g. DC, AC,
+S-parameter, transient, noise and harmonic balance analysis.  Pure digital
+simulations are also supported.")
+    (license license:gpl2+)))
+
+(define-public qucs-s
+  (package
+    (name "qucs-s")
+    (version "0.0.19S")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/ra3xdh/qucs/releases/download/"
+                                  version "/qucs-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1bhahvdqmayaw0306fxz1ghmjhd4fq05yk3rk7zi0z703w5imgjv"))))
+    (build-system cmake-build-system)
+    (arguments
+     `(#:tests? #f ; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'patch-scripts
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* '("qucs/qucsdigi"
+                            "qucs/qucsdigilib"
+                            "qucs/qucsveri")
+               (("\\$BINDIR")
+                (string-append (assoc-ref inputs "qucs") "/bin"))
+               (("freehdl-config")
+                (string-append (assoc-ref inputs "freehdl") "/bin/freehdl-config"))
+               (("freehdl-v2cc")
+                (string-append (assoc-ref inputs "freehdl") "/bin/freehdl-v2cc"))
+               (("cp ")
+                (string-append (assoc-ref inputs "coreutils") "/bin/cp "))
+               (("glibtool")
+                (string-append (assoc-ref inputs "libtool") "/bin/libtool"))
+               (("sed")
+                (string-append (assoc-ref inputs "sed") "/bin/sed"))
+               (("iverilog")
+                (string-append (assoc-ref inputs "iverilog") "/bin/iverilog"))
+               (("vvp")
+                (string-append (assoc-ref inputs "iverilog") "/bin/vvp")))
+             #t))
+         (add-after 'patch-scripts 'patch-paths
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "qucs/main.cpp"
+               (((string-append "QucsSettings\\.Qucsator = QucsSettings\\.BinDir "
+                                "\\+ \"qucsator\" \\+ executableSuffix"))
+                (string-append "}{ QucsSettings.Qucsator = \""
+                               (assoc-ref inputs "qucs") "/bin/qucsator\""))
+               (((string-append "else QucsSettings\\.XyceExecutable = "
+                                "\"/usr/local/Xyce-Release-6.2.0-OPENSOURCE/bin/runxyce"))
+                (string-append "QucsSettings.XyceExecutable = \""
+                               (assoc-ref inputs "xyce-serial") "/bin/Xyce"))
+               (((string-append "else QucsSettings\\.XyceParExecutable = \"/usr/local"
+                                "/Xyce-Release-6.2.0-OPENMPI-OPENSOURCE/bin/xmpirun"))
+                (string-append "QucsSettings.XyceParExecutable = \""
+                               (assoc-ref inputs "mpi") "/bin/mpirun"))
+               (("%p")
+                (string-append "%p "(assoc-ref inputs "xyce-parallel") "/bin/Xyce"))
+               (("else QucsSettings\\.NgspiceExecutable = \"ngspice\"")
+                (string-append "QucsSettings.NgspiceExecutable = " "\""
+                               (assoc-ref inputs "ngspice") "/bin/ngspice\"")))
+             (substitute* "qucs/qucs_actions.cpp"
+               (("qucstrans")
+                (string-append (assoc-ref inputs "qucs") "/bin/qucstrans"))
+               (("qucsattenuator")
+                (string-append (assoc-ref inputs "qucs") "/bin/qucsattenuator"))
+               (("qucsrescodes")
+                (string-append (assoc-ref inputs "qucs") "/bin/qucsrescodes")))
+             #t))
+         (add-after 'install 'install-scripts
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (for-each
+              (lambda (script)
+                (let ((file (string-append "../qucs-" ,version
+                                           "/qucs/" script))
+                      (out (assoc-ref outputs "out")))
+                  (install-file file (string-append out "/bin"))
+                  (chmod (string-append out "/bin/" script) #o555)))
+              '("qucsdigi" "qucsdigilib" "qucsveri"))
+             #t))
+         (add-after 'install-scripts 'make-wrapper
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (file (string-append out "/bin/qucs-s"))
+                    (qucs (assoc-ref inputs "qucs"))
+                    (qucsator (string-append qucs "/bin/qucsator")))
+               (wrap-program file
+                 `("CPLUS_INCLUDE_PATH" ":" prefix
+                   (,(string-append (assoc-ref inputs "gcc-toolchain")
+                                    "/include")))
+                 `("PATH" ":" prefix
+                   (,(string-append (assoc-ref inputs "gcc-toolchain")
+                                    "/bin")))
+                 `("LIBRARY_PATH" ":" prefix
+                   (,(string-append (assoc-ref inputs "gcc-toolchain")
+                                    "/lib")))
+                 `("QUCSATOR" ":" prefix (,qucsator))
+                 `("QUCSCONV" ":" prefix (,(string-append qucsator "/bin/qucsconv")))
+                 `("ADMSXMLBINDIR" ":" prefix (,(string-append (assoc-ref inputs "adms")
+                                                               "/bin")))
+                 `("ASCOBINDIR" ":" prefix (,(string-append (assoc-ref inputs "asco")
+                                                            "/bin")))
+                 `("QUCS_OCTAVE" ":" prefix (,(string-append (assoc-ref inputs "octave")
+                                                             "/bin/octave"))))
+               (symlink qucsator (string-append out "/bin/qucsator"))
+               #t))))))
+    (native-inputs
+     `(("libtool-native" ,libtool)))
+    (inputs
+     `(("adms" ,adms)
+       ("asco" ,asco)
+       ("coreutils" ,coreutils)
+       ("freehdl" ,freehdl)
+       ("gcc-toolchain" ,gcc-toolchain)
+       ("iverilog" ,iverilog)
+       ("libtool" ,libtool)
+       ("mpi" ,openmpi)
+       ("ngspice" ,ngspice)
+       ("octave" ,octave)
+       ("qt4" ,qt-4)
+       ("qucs" ,qucs)
+       ("sed" ,sed)
+       ("xyce-serial" ,xyce-serial)
+       ("xyce-parallel" ,xyce-parallel)))
+    (home-page "https://ra3xdh.github.io/")
+    (synopsis "Circuit simulator with graphical user interface")
+    (description
+     "Qucs-S is a spin-off of the Qucs cross-platform circuit simulator.
+The S letter indicates SPICE.  The purpose of the Qucs-S subproject is to use
+free SPICE circuit simulation kernels with the Qucs GUI.  It provides the
+simulator backends @code{Qucsator}, @code{ngspice} and @code{Xyce}.")
+    (license license:gpl2+)))

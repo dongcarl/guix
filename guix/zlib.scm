@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2016 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -158,11 +158,14 @@ buffered input, which would be lost (and is lost anyway)."
   (define gzfile
     (match (drain-input port)
       (""                                         ;PORT's buffer is empty
-       ;; Since 'gzclose' will eventually close the file descriptor beneath
-       ;; PORT, we increase PORT's revealed count and never call 'close-port'
-       ;; on PORT since we would get EBADF if 'gzclose' already closed it (on
-       ;; 2.0 EBADF is swallowed by 'fport_close' but on 2.2 it is raised).
-       (gzdopen (port->fdes port) "r"))
+       ;; 'gzclose' will eventually close the file descriptor beneath PORT.
+       ;; 'close-port' on PORT would get EBADF if 'gzclose' already closed it,
+       ;; so that's no good; revealed ports are no good either because they
+       ;; leak (see <https://bugs.gnu.org/28784>); calling 'close-port' after
+       ;; 'gzclose' doesn't work either because it leads to a race condition
+       ;; (see <https://bugs.gnu.org/29335>).  So we dup and close PORT right
+       ;; away.
+       (gzdopen (dup (fileno port)) "r"))
       (_
        ;; This is unrecoverable but it's better than having the buffered input
        ;; be lost, leading to unclear end-of-file or corrupt-data errors down
@@ -176,6 +179,7 @@ buffered input, which would be lost (and is lost anyway)."
   (unless (= buffer-size %default-buffer-size)
     (gzbuffer! gzfile buffer-size))
 
+  (close-port port)                               ;we no longer need it
   (make-custom-binary-input-port "gzip-input" read! #f #f
                                  (lambda ()
                                    (gzclose gzfile))))
@@ -190,7 +194,7 @@ port is closed."
   (define gzfile
     (begin
       (force-output port)                         ;empty PORT's buffer
-      (gzdopen (port->fdes port)
+      (gzdopen (dup (fileno port))
                (string-append "w" (number->string level)))))
 
   (define (write! bv start count)
@@ -199,6 +203,7 @@ port is closed."
   (unless (= buffer-size %default-buffer-size)
     (gzbuffer! gzfile buffer-size))
 
+  (close-port port)
   (make-custom-binary-output-port "gzip-output" write! #f #f
                                   (lambda ()
                                     (gzclose gzfile))))

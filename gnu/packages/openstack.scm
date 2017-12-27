@@ -1,7 +1,7 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2015 Cyril Roelandt <tipecaml@gmail.com>
 ;;; Copyright © 2015, 2016 Efraim Flashner <efraim@flashner.co.il>
-;;; Copyright © 2016 Clément Lassieur <clement@lassieur.org>
+;;; Copyright © 2016, 2017 Clément Lassieur <clement@lassieur.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -19,9 +19,13 @@
 ;;; along with GNU Guix.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (gnu packages openstack)
+  #:use-module (gnu packages check)
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-crypto)
+  #:use-module (gnu packages python-web)
   #:use-module (gnu packages ssh)
+  #:use-module (gnu packages time)
   #:use-module (gnu packages tls)
   #:use-module (gnu packages version-control)
   #:use-module (guix build-system python)
@@ -98,7 +102,7 @@ all the files it generates a report.")
         ("python-pbr" ,python-pbr)
         ;; Tests.
         ("python-oslotest" ,python-oslotest)))
-    (home-page "http://www.openstack.org/")
+    (home-page "https://www.openstack.org/")
     (synopsis
       "Find deprecated patterns and strategies in Python code")
     (description
@@ -168,7 +172,7 @@ guidelines}.")
         ("python-pbr" ,python-pbr)
         ("python-sphinx" ,python-sphinx)
         ("python-testtools" ,python-testtools)))
-    (home-page "http://www.openstack.org/")
+    (home-page "https://www.openstack.org/")
     (synopsis "Mock object framework for Python")
     (description
       "Mox3 is an unofficial port of the Google mox framework
@@ -204,7 +208,7 @@ tested on Python version 3.2, 2.7 and 2.6.")
         ("python-testrepository" ,python-testrepository)
         ("python-testscenarios" ,python-testscenarios)
         ("python-testtools" ,python-testtools)))
-    (home-page "http://www.openstack.org/")
+    (home-page "https://www.openstack.org/")
     (synopsis
       "OpenStack Client Configuration Library")
     (description
@@ -248,46 +252,6 @@ tested on Python version 3.2, 2.7 and 2.6.")
 
 (define-public python2-os-testr
   (package-with-python2 python-os-testr))
-
-(define-public python-requests-mock
-  (package
-    (name "python-requests-mock")
-    (version "1.3.0")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (pypi-uri "requests-mock" version))
-       (sha256
-        (base32
-         "0jr997dvk6zbmhvbpcv3rajrgag69mcsm1ai3w3rgk2jdh6rg1mx"))))
-    (build-system python-build-system)
-    (propagated-inputs
-     `(("python-requests" ,python-requests)
-       ("python-six" ,python-six)))
-    (native-inputs
-     `(("python-pbr" ,python-pbr)
-       ("python-discover" ,python-discover)
-       ("python-docutils" ,python-docutils)
-       ("python-fixtures" ,python-fixtures)
-       ("python-mock" ,python-mock)
-       ("python-sphinx" ,python-sphinx)
-       ("python-testrepository" ,python-testrepository)
-       ("python-testtools" ,python-testtools)))
-    (home-page "https://requests-mock.readthedocs.org/")
-    (synopsis "Mock out responses from the requests package")
-    (description
-      "This module provides a building block to stub out the HTTP requests
-portions of your testing code.")
-    (properties `((python2-variant . ,(delay python2-requests-mock))))
-    (license asl2.0)))
-
-(define-public python2-requests-mock
-  (package (inherit (package-with-python2
-                     (strip-python2-variant python-requests-mock)))
-           (arguments
-            `(#:python ,python-2
-              ;; FIXME: 'subunit.run discover: error: no such option: --list'
-              #:tests? #f))))
 
 (define-public python-stevedore
   (package
@@ -444,7 +408,7 @@ common features used in Tempest.")
         ("python-oslotest" ,python-oslotest)
         ("python-oslosphinx" ,python-oslosphinx)
         ("python-sphinx" ,python-sphinx)))
-    (home-page "http://launchpad.net/oslo")
+    (home-page "https://launchpad.net/oslo")
     (synopsis "Oslo context library")
     (description
       "The Oslo context library has helpers to maintain useful information
@@ -479,7 +443,7 @@ pipeline and used by various modules such as logging.")
         ("python-mox3" ,python-mox3)
         ("python-oslotest" ,python-oslotest)
         ("python-testscenarios" ,python-testscenarios)))
-    (home-page "http://launchpad.net/oslo")
+    (home-page "https://launchpad.net/oslo")
     (synopsis "Oslo internationalization (i18n) library")
     (description
       "The oslo.i18n library contain utilities for working with
@@ -521,7 +485,7 @@ in an application or library.")
       ("python-mock" ,python-mock)
       ("python-oslotest" ,python-oslotest)
       ("python-pbr" ,python-pbr)))
-  (home-page "http://launchpad.net/oslo")
+  (home-page "https://launchpad.net/oslo")
   (synopsis "Python logging library of the Oslo project")
   (description
     "The oslo.log (logging) configuration library provides standardized
@@ -560,7 +524,7 @@ handlers and support for context specific logging (like resource id’s etc).")
         ("python-mock" ,python-mock)
         ("python-oslo.i18n" ,python-oslo.i18n)
         ("python-oslotest" ,python-oslotest)))
-    (home-page "http://launchpad.net/oslo")
+    (home-page "https://launchpad.net/oslo")
     (synopsis "Oslo serialization library")
     (description
       "The oslo.serialization library provides support for representing objects
@@ -645,7 +609,7 @@ and building documentation from them.")
         ("python-docutils" ,python-docutils)
         ("python-hacking" ,python-hacking)
         ("python-sphinx" ,python-sphinx)))
-    (home-page "http://www.openstack.org/")
+    (home-page "https://www.openstack.org/")
     (synopsis "OpenStack sphinx extensions and theme")
     (description
       "This package provides themes and extensions for Sphinx documentation
@@ -682,7 +646,7 @@ from the OpenStack project.")
         ("python-testrepository" ,python-testrepository)
         ("python-testscenarios" ,python-testscenarios)
         ("python-testtools" ,python-testtools)))
-    (home-page "http://launchpad.net/oslo")
+    (home-page "https://launchpad.net/oslo")
     (synopsis "Oslo test framework")
     (description
       "The Oslo Test framework provides common fixtures, support for debugging,
@@ -736,7 +700,7 @@ and better support for mocking results.")
         ("python-mock" ,python-mock)
         ("python-mox3" ,python-mox3)
         ("python-testscenarios" ,python-testscenarios)))
-    (home-page "http://launchpad.net/oslo")
+    (home-page "https://launchpad.net/oslo")
     (synopsis "Oslo utility library")
     (description
       "The @code{oslo.utils} library provides support for common utility type
@@ -797,7 +761,7 @@ handling.")
        ("python-requests" ,python-requests)
        ("python-six" ,python-six)
        ("python-stevedore" ,python-stevedore)))
-    (home-page "http://www.openstack.org/")
+    (home-page "https://www.openstack.org/")
     (synopsis "Client Library for OpenStack Identity")
     (description
      "Python-keystoneclient is the identity service used by OpenStack for
@@ -850,7 +814,7 @@ LDAP.")
     (propagated-inputs
      `(("python-requests" ,python-requests)
        ("python-six" ,python-six)))
-    (home-page "http://www.openstack.org/")
+    (home-page "https://www.openstack.org/")
     (synopsis "OpenStack Object Storage API Client Library")
     (description
      "OpenStack Object Storage (code-named Swift) creates redundant, scalable
@@ -885,14 +849,14 @@ permanence.")
 (define-public python-git-review
   (package
     (name "python-git-review")
-    (version "1.25.0")
+    (version "1.26.0")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri "git-review" version))
        (sha256
         (base32
-         "07d1jn9ryff5j5ic6qj5pbk10m1ccmpllj0wyalrcms1q9yhlzh8"))))
+         "150b1zvm6favd1ad8yl2bilq7xkr4m1mw9510frh47f8ghfkqz28"))))
     (build-system python-build-system)
     (arguments
      '(#:tests? #f ; tests require a running Gerrit server
@@ -915,7 +879,7 @@ permanence.")
     (inputs
      `(("git" ,git)
        ("openssh" ,openssh)))
-    (home-page "http://docs.openstack.org/infra/git-review/")
+    (home-page "https://docs.openstack.org/infra/git-review/")
     (synopsis "Command-line tool for Gerrit")
     (description
      "Git-review is a command-line tool that helps submitting Git branches to

@@ -1,5 +1,6 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2016, 2017 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -60,7 +61,9 @@
     (timezone "Europe/Paris")
     (locale "en_US.UTF-8")
 
-    (bootloader (grub-configuration (target "/dev/vdb")))
+    (bootloader (bootloader-configuration
+                 (bootloader grub-bootloader)
+                 (target "/dev/vdb")))
     (kernel-arguments '("console=ttyS0"))
     (file-systems (cons (file-system
                           (device "my-root")
@@ -127,7 +130,11 @@
   "Return a variant of OS where ROOTS are registered as GC roots."
   (operating-system
     (inherit os)
-    (services (cons (service gc-root-service-type roots)
+
+    ;; We use this procedure for the installation OS, which already defines GC
+    ;; roots.  Add ROOTS to those.
+    (services (cons (simple-service 'extra-root
+                                    gc-root-service-type roots)
                     (operating-system-user-services os)))))
 
 
@@ -198,7 +205,7 @@ reboot\n")
                            #:imported-modules '((gnu services herd)
                                                 (guix combinators))))
                       (installation-disk-image-file-system-type "ext4")
-                      (target-size (* 1200 MiB)))
+                      (target-size (* 2200 MiB)))
   "Run SCRIPT (a shell script following the GuixSD installation procedure) in
 OS to install TARGET-OS.  Return a VM image of TARGET-SIZE bytes containing
 the installed system.  The packages specified in PACKAGES will be appended to
@@ -215,7 +222,7 @@ packages defined in installation-os."
                        (image  (system-disk-image
                                 (operating-system-with-gc-roots
                                  os (list target))
-                                #:disk-image-size (* 1500 MiB)
+                                #:disk-image-size 'guess
                                 #:file-system-type
                                 installation-disk-image-file-system-type)))
     (define install
@@ -339,7 +346,9 @@ per %test-installed-os, this test is expensive in terms of CPU and storage.")
     (timezone "Europe/Paris")
     (locale "en_US.UTF-8")
 
-    (bootloader (grub-configuration (target "/dev/vda")))
+    (bootloader (bootloader-configuration
+                 (bootloader grub-bootloader)
+                 (target "/dev/vda")))
     (kernel-arguments '("console=ttyS0"))
     (file-systems (cons (file-system
                           (device "my-root")
@@ -414,7 +423,9 @@ reboot\n")
     (timezone "Europe/Paris")
     (locale "en_US.utf8")
 
-    (bootloader (grub-configuration (target "/dev/vdb")))
+    (bootloader (bootloader-configuration
+                 (bootloader grub-bootloader)
+                 (target "/dev/vdb")))
     (kernel-arguments '("console=ttyS0"))
     (file-systems (cons* (file-system
                            (device "my-root")
@@ -472,7 +483,9 @@ partition.  In particular, home directories must be correctly created (see
     (timezone "Europe/Paris")
     (locale "en_US.UTF-8")
 
-    (bootloader (grub-configuration (target "/dev/vdb")))
+    (bootloader (bootloader-configuration
+                 (bootloader grub-bootloader)
+                 (target "/dev/vdb")))
     (kernel-arguments '("console=ttyS0"))
     (file-systems (cons* (file-system
                            (device "root-fs")
@@ -548,7 +561,9 @@ where /gnu lives on a separate partition.")
     (timezone "Europe/Paris")
     (locale "en_US.utf8")
 
-    (bootloader (grub-configuration (target "/dev/vdb")))
+    (bootloader (bootloader-configuration
+                 (bootloader grub-bootloader)
+                 (target "/dev/vdb")))
     (kernel-arguments '("console=ttyS0"))
     (initrd (lambda (file-systems . rest)
               ;; Add a kernel module for RAID-0 (aka. "stripe").
@@ -631,7 +646,9 @@ by 'mdadm'.")
     (timezone "Europe/Paris")
     (locale "en_US.UTF-8")
 
-    (bootloader (grub-configuration (target "/dev/vdb")))
+    (bootloader (bootloader-configuration
+                 (bootloader grub-bootloader)
+                 (target "/dev/vdb")))
 
     ;; Note: Do not pass "console=ttyS0" so we can use our passphrase prompt
     ;; detection logic in 'enter-luks-passphrase'.
@@ -758,7 +775,9 @@ build (current-guix) and then store a couple of full system images.")
     (timezone "Europe/Paris")
     (locale "en_US.UTF-8")
 
-    (bootloader (grub-configuration (target "/dev/vdb")))
+    (bootloader (bootloader-configuration
+                 (bootloader grub-bootloader)
+                 (target "/dev/vdb")))
     (kernel-arguments '("console=ttyS0"))
     (file-systems (cons (file-system
                           (device "my-root")
@@ -789,7 +808,7 @@ export GUIX_BUILD_OPTIONS=--no-grafts
 ls -l /run/current-system/gc-roots
 parted --script /dev/vdb mklabel gpt \\
   mkpart primary ext2 1M 3M \\
-  mkpart primary ext2 3M 1G \\
+  mkpart primary ext2 3M 2G \\
   set 1 boot on \\
   set 1 bios_grub on
 mkfs.btrfs -L my-root /dev/vdb2

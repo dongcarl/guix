@@ -507,6 +507,15 @@ site} for more information."
   (udisks   udisks-configuration-udisks
             (default udisks)))
 
+(define %udisks-activation
+  (with-imported-modules '((guix build utils))
+    #~(begin
+        (use-modules (guix build utils))
+
+        (let ((run-dir "/var/run/udisks2"))
+          (mkdir-p run-dir)
+          (chmod run-dir #o700)))))
+
 (define udisks-service-type
   (let ((udisks-package (lambda (config)
                           (list (udisks-configuration-udisks config)))))
@@ -518,6 +527,8 @@ site} for more information."
                                             udisks-package)
                          (service-extension udev-service-type
                                             udisks-package)
+                         (service-extension activation-service-type
+                                            (const %udisks-activation))
 
                          ;; Profile 'udisksctl' & co. in the system profile.
                          (service-extension profile-service-type
@@ -780,15 +791,23 @@ accountsservice web site} for more information."
   gnome-desktop-configuration
   (gnome-package gnome-package (default gnome)))
 
+(define (gnome-polkit-settings config)
+  "Return the list of GNOME dependencies that provide polkit actions and
+rules."
+  (let ((gnome (gnome-package config)))
+    (map (lambda (name)
+           ((package-direct-input-selector name) gnome))
+         '("gnome-settings-daemon"
+           "gnome-control-center"
+           "gnome-system-monitor"
+           "gvfs"))))
+
 (define gnome-desktop-service-type
   (service-type
    (name 'gnome-desktop)
    (extensions
     (list (service-extension polkit-service-type
-                             (compose list
-                                      (package-direct-input-selector
-                                       "gnome-settings-daemon")
-                                      gnome-package))
+                             gnome-polkit-settings)
           (service-extension profile-service-type
                              (compose list
                                       gnome-package))))))
@@ -835,7 +854,7 @@ with the administrator's password."
 
 (define %desktop-services
   ;; List of services typically useful for a "desktop" use case.
-  (cons* (slim-service)
+  (cons* (service slim-service-type)
 
          ;; Screen lockers are a pretty useful thing and these are small.
          (screen-locker-service slock)

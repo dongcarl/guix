@@ -1,5 +1,6 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2016 John J. Foerch <jjfoerch@earthlink.net>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -36,7 +37,7 @@
 (define-public ola
   (package
     (name "ola")
-    (version "0.10.4")
+    (version "0.10.5")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -45,7 +46,7 @@
               (patches (search-patches "ola-readdir-r.patch"))
               (sha256
                (base32
-                "01zpm0vpin784jyjhbdad097a4i0cjdfrqqfbsvx47d6nbssq2my"))))
+                "10q25mln4m628f1b2jgsdcw2398hsrhydnxjzi60w9yds3sdrpz9"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("bison" ,bison)
@@ -59,7 +60,9 @@
        ("libuuid" ,util-linux)
        ("zlib" ,zlib)))
     (propagated-inputs
-     `(("protobuf" ,protobuf))) ;; for pkg-config --libs libola
+     ;; Ola 0.10.5 only supports protobuf 2.x, and building it with 3.x breaks.
+     ;; XXX Remove protobuf-2 when it is no longer needed.
+     `(("protobuf" ,protobuf-2))) ;; for pkg-config --libs libola
     (arguments
      `(;; G++ >= 4.8 macro expansion tracking requires lots of memory, causing
        ;; build to fail on low memory systems.  We disable that with the

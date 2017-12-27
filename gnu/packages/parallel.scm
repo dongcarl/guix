@@ -1,11 +1,12 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2013, 2014 Eric Bavier <bavier@member.fsf.org>
 ;;; Copyright © 2015 Mark H Weaver <mhw@netris.org>
-;;; Copyright © 2015, 2016 Efraim Flashner <efraim@flashner.co.il>
+;;; Copyright © 2015, 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 Pjotr Prins <pjotr.guix@thebird.nl>
 ;;; Copyright © 2016 Andreas Enge <andreas@enge.fr>
 ;;; Copyright © 2016 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2016 Ben Woodcroft <donttrustben@gmail.com>
+;;; Copyright © 2017 Rutger Helling <rhelling@mykolab.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -45,7 +46,7 @@
 (define-public parallel
   (package
     (name "parallel")
-    (version "20170822")
+    (version "20171222")
     (source
      (origin
       (method url-fetch)
@@ -53,7 +54,7 @@
                           version ".tar.bz2"))
       (sha256
        (base32
-        "0j4i0dfbk1i37mcdl7l5ynsldp8biqnbm32sm0cl26by0nivyjc9"))))
+        "1p3r6dlhy49q3y468kf65nqdp0knqw41vwga9rprrvi04kywgj4v"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
@@ -92,16 +93,15 @@ and they are executed on lists of files, hosts, users or other items.")
 (define-public slurm
   (package
    (name "slurm")
-   (version "16.05.9.1")
+   (version "16.05.11")
    (source (origin
             (method url-fetch)
             (uri (string-append
-                  "https://github.com/SchedMD/slurm/archive/slurm-"
-                  (string-join (string-split version #\.) "-") ".tar.gz"))
-            (file-name (string-append name "-" version ".tar.gz"))
+                  "https://download.schedmd.com/slurm/slurm-"
+                  version ".tar.bz2"))
             (sha256
              (base32
-              "1zx5y2lyjknnca4aw7cbawn00mjhsqzy3h35w7s757cykfjqr8gv"))
+              "0c63mvh13wsp6jlydaz98v35iwg53mk94ynpx9dqn2z4gl53k5y7"))
             (patches (search-patches
                       "slurm-configure-remove-nonfree-contribs.patch"))
             (modules '((guix build utils)))

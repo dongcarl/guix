@@ -30,7 +30,6 @@
   #:use-module (guix packages)
   #:use-module (guix profiles)
   #:use-module (guix upstream)
-  #:use-module (guix discovery)
   #:use-module (guix graph)
   #:use-module (guix scripts graph)
   #:use-module (guix monads)
@@ -46,8 +45,7 @@
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-37)
   #:use-module (ice-9 binary-ports)
-  #:export (guix-refresh
-            %updaters))
+  #:export (guix-refresh))
 
 
 ;;;
@@ -162,22 +160,6 @@ specified with `--select'.\n"))
 ;;; Updates.
 ;;;
 
-(define (importer-modules)
-  "Return the list of importer modules."
-  (cons (resolve-interface '(guix gnu-maintenance))
-        (all-modules (map (lambda (entry)
-                            `(,entry . "guix/import"))
-                          %load-path))))
-
-(define %updaters
-  ;; The list of publically-known updaters.
-  (delay (fold-module-public-variables (lambda (obj result)
-                                         (if (upstream-updater? obj)
-                                             (cons obj result)
-                                             result))
-                                       '()
-                                       (importer-modules))))
-
 (define (lookup-updater-by-name name)
   "Return the updater called NAME."
   (or (find (lambda (updater)
@@ -291,7 +273,8 @@ the latest known version of ~a (~a)~%")
 
 (define (all-packages)
   "Return the list of all the distro's packages."
-  (fold-packages cons '()))
+  (fold-packages cons '()
+                 #:select? (const #t)))           ;include hidden packages
 
 (define (list-dependents packages)
   "List all the things that would need to be rebuilt if PACKAGES are changed."
@@ -356,12 +339,8 @@ dependent packages are rebuilt: ~{~a~^ ~}~%"
 (define (guix-refresh . args)
   (define (parse-options)
     ;; Return the alist of option values.
-    (args-fold* args %options
-                (lambda (opt name arg result)
-                  (leave (G_ "~A: unrecognized option~%") name))
-                (lambda (arg result)
-                  (alist-cons 'argument arg result))
-                %default-options))
+    (parse-command-line args %options (list %default-options)
+                        #:build-options? #f))
 
   (define (options->updaters opts)
     ;; Return the list of updaters to use.

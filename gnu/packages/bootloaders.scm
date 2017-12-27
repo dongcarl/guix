@@ -43,13 +43,16 @@
   #:use-module (gnu packages perl)
   #:use-module (gnu packages python)
   #:use-module (gnu packages texinfo)
+  #:use-module (gnu packages swig)
   #:use-module (gnu packages virtualization)
   #:use-module (guix build-system gnu)
   #:use-module (guix download)
   #:use-module (guix git-download)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
-  #:use-module (guix utils))
+  #:use-module (guix utils)
+  #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-26))
 
 (define unifont
   ;; GNU Unifont, <http://gnu.org/s/unifont>.
@@ -74,7 +77,7 @@
                "03vvdfhdmf16121v7xs8is2krwnv15wpkhkf16a4yf8nsfc3f2w1"))))
     (build-system gnu-build-system)
     (arguments
-     '(#:phases (modify-phases %standard-phases
+     `(#:phases (modify-phases %standard-phases
                   (add-after 'unpack 'patch-stuff
                    (lambda* (#:key inputs #:allow-other-keys)
                      (substitute* "grub-core/Makefile.in"
@@ -101,7 +104,11 @@
                       (substitute* "Makefile.in"
                         (("grub_cmd_date grub_cmd_set_date grub_cmd_sleep")
                           "grub_cmd_date grub_cmd_sleep"))
-                      #t)))))
+                      #t)))
+       ;; Disable tests on ARM and AARCH64 platforms.
+       #:tests? ,(not (any (cute string-prefix? <> (or (%current-target-system)
+                                                       (%current-system)))
+                           '("arm" "aarch64")))))
     (inputs
      `(("gettext" ,gettext-minimal)
 
@@ -157,8 +164,8 @@ menu to select one of the installed operating systems.")
      `(;; TODO: Tests need a UEFI firmware for qemu. There is one at
        ;; https://github.com/tianocore/edk2/tree/master/OvmfPkg .
        ;; Search for 'OVMF' in "tests/util/grub-shell.in".
-       #:tests? #f
        ,@(substitute-keyword-arguments (package-arguments grub)
+           ((#:tests? _ #f) #f)
            ((#:configure-flags flags ''())
             `(cons "--with-platform=efi" ,flags))
            ((#:phases phases)
@@ -236,7 +243,8 @@ menu to select one of the installed operating systems.")
          ("perl" ,perl)
          ("python-2" ,python-2)))
       (inputs
-       `(("libuuid" ,util-linux)))
+       `(("libuuid" ,util-linux)
+         ("mtools" ,mtools)))
       (arguments
        `(#:parallel-build? #f
          #:make-flags
@@ -251,11 +259,17 @@ menu to select one of the installed operating systems.")
          #:phases
          (modify-phases %standard-phases
            (add-after 'unpack 'patch-files
-             (lambda _
+             (lambda* (#:key inputs #:allow-other-keys)
                (substitute* (find-files "." "Makefile.*|ppmtolss16")
                  (("/bin/pwd") (which "pwd"))
                  (("/bin/echo") (which "echo"))
                  (("/usr/bin/perl") (which "perl")))
+               (let ((mtools (assoc-ref inputs "mtools")))
+                 (substitute* (find-files "." "\\.c$")
+                   (("mcopy")
+                    (string-append mtools "/bin/mcopy"))
+                   (("mattrib")
+                    (string-append mtools "/bin/mattrib"))))
                #t))
            (delete 'configure)
            (add-before 'build 'set-permissions
@@ -280,7 +294,7 @@ menu to select one of the installed operating systems.")
 (define-public dtc
   (package
     (name "dtc")
-    (version "1.4.4")
+    (version "1.4.5")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -288,15 +302,23 @@ menu to select one of the installed operating systems.")
                     "dtc-" version ".tar.xz"))
               (sha256
                (base32
-                "1yygyvnnpdh241hl90n9p3kxcdvk3jxmsr4ndb961c8mq3ak21s7"))))
+                "08gnl39i4xy3dm8iqwlz2ygx0ml1bgc5kpiys5ll1wvah1j72b04"))
+              ;; Fix build and tests on 32 bits platforms.
+              ;; Will probably be fixed in 1.4.6 release.
+              (patches (search-patches "dtc-format-modifier.patch"
+                                       "dtc-32-bits-check.patch"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("bison" ,bison)
-       ("flex" ,flex)))
+       ("flex" ,flex)
+       ("swig" ,swig)))
+    (inputs
+     `(("python-2" ,python-2)))
     (arguments
      `(#:make-flags
        (list "CC=gcc"
              (string-append "PREFIX=" (assoc-ref %outputs "out"))
+             (string-append "SETUP_PREFIX=" (assoc-ref %outputs "out"))
              "INSTALL=install")
        #:phases
        (modify-phases %standard-phases
@@ -311,7 +333,7 @@ tree binary files.  These are board description files used by Linux and BSD.")
 (define u-boot
   (package
     (name "u-boot")
-    (version "2017.07")
+    (version "2017.11")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -319,7 +341,7 @@ tree binary files.  These are board description files used by Linux and BSD.")
                     "u-boot-" version ".tar.bz2"))
               (sha256
                (base32
-                "1zzywk0fgngm1mfnhkp8d0v57rs51zr1y6rp4p03i6nbibfbyx2k"))))
+                "01bcsah5imy6m3fbjwhqywxg0pfk5fl8ks9ylb7kv3zmrb9qy0ba"))))
     (native-inputs
      `(("bc" ,bc)
        ("dtc" ,dtc)
@@ -333,7 +355,8 @@ also initializes the boards (RAM etc).")
 
 (define (make-u-boot-package board triplet)
   "Returns a u-boot package for BOARD cross-compiled for TRIPLET."
-  (let ((same-arch? (if (string-prefix? (%current-system) triplet)
+  (let ((same-arch? (if (string-prefix? (%current-system)
+                                        (gnu-triplet->nix-system triplet))
                       `#t
                       `#f)))
     (package
@@ -375,7 +398,9 @@ also initializes the boards (RAM etc).")
              (lambda* (#:key outputs make-flags #:allow-other-keys)
                (let* ((out (assoc-ref outputs "out"))
                       (libexec (string-append out "/libexec"))
-                      (uboot-files (find-files "." ".*\\.(bin|efi|spl)$")))
+                      (uboot-files (append
+                                    (find-files "." ".*\\.(bin|efi|img|spl)$")
+                                    (find-files "." "^MLO$"))))
                  (mkdir-p libexec)
                  (for-each
                   (lambda (file)

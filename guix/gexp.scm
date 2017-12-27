@@ -78,6 +78,8 @@
             gexp->script
             text-file*
             mixed-text-file
+            file-union
+            directory-union
             imported-files
             imported-modules
             compiled-modules
@@ -341,28 +343,34 @@ This is the declarative counterpart of 'text-file'."
      (text-file name content references))))
 
 (define-record-type <computed-file>
-  (%computed-file name gexp options)
+  (%computed-file name gexp guile options)
   computed-file?
   (name       computed-file-name)                 ;string
   (gexp       computed-file-gexp)                 ;gexp
+  (guile      computed-file-guile)                ;<package>
   (options    computed-file-options))             ;list of arguments
 
 (define* (computed-file name gexp
-                        #:key (options '(#:local-build? #t)))
+                        #:key guile (options '(#:local-build? #t)))
   "Return an object representing the store item NAME, a file or directory
 computed by GEXP.  OPTIONS is a list of additional arguments to pass
 to 'gexp->derivation'.
 
 This is the declarative counterpart of 'gexp->derivation'."
-  (%computed-file name gexp options))
+  (%computed-file name gexp guile options))
 
 (define-gexp-compiler (computed-file-compiler (file <computed-file>)
                                               system target)
   ;; Compile FILE by returning a derivation whose build expression is its
   ;; gexp.
   (match file
-    (($ <computed-file> name gexp options)
-     (apply gexp->derivation name gexp options))))
+    (($ <computed-file> name gexp guile options)
+     (if guile
+         (mlet %store-monad ((guile (lower-object guile system
+                                                  #:target target)))
+           (apply gexp->derivation name gexp #:guile-for-build guile
+                  options))
+         (apply gexp->derivation name gexp options)))))
 
 (define-record-type <program-file>
   (%program-file name gexp guile)
@@ -562,6 +570,7 @@ names and file names suitable for the #:allowed-references argument to
                            allowed-references disallowed-references
                            leaked-env-vars
                            local-build? (substitutable? #t)
+                           deprecation-warnings
                            (script-name (string-append name "-builder")))
   "Return a derivation NAME that runs EXP (a gexp) with GUILE-FOR-BUILD (a
 derivation) on SYSTEM; EXP is stored in a file called SCRIPT-NAME.  When
@@ -596,6 +605,9 @@ In the latter case, the list denotes store items that the result is allowed to
 refer to.  Any reference to another store item will lead to a build error.
 Similarly for DISALLOWED-REFERENCES, which can list items that must not be
 referenced by the outputs.
+
+DEPRECATION-WARNINGS determines whether to show deprecation warnings while
+compiling modules.  It can be #f, #t, or 'detailed.
 
 The other arguments are as for 'derivation'."
   (define %modules
@@ -646,7 +658,9 @@ The other arguments are as for 'derivation'."
                                      (compiled-modules %modules
                                                        #:system system
                                                        #:module-path module-path
-                                                       #:guile guile-for-build)
+                                                       #:guile guile-for-build
+                                                       #:deprecation-warnings
+                                                       deprecation-warnings)
                                      (return #f)))
                        (graphs   (if references-graphs
                                      (lower-reference-graphs references-graphs
@@ -1021,7 +1035,8 @@ last one is created from the given <scheme-file> object."
                            #:key (name "module-import-compiled")
                            (system (%current-system))
                            (guile (%guile-for-build))
-                           (module-path %load-path))
+                           (module-path %load-path)
+                           (deprecation-warnings #f))
   "Return a derivation that builds a tree containing the `.go' files
 corresponding to MODULES.  All the MODULES are built in a context where
 they can refer to each other."
@@ -1071,7 +1086,15 @@ they can refer to each other."
     (gexp->derivation name build
                       #:system system
                       #:guile-for-build guile
-                      #:local-build? #t)))
+                      #:local-build? #t
+                      #:env-vars
+                      (case deprecation-warnings
+                        ((#f)
+                         '(("GUILE_WARN_DEPRECATED" . "no")))
+                        ((detailed)
+                         '(("GUILE_WARN_DEPRECATED" . "detailed")))
+                        (else
+                         '())))))
 
 
 ;;;
@@ -1079,10 +1102,12 @@ they can refer to each other."
 ;;;
 
 (define (default-guile)
-  ;; Lazily resolve 'guile-final'.  This module must not refer to (gnu …)
+  ;; Lazily resolve 'guile-2.2' (not 'guile-final' because this is for
+  ;; programs returned by 'program-file' and we don't want to keep references
+  ;; to several Guile packages).  This module must not refer to (gnu …)
   ;; modules directly, to avoid circular dependencies, hence this hack.
-  (module-ref (resolve-interface '(gnu packages commencement))
-              'guile-final))
+  (module-ref (resolve-interface '(gnu packages guile))
+              'guile-2.2))
 
 (define (load-path-expression modules)
   "Return as a monadic value a gexp that sets '%load-path' and
@@ -1170,6 +1195,76 @@ This is the declarative counterpart of 'text-file*'."
               (display (string-append (ungexp-splicing text)) port)))))
 
   (computed-file name build))
+
+(define (file-union name files)
+  "Return a <computed-file> that builds a directory containing all of FILES.
+Each item in FILES must be a two-element list where the first element is the
+file name to use in the new directory, and the second element is a gexp
+denoting the target file.  Here's an example:
+
+  (file-union \"etc\"
+              `((\"hosts\" ,(plain-file \"hosts\"
+                                        \"127.0.0.1 localhost\"))
+                (\"bashrc\" ,(plain-file \"bashrc\"
+                                         \"alias ls='ls --color'\"))))
+
+This yields an 'etc' directory containing these two files."
+  (computed-file name
+                 (gexp
+                  (begin
+                    (mkdir (ungexp output))
+                    (chdir (ungexp output))
+                    (ungexp-splicing
+                     (map (match-lambda
+                            ((target source)
+                             (gexp
+                              (begin
+                                ;; Stat the source to abort early if it does
+                                ;; not exist.
+                                (stat (ungexp source))
+
+                                (symlink (ungexp source)
+                                         (ungexp target))))))
+                          files))))))
+
+(define* (directory-union name things
+                          #:key (copy? #f) (quiet? #f))
+  "Return a directory that is the union of THINGS, where THINGS is a list of
+file-like objects denoting directories.  For example:
+
+  (directory-union \"guile+emacs\" (list guile emacs))
+
+yields a directory that is the union of the 'guile' and 'emacs' packages.
+
+When HARD-LINKS? is true, create hard links instead of symlinks.  When QUIET?
+is true, the derivation will not print anything."
+  (define symlink
+    (if copy?
+        (gexp (lambda (old new)
+                (if (file-is-directory? old)
+                    (symlink old new)
+                    (copy-file old new))))
+        (gexp symlink)))
+
+  (define log-port
+    (if quiet?
+        (gexp (%make-void-port "w"))
+        (gexp (current-error-port))))
+
+  (match things
+    ((one)
+     ;; Only one thing; return it.
+     one)
+    (_
+     (computed-file name
+                    (with-imported-modules '((guix build union))
+                      (gexp (begin
+                              (use-modules (guix build union))
+                              (union-build (ungexp output)
+                                           '(ungexp things)
+
+                                           #:log-port (ungexp log-port)
+                                           #:symlink (ungexp symlink)))))))))
 
 
 ;;;

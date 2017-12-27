@@ -5,6 +5,8 @@
 ;;; Copyright © 2014, 2015, 2016, 2017 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 Lukas Gradl <lgradl@openmailbox.org>
+;;; Copyright © 2017 Ricardo Wurmus <rekado@elephly.net>
+;;; Copyright © 2017 Petter <petter@mykolab.ch>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -27,6 +29,7 @@
   #:use-module (guix download)
   #:use-module (guix utils)
   #:use-module (guix build-system gnu)
+  #:use-module (guix build-system perl)
   #:use-module (guix build-system python)
   #:use-module (gnu packages)
   #:use-module (gnu packages base)
@@ -43,6 +46,7 @@
   #:use-module (gnu packages nettle)
   #:use-module (gnu packages pcre)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages perl-check)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
   #:use-module (gnu packages xml)
@@ -62,12 +66,14 @@
             itstool
             libsigc++
             glibmm
-            telepathy-glib))
+            telepathy-glib
+            perl-net-dbus
+            perl-net-dbus-glib))
 
 (define dbus
   (package
     (name "dbus")
-    (version "1.10.18")
+    (version "1.10.22")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -75,7 +81,7 @@
                     version ".tar.gz"))
               (sha256
                (base32
-                "0jjirhw6xwz2ffmbg5kr79108l8i1bdaw7szc67n3qpkygaxsjb0"))
+                "15vv9gz5i4f5l7h0d045qz5iyvl89hjk2k83lb4vbizd7qg41cg2"))
               (patches (search-patches "dbus-helper-search-path.patch"))))
     (build-system gnu-build-system)
     (arguments
@@ -137,7 +143,7 @@ shared NFS home directories.")
 (define glib
   (package
    (name "glib")
-   (version "2.52.2")
+   (version "2.52.3")
    (source (origin
             (method url-fetch)
             (uri (string-append "mirror://gnome/sources/"
@@ -145,7 +151,7 @@ shared NFS home directories.")
                                 name "-" version ".tar.xz"))
             (sha256
              (base32
-              "1l65kab6jr9zlllgbjcbvrbgah3sdd577fpw4pdb2j195ag5s3ph"))
+              "0a71wkkhkvad84gm30w13micxxgqqw3sxhybj7nd9z60lwspdvi5"))
             (patches (search-patches "glib-tests-timer.patch"))))
    (build-system gnu-build-system)
    (outputs '("out"           ; everything
@@ -406,13 +412,12 @@ The intltool collection can be used to do these things:
     (arguments
      '(#:phases
        (modify-phases %standard-phases
-         (add-after
-          'install 'wrap-program
-          (lambda* (#:key outputs #:allow-other-keys)
-            (let ((prog (string-append (assoc-ref outputs "out")
-                                       "/bin/itstool")))
-              (wrap-program prog
-                `("PYTHONPATH" = (,(getenv "PYTHONPATH"))))))))))
+         (add-after 'install 'wrap-program
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((prog (string-append (assoc-ref outputs "out")
+                                        "/bin/itstool")))
+               (wrap-program prog
+                 `("PYTHONPATH" = (,(getenv "PYTHONPATH"))))))))))
     (home-page "http://www.itstool.org")
     (synopsis "Tool to translate XML documents with PO files")
     (description
@@ -504,22 +509,23 @@ has an ease of use unmatched by other C++ callback libraries.")
                "1926b3adx903hzvdp8glblsgjyadzqnwgkj8hg605d4wv98m1n0z"))))
     (build-system gnu-build-system)
     (arguments
-     `(#:phases (alist-cons-before
-                 'build 'pre-build
-                 (lambda _
-                   ;; This test uses /etc/fstab as an example file to read
-                   ;; from; choose a better example.
-                   (substitute* "tests/giomm_simple/main.cc"
-                     (("/etc/fstab")
-                      (string-append (getcwd)
-                                     "/tests/giomm_simple/main.cc")))
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'pre-build
+           (lambda _
+             ;; This test uses /etc/fstab as an example file to read
+             ;; from; choose a better example.
+             (substitute* "tests/giomm_simple/main.cc"
+               (("/etc/fstab")
+                (string-append (getcwd)
+                               "/tests/giomm_simple/main.cc")))
 
-                   ;; This test does a DNS lookup, and then expects to be able
-                   ;; to open a TLS session; just skip it.
-                   (substitute* "tests/giomm_tls_client/main.cc"
-                     (("Gio::init.*$")
-                      "return 77;\n")))
-                 %standard-phases)))
+             ;; This test does a DNS lookup, and then expects to be able
+             ;; to open a TLS session; just skip it.
+             (substitute* "tests/giomm_tls_client/main.cc"
+               (("Gio::init.*$")
+                "return 77;\n"))
+             #t)))))
     (native-inputs `(("pkg-config" ,pkg-config)
                      ("glib" ,glib "bin")))
     (propagated-inputs
@@ -748,3 +754,57 @@ programming langauage.  It also contains the utility
 reading and writing @uref{https://www.freedesktop.org/wiki/Distributions/AppStream,AppStream}
 metadata.")
     (license license:lgpl2.1+)))
+
+(define perl-net-dbus
+  (package
+    (name "perl-net-dbus")
+    (version "1.1.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "mirror://cpan/authors/id/D/DA/DANBERR/Net-DBus-"
+                           version ".tar.gz"))
+       (sha256
+        (base32
+         "0sg2w147b9r9ykfzjs7y9qxry73xkjnhnk4qf95kfv79p5nnk4c3"))))
+    (build-system perl-build-system)
+    (native-inputs
+     `(("pkg-config" ,pkg-config)
+       ("perl-test-pod" ,perl-test-pod)
+       ("perl-test-pod-coverage" ,perl-test-pod-coverage)))
+    (inputs
+     `(("dbus" ,dbus)))
+    (propagated-inputs
+     `(("perl-xml-twig" ,perl-xml-twig)))
+    (home-page "http://search.cpan.org/dist/Net-DBus/")
+    (synopsis "Extension for the DBus bindings")
+    (description "@code{Net::DBus} provides a Perl XS API to the DBus
+inter-application messaging system.  The Perl API covers the core base level
+of the DBus APIs, not concerning itself yet with the GLib or QT wrappers.")
+    (license license:perl-license)))
+
+(define perl-net-dbus-glib
+  (package
+    (name "perl-net-dbus-glib")
+    (version "0.33.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "mirror://cpan/authors/id/D/DA/DANBERR/"
+                           "Net-DBus-GLib-" version ".tar.gz"))
+       (sha256
+        (base32
+         "1z4mbv8z0rad604xahijpg5szzi8qak07hbahh230z4jf96fkxvj"))))
+    (build-system perl-build-system)
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (inputs
+     `(("dbus-glib" ,dbus-glib)))
+    (home-page "http://search.cpan.org/~danberr/Net-DBus-GLib-0.33.0/")
+    (synopsis "Perl extension for the DBus GLib bindings")
+    (description "This package provides an extension to the @code{Net::DBus}
+module allowing integration with the GLib mainloop.  To integrate with the
+main loop, simply get a connection to the bus via the methods in
+@code{Net::DBus::GLib} rather than the usual @code{Net::DBus} module.  Every
+other API remains the same.")
+    (license license:gpl2+)))

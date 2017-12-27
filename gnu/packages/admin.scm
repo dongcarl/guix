@@ -6,7 +6,7 @@
 ;;; Copyright © 2015, 2016 Taylan Ulrich Bayırlı/Kammer <taylanbayirli@gmail.com>
 ;;; Copyright © 2015 Alex Sassmannshausen <alex.sassmannshausen@gmail.com>
 ;;; Copyright © 2015 Eric Dvorsak <eric@dvorsak.fr>
-;;; Copyright © 2016 Leo Famulari <leo@famulari.name>
+;;; Copyright © 2016, 2017 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2016 Pjotr Prins <pjotr.guix@thebird.nl>
 ;;; Copyright © 2016, 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
@@ -46,6 +46,7 @@
   #:use-module (guix build-system trivial)
   #:use-module (gnu packages)
   #:use-module (gnu packages base)
+  #:use-module (gnu packages check)
   #:use-module (gnu packages cyrus-sasl)
   #:use-module (gnu packages ncurses)
   #:use-module (gnu packages readline)
@@ -55,6 +56,7 @@
   #:use-module (gnu packages gettext)
   #:use-module (gnu packages pcre)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages perl-check)
   #:use-module (gnu packages tcl)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages cross-base)
@@ -68,6 +70,8 @@
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages popt)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-crypto)
+  #:use-module (gnu packages python-web)
   #:use-module (gnu packages texinfo)
   #:use-module (gnu packages groff)
   #:use-module (gnu packages pciutils)
@@ -77,7 +81,6 @@
   #:use-module (gnu packages image)
   #:use-module (gnu packages xorg)
   #:use-module (gnu packages xdisorg)
-  #:use-module (gnu packages python)
   #:use-module (gnu packages man)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages gnome)
@@ -159,7 +162,8 @@ and provides a \"top-like\" mode (monitoring).")
                                   version ".tar.gz"))
               (sha256
                (base32
-                "174q1qg7yg6w1hfvlfv720hr6hid4h5xzw15y3ycfpspllzldhcb"))))
+                "174q1qg7yg6w1hfvlfv720hr6hid4h5xzw15y3ycfpspllzldhcb"))
+              (patches (search-patches "shepherd-close-fds.patch"))))
     (build-system gnu-build-system)
     (arguments
      '(#:configure-flags '("--localstatedir=/var")))
@@ -361,32 +365,31 @@ login, passwd, su, groupadd, and useradd.")
                "05yxrp44ky2kg6qknk1ih0kvwkgbn9fbz77r3vci7agslh5wjm8g"))))
     (build-system gnu-build-system)
     (arguments
-     `(#:phases (alist-replace 'configure
-                               (lambda* (#:key inputs outputs
-                                         #:allow-other-keys)
-                                 (let* ((out    (assoc-ref outputs "out"))
-                                        (man8   (string-append
-                                                 out "/share/man/man8"))
-                                        (sbin   (string-append out "/sbin"))
-                                        (shadow (assoc-ref inputs "shadow"))
-                                        (login  (string-append shadow
-                                                               "/bin/login")))
-                                   (substitute* "Makefile"
-                                     (("^SBINDIR.*")
-                                      (string-append "SBINDIR = " out
-                                                     "/sbin\n"))
-                                     (("^MANDIR.*")
-                                      (string-append "MANDIR = " out
-                                                     "/share/man/man8\n")))
+     `(#:phases
+       (modify-phases %standard-phases
+         (replace 'configure
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let* ((out    (assoc-ref outputs "out"))
+                    (man8   (string-append out "/share/man/man8"))
+                    (sbin   (string-append out "/sbin"))
+                    (shadow (assoc-ref inputs "shadow"))
+                    (login  (string-append shadow "/bin/login")))
+               (substitute* "Makefile"
+                 (("^SBINDIR.*")
+                  (string-append "SBINDIR = " out
+                                 "/sbin\n"))
+                 (("^MANDIR.*")
+                  (string-append "MANDIR = " out
+                                 "/share/man/man8\n")))
 
-                                   ;; Pick the right 'login' by default.
-                                   (substitute* "mingetty.c"
-                                     (("\"/bin/login\"")
-                                      (string-append "\"" login "\"")))
+               ;; Pick the right 'login' by default.
+               (substitute* "mingetty.c"
+                 (("\"/bin/login\"")
+                  (string-append "\"" login "\"")))
 
-                                   (mkdir-p sbin)
-                                   (mkdir-p man8)))
-                               %standard-phases)
+               (mkdir-p sbin)
+               (mkdir-p man8))
+             #t)))
        #:tests? #f))                              ; no tests
     (inputs `(("shadow" ,shadow)))
 
@@ -725,25 +728,25 @@ by bandwidth they use.")
                          ("perl-x11-protocol" ,perl-x11-protocol)))
     (arguments
      `(#:phases
-       (alist-cons-after
-        'install 'set-load-paths
-        (lambda* (#:key inputs outputs #:allow-other-keys)
-          ;; Put the perl-tk and perl-x11-protocol modules in the perl inc
-          ;; path for PROG
-          (let* ((out  (assoc-ref outputs "out"))
-                 (prog (string-append out "/bin/cssh"))
-                 (perl-ver ,(package-version perl))
-                 (x11-inc (string-append
-                           (assoc-ref inputs "perl-x11-protocol")
-                           "/lib/perl5/site_perl/" perl-ver))
-                 (tk-inc (string-append
-                          (assoc-ref inputs "perl-tk")
-                          "/lib/perl5/site_perl/" perl-ver
-                          "/x86_64-linux")))
-            (wrap-program
-             prog
-             `("PERL5LIB" ":" prefix (,x11-inc ,tk-inc)))))
-        %standard-phases)))
+       (modify-phases %standard-phases
+         (add-after 'install 'set-load-paths
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             ;; Put the perl-tk and perl-x11-protocol modules in the perl inc
+             ;; path for PROG
+             (let* ((out  (assoc-ref outputs "out"))
+                    (prog (string-append out "/bin/cssh"))
+                    (perl-ver ,(package-version perl))
+                    (x11-inc (string-append
+                              (assoc-ref inputs "perl-x11-protocol")
+                              "/lib/perl5/site_perl/" perl-ver))
+                    (tk-inc (string-append
+                             (assoc-ref inputs "perl-tk")
+                             "/lib/perl5/site_perl/" perl-ver
+                             "/x86_64-linux")))
+               (wrap-program
+                   prog
+                 `("PERL5LIB" ":" prefix (,x11-inc ,tk-inc))))
+             #t)))))
     ;; The clusterssh.sourceforge.net address requires login to view
     (home-page "https://sourceforge.net/projects/clusterssh/")
     (synopsis "Secure concurrent multi-server terminal control")
@@ -784,6 +787,11 @@ over ssh connections.")
                                          "/etc"))
 
        #:phases (modify-phases %standard-phases
+                  (add-after 'unpack 'patch-paths
+                    (lambda _
+                      (substitute* "rc/rc"
+                        (("/usr/sbin/sendmail") "sendmail"))
+                      #t))
                   (add-after 'build 'set-packdir
                     (lambda _
                       ;; Set a default location for archived logs.
@@ -903,18 +911,24 @@ commands and their arguments.")
                     "http://w1.fi/releases/wpa_supplicant-"
                     version
                     ".tar.gz"))
+              (patches (search-patches "wpa-supplicant-CVE-2017-13082.patch"
+                                       "wpa-supplicant-fix-key-reuse.patch"
+                                       "wpa-supplicant-fix-zeroed-keys.patch"
+                                       "wpa-supplicant-fix-nonce-reuse.patch"
+                                       "wpa-supplicant-krack-followups.patch"))
               (sha256
                (base32
                 "0l0l5gz3d5j9bqjsbjlfcv4w4jwndllp9fmyai4x9kg6qhs6v4xl"))))
     (build-system gnu-build-system)
     (arguments
-     '(#:phases (alist-replace
-                 'configure
-                 (lambda* (#:key outputs #:allow-other-keys)
-                   (chdir "wpa_supplicant")
-                   (copy-file "defconfig" ".config")
-                   (let ((port (open-file ".config" "al")))
-                     (display "
+     '(#:phases
+       (modify-phases %standard-phases
+         (replace 'configure
+           (lambda* (#:key outputs #:allow-other-keys)
+             (chdir "wpa_supplicant")
+             (copy-file "defconfig" ".config")
+             (let ((port (open-file ".config" "al")))
+               (display "
       CONFIG_DEBUG_SYSLOG=y
 
       # Choose GnuTLS (the default is OpenSSL.)
@@ -924,26 +938,23 @@ commands and their arguments.")
       CFLAGS += $(shell pkg-config libnl-3.0 --cflags)
       CONFIG_LIBNL32=y
       CONFIG_READLINE=y\n" port)
-                     (close-port port)))
+               (close-port port))))
+         (add-after 'install 'install-man-pages
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out  (assoc-ref outputs "out"))
+                    (man  (string-append out "/share/man"))
+                    (man5 (string-append man "/man5"))
+                    (man8 (string-append man "/man8")))
+               (define (copy-man-page target)
+                 (lambda (file)
+                   (install-file file target)))
 
-                 (alist-cons-after
-                  'install 'install-man-pages
-                  (lambda* (#:key outputs #:allow-other-keys)
-                    (let* ((out  (assoc-ref outputs "out"))
-                           (man  (string-append out "/share/man"))
-                           (man5 (string-append man "/man5"))
-                           (man8 (string-append man "/man8")))
-                      (define (copy-man-page target)
-                        (lambda (file)
-                          (install-file file target)))
-
-                      (mkdir-p man5) (mkdir man8)
-                      (for-each (copy-man-page man5)
-                                (find-files "doc/docbook" "\\.5"))
-                      (for-each (copy-man-page man8)
-                                (find-files "doc/docbook" "\\.8"))
-                      #t))
-                  %standard-phases))
+               (mkdir-p man5) (mkdir man8)
+               (for-each (copy-man-page man5)
+                         (find-files "doc/docbook" "\\.5"))
+               (for-each (copy-man-page man8)
+                         (find-files "doc/docbook" "\\.8"))
+               #t))))
 
       #:make-flags (list "CC=gcc"
                          (string-append "BINDIR=" (assoc-ref %outputs "out")
@@ -980,25 +991,24 @@ This package provides the 'wpa_supplicant' daemon and the 'wpa_cli' command.")
     (arguments
      (substitute-keyword-arguments (package-arguments wpa-supplicant-minimal)
        ((#:phases phases)
-        `(alist-cons-after
-          'configure 'configure-for-dbus
-          (lambda _
-            (let ((port (open-file ".config" "al")))
-              (display "
+        `(modify-phases ,phases
+           (add-after 'configure 'configure-for-dbus
+             (lambda _
+               (let ((port (open-file ".config" "al")))
+                 (display "
       CONFIG_CTRL_IFACE_DBUS=y
       CONFIG_CTRL_IFACE_DBUS_NEW=y
       CONFIG_CTRL_IFACE_DBUS_INTRO=y\n" port)
-              (close-port port))
-            #t)
-          (alist-cons-after
-           'install-man-pages 'install-dbus-conf
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let* ((out (assoc-ref outputs "out"))
-                    (dir (string-append out "/etc/dbus-1/system.d")))
-               (mkdir-p dir)
-               (copy-file "dbus/dbus-wpa_supplicant.conf"
-                          (string-append dir "/wpa_supplicant.conf"))))
-           ,phases)))))))
+                 (close-port port))
+               #t))
+          (add-after 'install-man-pages 'install-dbus-conf
+            (lambda* (#:key outputs #:allow-other-keys)
+              (let* ((out (assoc-ref outputs "out"))
+                     (dir (string-append out "/etc/dbus-1/system.d")))
+                (mkdir-p dir)
+                (copy-file "dbus/dbus-wpa_supplicant.conf"
+                           (string-append dir "/wpa_supplicant.conf")))
+              #t))))))))
 
 (define-public wakelan
   (package
@@ -1014,22 +1024,22 @@ This package provides the 'wpa_supplicant' daemon and the 'wpa_cli' command.")
                 "0vydqpf44146ir6k87gmqaq6xy66xhc1gkr3nsd7jj3nhy7ypx9x"))))
     (build-system gnu-build-system)
     (arguments
-     '(#:phases (alist-replace
-                 'configure
-                 (lambda* (#:key outputs #:allow-other-keys)
-                   (let ((out (assoc-ref outputs "out")))
-                     (mkdir-p (string-append out "/bin"))
-                     (mkdir-p (string-append out "/share/man/man1"))
+     '(#:phases
+       (modify-phases %standard-phases
+         (replace 'configure
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out")))
+               (mkdir-p (string-append out "/bin"))
+               (mkdir-p (string-append out "/share/man/man1"))
 
-                     ;; It's an old configure script that doesn't understand
-                     ;; the extra options we pass.
-                     (setenv "CONFIG_SHELL" (which "bash"))
-                     (zero?
-                      (system* "./configure"
-                               (string-append "--prefix=" out)
-                               (string-append "--mandir=" out
-                                              "/share/man")))))
-                 %standard-phases)
+               ;; It's an old configure script that doesn't understand
+               ;; the extra options we pass.
+               (setenv "CONFIG_SHELL" (which "bash"))
+               (zero?
+                (system* "./configure"
+                         (string-append "--prefix=" out)
+                         (string-append "--mandir=" out
+                                        "/share/man")))))))
        #:tests? #f))
     (home-page "http://kernel.org")               ; really, no home page
     (synopsis "Send a wake-on-LAN packet")
@@ -1071,7 +1081,7 @@ module slots, and the list of I/O ports (e.g. serial, parallel, USB).")
 (define-public acpica
   (package
     (name "acpica")
-    (version "20150410")
+    (version "20171110")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -1079,23 +1089,24 @@ module slots, and the list of I/O ports (e.g. serial, parallel, USB).")
                     version ".tar.gz"))
               (sha256
                (base32
-                "0q1fjwkyw9x6gsva6fd0zbn7ly4fx0ha4853f416np9kf2irillw"))))
+                "08g83qvhfx04vzb3f3pfpkp0w601v6csjzdv7z1vjzz1k71h7yml"))))
     (build-system gnu-build-system)
     (native-inputs `(("flex" ,flex)
                      ("bison" ,bison)))
     (arguments
      '(#:make-flags (list (string-append "PREFIX=" %output)
+                          "CC=gcc"
                           "HOST=_LINUX"
                           "OPT_CFLAGS=-Wall -fno-strict-aliasing")
        #:tests? #f  ; no 'check' target.
-       #:phases (alist-delete 'configure %standard-phases)))
-    (home-page "http://acpica.org/")
+       #:phases (modify-phases %standard-phases (delete 'configure))))
+    (home-page "https://acpica.org/")
     (synopsis "Tools for the development and debug of ACPI tables")
     (description
-     "The ACPI Component Architecture (ACPICA) project provides an
+     "The ACPI Component Architecture (@dfn{ACPICA}) project provides an
 OS-independent reference implementation of the Advanced Configuration and
-Power Interface Specification (ACPI).  ACPICA code contains those portions of
-ACPI meant to be directly integrated into the host OS as a kernel-resident
+Power Interface Specification (@dfn{ACPI}).  ACPICA code contains those portions
+of ACPI meant to be directly integrated into the host OS as a kernel-resident
 subsystem, and a small set of tools to assist in developing and debugging ACPI
 tables.  This package contains only the user-space tools needed for ACPI table
 development, not the kernel implementation of ACPI.")
@@ -1198,7 +1209,7 @@ recover lost partitions and/or make non-booting disks bootable again.")
                (base32 "04kviw799qxly08zb8n5mgxfd96gyis6x69q2qiw86jnh87c4mv9"))))
     (build-system gnu-build-system)
     (arguments
-     '(#:phases (alist-delete 'configure %standard-phases)
+     '(#:phases (modify-phases %standard-phases (delete 'configure))
        #:tests? #f                      ; no check target
        #:make-flags (let ((out (assoc-ref %outputs "out")))
                                (list (string-append "prefix=" out)))))
@@ -1227,23 +1238,23 @@ environment variable is set and output is to tty.")
                            "#!$SHELL")))))
     (build-system gnu-build-system)
     (arguments
-     '(#:phases (alist-cons-before
-                 'build 'patch-/bin/sh
-                 (lambda* (#:key inputs #:allow-other-keys)
-                   ;; Use the right shell when executing the watcher and
-                   ;; user-provided shell commands.
-                   (let ((bash (assoc-ref inputs "bash")))
-                     (substitute* '("src/direvent.c" "src/progman.c")
-                       (("\"/bin/sh\"")
-                        (string-append "\"" bash "/bin/sh\"")))
+     '(#:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'patch-/bin/sh
+           (lambda* (#:key inputs #:allow-other-keys)
+             ;; Use the right shell when executing the watcher and
+             ;; user-provided shell commands.
+             (let ((bash (assoc-ref inputs "bash")))
+               (substitute* '("src/direvent.c" "src/progman.c")
+                 (("\"/bin/sh\"")
+                  (string-append "\"" bash "/bin/sh\"")))
 
-                     ;; Adjust the 'shell.at' test accordingly.
-                     (substitute* "tests/testsuite"
-                       (("SHELL=/bin/sh")
-                        (string-append "SHELL=" bash "/bin/sh")))
+               ;; Adjust the 'shell.at' test accordingly.
+               (substitute* "tests/testsuite"
+                 (("SHELL=/bin/sh")
+                  (string-append "SHELL=" bash "/bin/sh")))
 
-                     #t))
-                 %standard-phases)))
+               #t))))))
     (home-page "https://www.gnu.org/software/direvent/")
     (synopsis "Daemon to monitor directories for events such as file removal")
     (description
@@ -1285,7 +1296,7 @@ various ways that may be running with too much privilege.")
 (define-public smartmontools
   (package
     (name "smartmontools")
-    (version "6.5")
+    (version "6.6")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -1293,16 +1304,16 @@ various ways that may be running with too much privilege.")
                     version "/smartmontools-" version ".tar.gz"))
               (sha256
                (base32
-                "1g25r6sx85b5lay5n6sbnqv05qxzj6xsafsp93hnrg1h044bps49"))))
+                "0m1hllbb78rr6cxkbalmz1gqkl0psgq8rrmv4gwcmz34n07kvx2i"))))
     (build-system gnu-build-system)
     (inputs `(("libcap-ng" ,libcap-ng)))
-    (home-page "http://www.smartmontools.org/")
+    (home-page "https://www.smartmontools.org/")
     (synopsis "S.M.A.R.T. harddisk control and monitoring tools")
     (description
      "The smartmontools package contains utility programs to control and
 monitor storage systems using the Self-Monitoring, Analysis and Reporting
-Technology System (S.M.A.R.T.) built into most modern ATA and SCSI harddisks.
-In many cases, these utilities will provide advanced warning of disk
+Technology System (@dfn{S.M.A.R.T.}) built into most modern ATA and SCSI hard
+disks.  In many cases, these utilities will provide advanced warning of disk
 degradation and failure.")
     (license license:gpl2+)))
 
@@ -1376,14 +1387,14 @@ of supported upstream metrics systems simultaneously.")
 (define-public ansible
   (package
     (name "ansible")
-    (version "2.3.1.0")
+    (version "2.4.1.0")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri "ansible" version))
        (sha256
         (base32
-         "1xdr82fy8gahxh3586wm5k1bxksys7yl1f2n24shrk8gf99qyjyd"))
+         "0spv0kjaicwss4q52s727b6grdizcxpa0bbsfg26pgf5kjrayqfs"))
        (patches (search-patches "ansible-wrap-program-hack.patch"))))
     (build-system python-build-system)
     (native-inputs
@@ -1535,7 +1546,7 @@ displays a table of current bandwidth usage by pairs of hosts.")
 (define-public munge
   (package
     (name "munge")
-    (version "0.5.12")
+    (version "0.5.13")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/dun/munge/releases/"
@@ -1543,7 +1554,7 @@ displays a table of current bandwidth usage by pairs of hosts.")
                                   version ".tar.xz"))
               (sha256
                (base32
-                "1s0vlwgm3hcx75vcmjf2y3icy5nv8y07bx93w2cmm6a7x71y6wp9"))))
+                "1nj486bbg1adfg298zck96vgx57kchcypc1zdz1n7w540vyksxcr"))))
     (inputs
      `(("openssl" ,openssl)
        ("libgcrypt" ,libgcrypt)))
@@ -1700,7 +1711,7 @@ results (ndiff), and a packet generation and response analysis tool (nping).")
                       (list (string-append "DESTDIR=" out)
                             "prefix=/"))
        ;; no configure script
-       #:phases (alist-delete 'configure %standard-phases)))
+       #:phases (modify-phases %standard-phases (delete 'configure))))
     (inputs `(("python-2" ,python-2)))
     (synopsis "Versatile resource statistics tool")
     (description "Dstat is a versatile replacement for @command{vmstat},
@@ -1763,13 +1774,13 @@ a new command using the matched rule, and runs it.")
 (define-public di
   (package
     (name "di")
-    (version "4.43")
+    (version "4.44")
     (source
      (origin
        (method url-fetch)
        (uri (string-append "https://gentoo.com/di/di-" version ".tar.gz"))
        (sha256
-        (base32 "1q25jy51qfzsym9b2w0cqzscq2j492gn60dy6gbp88m8nwm4sdy8"))))
+        (base32 "0803lp8kd3mp1jcm17i019xiqxdy85hhs6xk67zib8gmvg500gcn"))))
     (build-system gnu-build-system)
     (arguments
      `(#:tests? #f ; Obscure test failures.
@@ -1785,23 +1796,23 @@ a new command using the matched rule, and runs it.")
     (home-page "https://www.gentoo.com/di/")
     (synopsis "Advanced df like disk information utility")
     (description
-     "'di' is a disk information utility, displaying everything
-(and more) that your @code{df} command does.  It features the ability to
-display your disk usage in whatever format you prefer.  It is designed to be
-highly portable.  Great for heterogeneous networks.")
+     "'di' is a disk information utility, displaying everything that your
+@code{df} command does and more.  It features the ability to display your disk
+usage in whatever format you prefer.  It is designed to be highly portable and
+produce uniform output across heterogeneous networks.")
     (license license:zlib)))
 
 (define-public cbatticon
   (package
     (name "cbatticon")
-    (version "1.6.6")
+    (version "1.6.7")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/valr/"
                                   name "/archive/" version ".tar.gz"))
               (sha256
                (base32
-                "1rxlrwd817f2zl4fsc5ha43wjzfidq3yyagq4lgyi150qg36svv3"))
+                "1s2n49ydh7pznnf02fak4yy0wqkgi9ag7yiw1zg1lhp4m0h37hyh"))
               (file-name (string-append name "-" version ".tar.gz"))))
     (build-system gnu-build-system)
     (arguments
@@ -2138,7 +2149,7 @@ tool for remote execution and deployment.")
 (define-public neofetch
   (package
     (name "neofetch")
-    (version "3.2.0")
+    (version "3.3.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/dylanaraps/neofetch/"
@@ -2146,10 +2157,10 @@ tool for remote execution and deployment.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "07a32rzmch51znxspzyc7zyaldmr383v70b49wmnjdjs2qfdbv3a"))))
+                "15p69q0jchfms1fpb4i7kq8b28w2xpgh2zmynln618qxv1myf228"))))
     (build-system gnu-build-system)
     (arguments
-     '(#:tests? #f                      ; there are no tests
+     `(#:tests? #f                      ; there are no tests
        #:make-flags
        (list (string-append "PREFIX=" %output))
        #:phases
@@ -2166,7 +2177,15 @@ tool for remote execution and deployment.")
                  (("\"/usr/share/neofetch")
                   (string-append "\"" out "/share/neofetch"))))
              #t))
-         (delete 'configure))))
+         (delete 'configure)            ; no configure script
+         (replace 'install
+           (lambda* (#:key make-flags outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (doc (string-append out "/share/doc/" ,name "-" ,version))
+                    (etc (string-append doc "/examples/etc")))
+               (zero? (apply system* `("make" ,@make-flags
+                                       ,(string-append "SYSCONFDIR=" etc)
+                                       "install")))))))))
     (home-page "https://github.com/dylanaraps/neofetch")
     (synopsis "System info script")
     (description "Neofetch is a CLI system information tool written in Bash.
@@ -2179,7 +2198,7 @@ you are running, what theme or icon set you are using, etc.")
 (define-public nnn
   (package
     (name "nnn")
-    (version "1.3")
+    (version "1.5")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/jarun/nnn/"
@@ -2187,7 +2206,7 @@ you are running, what theme or icon set you are using, etc.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0sivgcmg3hihz15v2wgbxnd0icn06pyvvqdqh8x0mwkhvm434fpb"))))
+                "0zswf8lb29zr1z642i1d0zi1y2mxal8qjqdrpdiqjh197jamj3zm"))))
     (build-system gnu-build-system)
     (inputs `(("ncurses" ,ncurses)
               ("readline" ,readline)))
@@ -2278,3 +2297,71 @@ on systems running the Linux kernel.")
     ;; arm and aarch64 don't have cpuid.h
     (supported-systems '("i686-linux" "x86_64-linux"))
     (license license:gpl2+)))
+
+(define-public masscan
+  (package
+    (name "masscan")
+    (version "1.0.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/robertdavidgraham/masscan"
+                                  "/archive/" version ".tar.gz"))
+              (sha256
+               (base32
+                "1y9af345g00z83rliv6bmlqg37xwc7xpnx5xqdgmjikzcxgk9pji"))))
+    (build-system gnu-build-system)
+    (inputs
+     `(("libpcap" ,libpcap)))
+    (arguments
+     '(#:test-target "regress"
+       #:make-flags (list (string-append "PREFIX=" (assoc-ref %outputs "out")))
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure) ; There is no ./configure script
+         (add-after 'unpack 'patch-path
+           (lambda* (#:key outputs inputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (pcap (assoc-ref inputs "libpcap")))
+               (substitute* "src/rawsock-pcap.c"
+                 (("libpcap.so") (string-append pcap "/lib/libpcap.so")))
+               #t))))))
+    (synopsis "TCP port scanner")
+    (description "MASSCAN is an asynchronous TCP port scanner.  It can detect
+open ports, and also complete the TCP connection and interact with the remote
+application, collecting the information received.")
+    (home-page "https://github.com/robertdavidgraham/masscan")
+        ;; 'src/siphash24.c' is the SipHash reference implementation, which
+        ;; bears a CC0 Public Domain Dedication.
+    (license license:agpl3+)))
+
+(define-public hungrycat
+  (package
+    (name "hungrycat")
+    (version "0.4.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jwilk/hungrycat/"
+                                  "releases/download/" version "/"
+                                  name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "03fc1zsrf99lvxa7b4ps6pbi43304wbxh1f6ci4q0vkal370yfwh"))))
+    (build-system gnu-build-system)
+    (native-inputs
+     ;; For tests.
+     `(("python" ,python-wrapper)
+       ("python-nose" ,python-nose)))
+    (arguments
+     `(#:test-target "test"))
+    (synopsis "A single tool that combines @command{cat} & @command{rm}")
+    (description
+     "hungrycat prints the contents of a file to standard output, while
+simultaneously freeing the disk space it occupied.  It is useful if you need
+to process a large file, don't have enough space to store both the input and
+output files, and don't need the input file afterwards.
+While similar in principle to running @command{cat} immediately followed by
+@command{rm}, @command{hungrycat} actually frees blocks as soon as they are
+printed instead of after the entire file has been read, which is often too
+late.")
+    (home-page "https://jwilk.net/software/hungrycat")
+    (license license:expat)))

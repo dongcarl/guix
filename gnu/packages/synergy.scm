@@ -38,22 +38,24 @@
     (source
      (origin
       (method url-fetch)
-      (uri (string-append "https://github.com/symless/synergy/archive/"
+      (uri (string-append "https://github.com/symless/synergy-core/archive/"
                           "v" version "-stable.tar.gz"))
       (file-name (string-append name "-" version ".tar.gz"))
       (sha256
        (base32
-        "16vxbly4a33c63da3kmj7j47cam583l7bip33jc43mw173wqihw5"))
+        "052z1yiwck9hlshf8in2dgz6p7jxmq9yfj32mfzjaygpz6mmmr4y"))
       (modules '((guix build utils)))
       (snippet
        ;; Remove ~14MB of unnecessary bundled source and binaries
-       '(for-each delete-file-recursively
-                  `("ext/bonjour"
-                    "ext/LICENSE (OpenSSL)"
-                    ,@(find-files "ext" "openssl-.*\\.tar\\.gz")
-                    "ext/openssl-osx"
-                    "ext/openssl-win32"
-                    "ext/openssl-win64")))))
+       '(begin
+          (for-each delete-file-recursively
+                    `("ext/bonjour"
+                      "ext/LICENSE (OpenSSL)"
+                      ,@(find-files "ext" "openssl-.*\\.tar\\.gz")
+                      "ext/openssl-osx"
+                      "ext/openssl-win32"
+                      "ext/openssl-win64"))
+          #t))))
     (build-system cmake-build-system)
     (native-inputs `(("unzip" ,unzip)))
     (inputs
@@ -66,7 +68,7 @@
        ("xinput"  ,xinput)))
     (arguments
      `(#:phases
-       (let ((srcdir (string-append "../synergy-" ,version "-stable")))
+       (let ((srcdir (string-append "../synergy-core-" ,version "-stable")))
          (modify-phases %standard-phases
            (add-before 'configure 'unpack-aux-src
              ;; TODO: package and use from system
@@ -78,9 +80,10 @@
                    (for-each
                     (lambda (f)
                       (system* unzip "-d" f (string-append f ".zip")))
-                    '("gmock-1.6.0" "gtest-1.6.0"))))))
+                    '("gmock-1.6.0" "gtest-1.6.0"))))
+               #t))
           (replace 'check
-            ;; Don't run "integtests" as it requires network and X an display.
+            ;; Don't run "integtests" as it requires network and an X display.
             (lambda _
               (zero? (system* (string-append srcdir "/bin/unittests")))))
           (replace 'install
@@ -103,11 +106,12 @@
                      (install-file (string-append srcdir "/doc/" e) ex))
                    '("synergy.conf.example"
                      "synergy.conf.example-advanced"
-                     "synergy.conf.example-basic"))))))))))
-    (home-page "http://symless.com/")
+                     "synergy.conf.example-basic"))))
+              #t))))))
+    (home-page "https://symless.com/synergy")
     (synopsis "Mouse and keyboard sharing utility")
     (description
-     "Synergy brings your computers together in one cohesive experience; its
+     "Synergy brings your computers together in one cohesive experience; it's
 software for sharing one mouse and keyboard between multiple computers on your
 desk.")
     (license gpl2)))

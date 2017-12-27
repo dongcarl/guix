@@ -29,6 +29,7 @@
             uuid?
             uuid-type
             uuid-bytevector
+            uuid=?
 
             bytevector->uuid
 
@@ -41,6 +42,7 @@
             string->ext3-uuid
             string->ext4-uuid
             string->btrfs-uuid
+            string->fat-uuid
             iso9660-uuid->string
 
             ;; XXX: For lack of a better place.
@@ -162,18 +164,34 @@ ISO9660 UUID representation."
 
 
 ;;;
-;;; FAT32.
+;;; FAT32/FAT16.
 ;;;
 
-(define-syntax %fat32-endianness
-  ;; Endianness of FAT file systems.
+(define-syntax %fat-endianness
+  ;; Endianness of FAT32/FAT16 file systems.
   (identifier-syntax (endianness little)))
 
-(define (fat32-uuid->string uuid)
-  "Convert fat32 UUID, a 4-byte bytevector, to its string representation."
-  (let ((high  (bytevector-uint-ref uuid 0 %fat32-endianness 2))
-        (low (bytevector-uint-ref uuid 2 %fat32-endianness 2)))
+(define (fat-uuid->string uuid)
+  "Convert FAT32/FAT16 UUID, a 4-byte bytevector, to its string representation."
+  (let ((high  (bytevector-uint-ref uuid 0 %fat-endianness 2))
+        (low (bytevector-uint-ref uuid 2 %fat-endianness 2)))
     (format #f "~:@(~x-~x~)" low high)))
+
+(define %fat-uuid-rx
+  (make-regexp "^([[:xdigit:]]{4})-([[:xdigit:]]{4})$"))
+
+(define (string->fat-uuid str)
+  "Parse STR, which is in FAT32/FAT16 format, and return a bytevector or #f."
+  (match (regexp-exec %fat-uuid-rx str)
+    (#f
+     #f)
+    (rx-match
+     (uint-list->bytevector (list (string->number
+                                   (match:substring rx-match 2) 16)
+                                  (string->number
+                                   (match:substring rx-match 1) 16))
+                            %fat-endianness
+                            2))))
 
 
 ;;;
@@ -198,13 +216,14 @@ ISO9660 UUID representation."
 (define %uuid-parsers
   (vhashq
    ('dce 'ext2 'ext3 'ext4 'btrfs 'luks => string->dce-uuid)
+   ('fat32 'fat16 'fat => string->fat-uuid)
    ('iso9660 => string->iso9660-uuid)))
 
 (define %uuid-printers
   (vhashq
    ('dce 'ext2 'ext3 'ext4 'btrfs 'luks => dce-uuid->string)
    ('iso9660 => iso9660-uuid->string)
-   ('fat32 'fat => fat32-uuid->string)))
+   ('fat32 'fat16 'fat => fat-uuid->string)))
 
 (define* (string->uuid str #:optional (type 'dce))
   "Parse STR as a UUID of the given TYPE.  On success, return the
@@ -218,7 +237,7 @@ corresponding bytevector; otherwise return #f."
 ;; This is necessary to serialize bytevectors with the right printer in some
 ;; circumstances.  For instance, GRUB "search --fs-uuid" command compares the
 ;; string representation of UUIDs, not the raw bytes; thus, when emitting a
-;; GRUB 'search' command, we need to procedure the right string representation
+;; GRUB 'search' command, we need to produce the right string representation
 ;; (see <https://debbugs.gnu.org/cgi/bugreport.cgi?msg=52;att=0;bug=27735>).
 (define-record-type <uuid>
   (make-uuid type bv)
@@ -263,3 +282,15 @@ corresponding bytevector; otherwise return #f."
        ((_ . (? procedure? unparse)) (unparse bv))))
     (((? uuid? uuid))
      (uuid->string (uuid-bytevector uuid) (uuid-type uuid)))))
+
+(define uuid=?
+  ;; Return true if A is equal to B, comparing only the actual bits.
+  (match-lambda*
+    (((? bytevector? a) (? bytevector? b))
+     (bytevector=? a b))
+    (((? uuid? a) (? bytevector? b))
+     (bytevector=? (uuid-bytevector a) b))
+    (((? uuid? a) (? uuid? b))
+     (bytevector=? (uuid-bytevector a) (uuid-bytevector b)))
+    ((a b)
+     (uuid=? b a))))

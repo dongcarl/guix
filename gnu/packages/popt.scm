@@ -1,6 +1,7 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2013, 2014, 2016 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2015, 2016 Ricardo Wurmus <rekado@elephly.net>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -66,14 +67,15 @@ line syntax.")
                "1j2c61nn2n351nhj4d25mnf3vpiddcykq005w2h6kw79dwlysa77"))))
     (build-system gnu-build-system)
     (arguments
-     '(#:phases (alist-cons-before
-                 'configure 'patch-test
-                 (lambda _
-                   (substitute* "test-poptrc.in"
-                     (("/bin/echo") (which "echo")))
-                   (substitute* "testit.sh"   ; don't expect old libtool names
-                     (("lt-test1") "test1")))
-                 %standard-phases)))
+     '(#:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'patch-test
+           (lambda _
+             (substitute* "test-poptrc.in"
+               (("/bin/echo") (which "echo")))
+             (substitute* "testit.sh"   ; don't expect old libtool names
+               (("lt-test1") "test1"))
+             #t)))))
     (home-page "http://rpm5.org/files/popt/")
     (synopsis "Command line option parsing library")
     (description
@@ -94,14 +96,14 @@ similar to getopt(3), it contains a number of enhancements, including:
 (define-public gflags
   (package
     (name "gflags")
-    (version "2.2.0")
+    (version "2.2.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/gflags/gflags"
                                   "/archive/v" version ".tar.gz"))
               (sha256
                (base32
-                "120z4w40zr4s8wvfyw1bdmqvincwrwjnimzlwhs1ficaa333cv26"))
+                "03lxc2ah8i392kh1naq99iip34k4fpv22kwflyx3byd2ssycs9xf"))
               (file-name (string-append name "-" version ".tar.gz"))))
     (build-system cmake-build-system)
     (arguments

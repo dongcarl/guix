@@ -3,7 +3,7 @@
 ;;; Copyright © 2014, 2015 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2015 Taylan Ulrich Bayırlı/Kammer <taylanbayirli@gmail.com>
 ;;; Copyright © 2015 Ludovic Courtès <ludo@gnu.org>
-;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
+;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -98,15 +98,17 @@ computers over a network.")
 (define-public openntpd
   (package
     (name "openntpd")
-    (version "6.1p1")
+    (version "6.2p3")
     (source (origin
               (method url-fetch)
               (uri (string-append
                     "mirror://openbsd/OpenNTPD/" name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1ykx9ga76k5m54h7k5x4ds2clxsyfniss5vmf88pxnrip5bx6if8"))))
+                "0fn12i4kzsi0zkr4qp3dp9bycmirnfapajqvdfx02zhr4hanj0kv"))))
     (build-system gnu-build-system)
+    (inputs
+     `(("libressl" ,libressl))) ; enable TLS time constraints. See ntpd.conf(5).
     (home-page "http://www.openntpd.org/")
     (synopsis "NTP client and server by the OpenBSD Project")
     (description "OpenNTPD is the OpenBSD Project's implementation of a client

@@ -8,6 +8,8 @@
 ;;; Copyright © 2016 Christopher Allan Webber <cwebber@dustycloud.org>
 ;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2017 Stefan Reichör <stefan@xsteve.at>
+;;; Copyright © 2017 Ricardo Wurmus <rekado@elephly.net>
+;;; Copyright © 2017 ng0 <ng0@n0.is>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -128,14 +130,14 @@ a server that supports the SSH-2 protocol.")
 (define-public openssh
   (package
    (name "openssh")
-   (version "7.5p1")
+   (version "7.6p1")
    (source (origin
              (method url-fetch)
              (uri (string-append "mirror://openbsd/OpenSSH/portable/"
                                  name "-" version ".tar.gz"))
              (sha256
               (base32
-               "1w7rb5gbrikxdkp8w7zxnci4549gk4bw1lml01s59w5rzb2y6ilq"))))
+               "08qpsb8mrzcx8wgvz9insiyvq7sbg26yj5nvl2m5n57yvppcl8x3"))))
    (build-system gnu-build-system)
    (native-inputs `(("groff" ,groff)))
    (inputs `(("openssl" ,openssl)
@@ -603,3 +605,61 @@ monitor it, restarting it as necessary should it die or stop passing traffic.")
      ;; copy of this license in their headers, but there's no separate file
      ;; with that information.
      (license:non-copyleft "file://autossh.c"))))
+
+(define-public pdsh
+  (package
+    (name "pdsh")
+    (version "2.33")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://github.com/chaos/pdsh/"
+                           "releases/download/pdsh-" version
+                           "/pdsh-" version ".tar.gz"))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32 "0bwlkl9inj66iwvafg00pi3sk9n673phdi0kcc59y9nn55s0hs3k"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:configure-flags
+       (list "--with-ssh")
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'patch-/bin/sh
+           (lambda _
+             (substitute* '("tests/t0006-pdcp.sh"
+                            "tests/t0004-module-loading.sh"
+                            "tests/t2001-ssh.sh"
+                            "tests/t1003-slurm.sh"
+                            "tests/t6036-long-output-lines.sh"
+                            "tests/aggregate-results.sh"
+                            "tests/t2000-exec.sh"
+                            "tests/t0002-internal.sh"
+                            "tests/t1002-dshgroup.sh"
+                            "tests/t5000-dshbak.sh"
+                            "tests/t0001-basic.sh"
+                            "tests/t0005-rcmd_type-and-user.sh"
+                            "tests/test-lib.sh"
+                            "tests/t2002-mrsh.sh"
+                            "tests/t0003-wcoll.sh"
+                            "tests/test-modules/pcptest.c")
+               (("/bin/sh") (which "bash")))
+             #t))
+         (add-after 'unpack 'patch-tests
+           (lambda _
+             (substitute* "tests/t6036-long-output-lines.sh"
+               (("which") (which "which")))
+             #t)))))
+    (inputs
+     `(("openssh" ,openssh)
+       ("mit-krb5" ,mit-krb5)
+       ("perl" ,perl)))
+    (native-inputs
+     `(("which" ,which)))
+    (home-page "https://github.com/chaos/pdsh")
+    (synopsis "Parallel distributed shell")
+    (description "Pdsh is a an efficient, multithreaded remote shell client
+which executes commands on multiple remote hosts in parallel.  Pdsh implements
+dynamically loadable modules for extended functionality such as new remote
+shell services and remote host selection.")
+    (license license:gpl2+)))

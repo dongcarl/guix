@@ -4,7 +4,7 @@
 ;;; Copyright © 2015 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2015, 2016, 2017 Stefan Reichör <stefan@xsteve.at>
 ;;; Copyright © 2016 Raimon Grau <raimonster@gmail.com>
-;;; Copyright © 2016 Tobias Geerinckx-Rice <me@tobias.gr>
+;;; Copyright © 2016, 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2016 John Darrington <jmd@gnu.org>
 ;;; Copyright © 2016, 2017 Nicolas Goaziou <mail@nicolasgoaziou.fr>
 ;;; Copyright © 2016 Eric Bavier <bavier@member.fsf.org>
@@ -17,6 +17,7 @@
 ;;; Copyright © 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2017 Rutger Helling <rhelling@mykolab.com>
 ;;; Copyright © 2017 Gábor Boskovits <boskovits@gmail.com>
+;;; Copyright © 2017 Thomas Danckaert <post@thomasdanckaert.be>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -37,6 +38,7 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
   #:use-module (guix download)
+  #:use-module (guix build-system cmake)
   #:use-module (guix build-system glib-or-gtk)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system perl)
@@ -46,6 +48,7 @@
   #:use-module (gnu packages adns)
   #:use-module (gnu packages algebra)
   #:use-module (gnu packages audio)
+  #:use-module (gnu packages autotools)
   #:use-module (gnu packages bison)
   #:use-module (gnu packages check)
   #:use-module (gnu packages code)
@@ -53,9 +56,11 @@
   #:use-module (gnu packages curl)
   #:use-module (gnu packages databases)
   #:use-module (gnu packages dejagnu)
+  #:use-module (gnu packages documentation)
   #:use-module (gnu packages flex)
   #:use-module (gnu packages gettext)
   #:use-module (gnu packages glib)
+  #:use-module (gnu packages gnome)
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages gtk)
   #:use-module (gnu packages libidn)
@@ -65,6 +70,7 @@
   #:use-module (gnu packages ncurses)
   #:use-module (gnu packages pcre)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages perl-check)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
   #:use-module (gnu packages qt)
@@ -317,14 +323,14 @@ receiving NDP messages.")
 (define-public ethtool
   (package
     (name "ethtool")
-    (version "4.11")
+    (version "4.13")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://kernel.org/software/network/"
                                   name "/" name "-" version ".tar.xz"))
               (sha256
                (base32
-                "1cp132kk2xd2cwn1ysjv0cl8i9lnq3n4zi4wy676p5k4h2mfvn0j"))))
+                "1flwz4x76ajxigadq9knxgwr778g03y3qfx6c7rflc3x020a7hdp"))))
     (build-system gnu-build-system)
     (home-page "https://www.kernel.org/pub/software/network/ethtool/")
     (synopsis "Display or change Ethernet device settings")
@@ -444,7 +450,7 @@ and up to 1 Mbit/s downstream.")
 (define-public whois
   (package
     (name "whois")
-    (version "5.2.18")
+    (version "5.2.19")
     (source
      (origin
        (method url-fetch)
@@ -452,7 +458,7 @@ and up to 1 Mbit/s downstream.")
                            name "_" version ".tar.xz"))
        (sha256
         (base32
-         "1mcpgj18n1xppvlhjqzpj05yr5z48bym9bd88k10fwgkmwk0spf3"))))
+         "0b16w48c17k35lhd95qcl2kjq2rahk8znkg3w467rf3kzmsa4fbc"))))
     (build-system gnu-build-system)
     ;; TODO: unbundle mkpasswd binary + its po files.
     (arguments
@@ -465,13 +471,14 @@ and up to 1 Mbit/s downstream.")
          (add-before 'build 'setenv
            (lambda _
              (setenv "HAVE_ICONV" "1")
-             (setenv "HAVE_LIBIDN" "1")
              #t)))))
     (inputs
+     ;; TODO: Switch to libidn2 when >= 2.0.3 is ungrafted in master.
      `(("libidn" ,libidn)))
     (native-inputs
      `(("gettext" ,gettext-minimal)
-       ("perl" ,perl)))
+       ("perl" ,perl)
+       ("pkg-config" ,pkg-config)))
     (synopsis "Improved whois client")
     (description "This whois client is intelligent and can
 automatically select the appropriate whois server for most queries.
@@ -483,7 +490,7 @@ which can be used to encrypt a password with @code{crypt(3)}.")
 (define-public wireshark
   (package
     (name "wireshark")
-    (version "2.4.0")
+    (version "2.4.3")
     (source
      (origin
        (method url-fetch)
@@ -491,7 +498,7 @@ which can be used to encrypt a password with @code{crypt(3)}.")
                            version ".tar.xz"))
        (sha256
         (base32
-         "011vvrj76z1azkpvyy2j40b1x1z56ymld508zfc4xw3gh8dv82w9"))))
+         "0bpiby916k3k8bm7q8b1dflva6zs0a4ircskrck0d538dfcrb50q"))))
     (build-system gnu-build-system)
     (inputs `(("c-ares" ,c-ares)
               ("glib" ,glib)
@@ -507,12 +514,12 @@ which can be used to encrypt a password with @code{crypt(3)}.")
               ("openssl" ,openssl)
               ("portaudio" ,portaudio)
               ("qtbase" ,qtbase)
-              ("qttools" ,qttools)
               ("sbc" ,sbc)
               ("zlib" ,zlib)))
     (native-inputs `(("perl" ,perl)
                      ("pkg-config" ,pkg-config)
-                     ("python" ,python-wrapper)))
+                     ("python" ,python-wrapper)
+                     ("qttools" ,qttools)))
     (arguments
      `(#:configure-flags
        (list (string-append "--with-c-ares=" (assoc-ref %build-inputs "c-ares"))
@@ -526,7 +533,6 @@ which can be used to encrypt a password with @code{crypt(3)}.")
              (string-append "--with-sbc=" (assoc-ref %build-inputs "sbc"))
              (string-append "--with-ssl=" (assoc-ref %build-inputs "openssl"))
              (string-append "--with-zlib=" (assoc-ref %build-inputs "zlib")))))
-    (home-page "https://www.wireshark.org/")
     (synopsis "Network traffic analyzer")
     (description "Wireshark is a network protocol analyzer, or @dfn{packet
 sniffer}, that lets you capture and interactively browse the contents of
@@ -705,7 +711,7 @@ allows for heavy scripting.")
 (define-public perl-net-dns
  (package
   (name "perl-net-dns")
-  (version "1.12")
+  (version "1.14")
   (source
     (origin
       (method url-fetch)
@@ -715,7 +721,7 @@ allows for heavy scripting.")
              ".tar.gz"))
       (sha256
         (base32
-          "1zy16idzc96n20fm9976qapz89n3f44xpylhs5cvfgyyg7z03zr5"))))
+          "1z4r092qv0ify033dld5jayk8gs0bc7pl130dvb8ab7b9rcqmhw3"))))
   (build-system perl-build-system)
   (inputs
     `(("perl-digest-hmac" ,perl-digest-hmac)))
@@ -873,7 +879,7 @@ offline emulation of DNS.")
 (define-public perl-geo-ip
  (package
   (name "perl-geo-ip")
-  (version "1.50")
+  (version "1.51")
   (source
     (origin
       (method url-fetch)
@@ -883,7 +889,7 @@ offline emulation of DNS.")
              ".tar.gz"))
       (sha256
         (base32
-          "0ar69lrm26rp6sqxjf0p6cvjfprjx8gkxx11r399lvh99rqfl7zr"))))
+          "1fka8fr7fw6sh3xa9glhs1zjg3s2gfkhi7n7da1l2m2wblqj0c0n"))))
   (build-system perl-build-system)
   (home-page "http://search.cpan.org/dist/Geo-IP")
   (synopsis
@@ -921,6 +927,38 @@ information by IP Address.")
   (description "IO::Socket::INET6 is an interface for AF_INET/AF_INET6 domain
 sockets in Perl.")
   (license license:perl-license)))
+
+(define-public libproxy
+  (package
+    (name "libproxy")
+    (version "0.4.15")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/libproxy/libproxy/"
+                                  "releases/download/" version "/libproxy-"
+                                  version ".tar.xz"))
+              (sha256
+               (base32
+                "0kvdrazlzwia876w988cmlypp253gwy6idlh8mjk958c29jb8kb5"))))
+    (build-system cmake-build-system)
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (inputs
+     `(("dbus" ,dbus)
+       ("zlib" ,zlib)
+       ("network-manager" ,network-manager)))
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (replace 'check
+                  (lambda _
+                    (zero? (system* "ctest" "-E" "url-test")))))))
+    (synopsis "Library providing automatic proxy configuration management")
+    (description "Libproxy handles the details of HTTP/HTTPS proxy
+configuration for applications across all scenarios.  Applications using
+libproxy only have to specify which proxy to use.")
+    (home-page "https://libproxy.github.io/libproxy")
+    (license license:lgpl2.1+)))
 
 (define-public proxychains-ng
   (package
@@ -1233,7 +1271,7 @@ networks.")
 (define-public speedtest-cli
   (package
     (name "speedtest-cli")
-    (version "1.0.6")
+    (version "1.0.7")
     (source
      (origin
        (method url-fetch)
@@ -1242,7 +1280,7 @@ networks.")
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
         (base32
-         "1alambi1ljng6j04k7pq58jqwd0wh1q9630f17nl34ljabji5lwy"))))
+         "1fbq4kpx8sj50g74hwpixisfjjgxq6zyn40d3m28dxhn7mxbnlrq"))))
     (build-system python-build-system)
     (home-page "https://github.com/sivel/speedtest-cli")
     (synopsis "Internet bandwidth tester")
@@ -1356,14 +1394,14 @@ does not use SSH and requires a pre-shared symmetric key.")
 (define-public quagga
   (package
     (name "quagga")
-    (version "1.2.1")
+    (version "1.2.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://savannah/quagga/quagga-"
                                   version ".tar.gz"))
               (sha256
                (base32
-                "1kgvcr9cfgys5asvb5lh5h95silkr624apqm5x68xva19xfvmpda"))
+                "0c99rjjc62xl5kwvx2pwyvs0709vbwax1qydqbqf6r7fpvr24bjj"))
               (patches
                (search-patches "quagga-reproducible-build.patch"))))
     (build-system gnu-build-system)
@@ -1460,3 +1498,73 @@ interface and a programmable text output for scripting.")
     ;; Update the license field when upstream responds.
     (license (list license:bsd-2
                    license:expat))))
+
+(define-public libnet
+  (package
+    (name "libnet")
+    (version "1.1.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/sam-github/libnet/"
+                                  "archive/libnet-" version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0l4gbzzvr199fzczzricjz7b825i7dlk6sgl5p5alnkcagmq0xys"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'chdir
+           (lambda _ (chdir "libnet") #t))
+         (add-after 'chdir 'bootstrap
+           (lambda _ (zero? (system* "autoreconf" "-vif"))))
+         (add-before 'build 'build-doc
+           (lambda* (#:key make-flags #:allow-other-keys)
+             (zero? (apply system* "make" "-C" "doc" "doc"
+                           make-flags)))))))
+    (native-inputs
+     `(("autoconf" ,autoconf)
+       ("automake" ,automake)
+       ("libtool" ,libtool)
+       ("doxygen" ,doxygen)))
+    (home-page "https://sourceforge.net/projects/libnet-dev/")
+    (synopsis "Framework for low-level network packet construction")
+    (description
+     "Libnet provides a fairly portable framework for network packet
+construction and injection.  It features portable packet creation interfaces
+at the IP layer and link layer, as well as a host of supplementary
+functionality.  Using libnet, quick and simple packet assembly applications
+can be whipped up with little effort.")
+    (license license:bsd-2)))
+
+(define-public mtr
+  (package
+    (name "mtr")
+    (version "0.92")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "ftp://ftp.bitwizard.nl/" name "/"
+                           name "-" version ".tar.gz"))
+       (sha256
+        (base32 "10j3ds3p27jygys4x08kj8fi3zlsgiv72xsfazkah6plwawrv5zj"))))
+    (build-system gnu-build-system)
+    (inputs
+     `(("libcap" ,libcap)
+       ("ncurses" ,ncurses)))
+    (native-inputs
+     ;; The 0.92 release tarball still requires the ‘autoheader’ tool.
+     `(("autoconf" ,autoconf)))
+    (arguments
+     `(#:tests? #f))                    ; tests require network access
+    (home-page "https://www.bitwizard.nl/mtr/")
+    (synopsis "Network diagnostic tool")
+    (description
+     "@dfn{mtr} (My TraceRoute) combines the functionality of the
+@command{traceroute} and @command{ping} programs in a single network diagnostic
+tool.  @command{mtr} can use several network protocols to detect intermediate
+routers (or @dfn{hops}) between the local host and a user-specified destination.
+It then continually measures the response time and packet loss at each hop, and
+displays the results in real time.")
+    (license license:gpl2+)))

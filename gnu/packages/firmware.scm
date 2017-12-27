@@ -52,31 +52,31 @@
               (patches (search-patches "ath9k-htc-firmware-objcopy.patch"))))
     (build-system gnu-build-system)
     (arguments
-     '(#:phases (alist-cons-before
-                 'configure 'pre-configure
-                 (lambda* (#:key inputs #:allow-other-keys)
-                   (chdir "target_firmware")
+     '(#:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'pre-configure
+           (lambda* (#:key inputs #:allow-other-keys)
+             (chdir "target_firmware")
 
-                   ;; 'configure' is a simple script that runs 'cmake' with
-                   ;; the right flags.
-                   (substitute* "configure"
-                     (("^TOOLCHAIN=.*$")
-                      (string-append "TOOLCHAIN="
-                                     (assoc-ref inputs "cross-gcc")
-                                     "\n"))))
-                 (alist-replace
-                  'install
-                  (lambda* (#:key outputs #:allow-other-keys)
-                    (let* ((out    (assoc-ref outputs "out"))
-                           (fw-dir (string-append out "/lib/firmware")))
-                      (mkdir-p fw-dir)
-                      (for-each (lambda (file)
-                                  (copy-file file
-                                             (string-append fw-dir "/"
-                                                            (basename file))))
-                                (find-files "." "\\.fw$"))
-                      #t))
-                  %standard-phases))
+             ;; 'configure' is a simple script that runs 'cmake' with
+             ;; the right flags.
+             (substitute* "configure"
+               (("^TOOLCHAIN=.*$")
+                (string-append "TOOLCHAIN="
+                               (assoc-ref inputs "cross-gcc")
+                               "\n")))
+             #t))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out    (assoc-ref outputs "out"))
+                    (fw-dir (string-append out "/lib/firmware")))
+               (mkdir-p fw-dir)
+               (for-each (lambda (file)
+                           (copy-file file
+                                      (string-append fw-dir "/"
+                                                     (basename file))))
+                         (find-files "." "\\.fw$"))
+              #t))))
        #:tests? #f))
 
     ;; The firmware is cross-compiled using a "bare bones" compiler (no libc.)
@@ -211,9 +211,9 @@ by the b43-open driver of Linux-libre.")
                (copy-file "out/bios.bin" (string-append fmw "/bios.bin"))))))))
     (home-page "https://www.seabios.org/SeaBIOS")
     (synopsis "x86 BIOS implementation")
-    (description "SeaBIOS is an open source implementation of a 16bit x86 BIOS.
-SeaBIOS can run in an emulator or it can run natively on X86 hardware with the
-use of coreboot.")
+    (description "SeaBIOS is an implementation of a 16bit x86 BIOS.  SeaBIOS
+can run in an emulator or it can run natively on X86 hardware with the use of
+coreboot.")
     ;; Dual licensed.
     (license (list license:gpl3+ license:lgpl3+
                    ;; src/fw/acpi-dsdt.dsl is lgpl2

@@ -14,11 +14,14 @@
 ;;; Copyright © 2016 Kei Kebreau <kkebreau@posteo.net>
 ;;; Copyright © 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2016 Leo Famulari <leo@famulari.name>
-;;; Copyright © 2016 Thomas Danckaert <post@thomasdanckaert.be>
+;;; Copyright © 2016, 2017 Thomas Danckaert <post@thomasdanckaert.be>
 ;;; Copyright © 2017 Paul Garlick <pgarlick@tourbillion-technology.com>
 ;;; Copyright © 2017 ng0 <contact.ng0@cryptolab.net>
 ;;; Copyright © 2017 Ben Woodcroft <donttrustben@gmail.com>
-;;; Copyright © 2017 Theodoros Foradis <theodoros.for@openmailbox.org>
+;;; Copyright © 2017 Theodoros Foradis <theodoros@foradis.org>
+;;; Copyright © 2017 Arun Isaac <arunisaac@systemreboot.net>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
+;;; Copyright © 2017 Dave Love <me@fx@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -69,6 +72,7 @@
   #:use-module (gnu packages graphviz)
   #:use-module (gnu packages gtk)
   #:use-module (gnu packages image)
+  #:use-module (gnu packages java)
   #:use-module (gnu packages less)
   #:use-module (gnu packages lisp)
   #:use-module (gnu packages logging)
@@ -88,6 +92,7 @@
   #:use-module (gnu packages perl)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-web)
   #:use-module (gnu packages readline)
   #:use-module (gnu packages tbb)
   #:use-module (gnu packages scheme)
@@ -149,14 +154,14 @@ interactive dialogs to guide them.")
 (define-public coda
   (package
     (name "coda")
-    (version "2.18.2")
+    (version "2.18.3")
     (source
      (origin
        (method url-fetch)
        (uri (string-append "https://github.com/stcorp/coda/releases/download/"
                            version "/coda-" version ".tar.gz"))
        (sha256
-        (base32 "01fnqcby9jijvf3jxr1fk4bny059lvvq5wbqm7ns60ilykfdnm6a"))
+        (base32 "1zlzgcvwmmjm8mw8w4rg2rqy0pjilz7kyyxm0y4p8cbljbbjxxz0"))
        (patches (search-patches "coda-use-system-libs.patch"))
        (modules '((guix build utils)))
        (snippet
@@ -190,14 +195,28 @@ programming languages.")
 (define-public units
   (package
    (name "units")
-   (version "2.14")
+   (version "2.16")
    (source (origin
             (method url-fetch)
             (uri (string-append "mirror://gnu/units/units-" version
                                 ".tar.gz"))
             (sha256 (base32
-                     "1s421bxm36akjsy3qzg6da1d1g20gh094ac2slqxipgkh8yqjcwx"))))
+                     "11hnp3gcmcc5kci2caxw4hs6m08h2mhqs3xzqq7iafx1ha2ggwyw"))))
    (build-system gnu-build-system)
+   (inputs
+    `(("readline" ,readline)
+      ("python" ,python-wrapper)        ;for 'units_cur' script
+      ("python-requests" ,python-requests)))
+   (arguments
+    `(#:phases (modify-phases %standard-phases
+                 (add-after 'install 'wrap-units_cur
+                   (lambda* (#:key outputs #:allow-other-keys)
+                     (let* ((out (assoc-ref outputs "out"))
+                            (bin (string-append out "/bin")))
+                       (wrap-program (string-append bin "/units_cur")
+                         `("PYTHONPATH" ":" prefix
+                           ,(search-path-as-string->list (getenv "PYTHONPATH"))))
+                       #t))))))
    (synopsis "Conversion between thousands of scales")
    (description
     "GNU Units converts numeric quantities between units of measure.  It
@@ -317,7 +336,7 @@ the OCaml language.")
 (define-public glpk
   (package
     (name "glpk")
-    (version "4.63")
+    (version "4.64")
     (source
      (origin
       (method url-fetch)
@@ -325,7 +344,7 @@ the OCaml language.")
                           version ".tar.gz"))
       (sha256
        (base32
-        "1xp7nclmp8inp20968bvvfcwmz3mz03sbm0v3yjz8aqwlpqjfkci"))))
+        "096cqgjc7vkq6wd8znhcxjbs1s2rym3qf753fqxrrq531vs6g4jk"))))
     (build-system gnu-build-system)
     (inputs
      `(("gmp" ,gmp)))
@@ -456,19 +475,33 @@ large scale eigenvalue problems.")
 
                           ;; Build the 'LAPACKE_clatms' functions.
                           "-DLAPACKE_WITH_TMG=ON")
-       #:phases (alist-cons-before
-                 'check 'patch-python
-                 (lambda* (#:key inputs #:allow-other-keys)
-                   (let ((python (assoc-ref inputs "python")))
-                     (substitute* "lapack_testing.py"
-                       (("/usr/bin/env python") python))))
-                  %standard-phases)))
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'patch-python
+           (lambda* (#:key inputs #:allow-other-keys)
+             (let ((python (assoc-ref inputs "python")))
+               (substitute* "lapack_testing.py"
+                 (("/usr/bin/env python") python)))
+             #t)))))
     (synopsis "Library for numerical linear algebra")
     (description
      "LAPACK is a Fortran 90 library for solving the most commonly occurring
 problems in numerical linear algebra.")
     (license (license:non-copyleft "file://LICENSE"
                                 "See LICENSE in the distribution."))))
+
+(define-public lapack-3.5
+  (package
+    (inherit lapack)
+    (version "3.5.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "http://www.netlib.org/lapack/lapack-"
+                           version ".tgz"))
+       (sha256
+        (base32
+         "0lk3f97i9imqascnlf6wr5mjpyxqcdj73pgj97dj2mgvyg9z1n4s"))))))
 
 (define-public scalapack
   (package
@@ -741,6 +774,124 @@ incompatible with HDF5.")
 extremely large and complex data collections.")
     (license (license:x11-style
               "http://www.hdfgroup.org/ftp/HDF5/current/src/unpacked/COPYING"))))
+
+(define-public hdf-java
+  (package
+   (name "hdf-java")
+   (version "3.3.2")
+   (source
+    (origin
+      (method url-fetch)
+      (uri (string-append
+            "http://www.hdfgroup.org/ftp/HDF5/releases/HDF-JAVA/hdfjni-"
+            version "/src/CMake-hdfjava-" version ".tar.gz"))
+      (sha256
+       (base32 "0m1gp2aspcblqzmpqbdpfp6giskws85ds6p5gz8sx7asyp7wznpr"))
+      (modules '((guix build utils)))
+      (snippet ; Make sure we don't use the bundled sources and binaries.
+       `(begin
+          (for-each delete-file
+                    (list "SZip.tar.gz" "ZLib.tar.gz" "JPEG8d.tar.gz"
+                          "HDF4.tar.gz" "HDF5.tar.gz"))
+          (delete-file-recursively ,(string-append "hdfjava-" version "/lib"))))))
+   (build-system gnu-build-system)
+   (native-inputs
+    `(("jdk" ,icedtea "jdk")
+      ("automake" ,automake) ; For up to date 'config.guess' and 'config.sub'.
+      ;; For tests:
+      ("hamcrest-core" ,java-hamcrest-core)
+      ("junit" ,java-junit)
+      ("slf4j-simple" ,java-slf4j-simple)))
+   (inputs
+    `(("hdf4" ,hdf4)
+      ("hdf5" ,hdf5)
+      ("zlib" ,zlib)
+      ("libjpeg" ,libjpeg)
+      ("slf4j-api" ,java-slf4j-api)))
+   (arguments
+    `(#:configure-flags
+      (list (string-append "--target=" ,(or (%current-target-system) (%current-system)))
+            (string-append "--with-jdk=" (assoc-ref %build-inputs "jdk") "/include,"
+                           (assoc-ref %build-inputs "jdk") "/lib" )
+            (string-append "--with-hdf4=" (assoc-ref %build-inputs "hdf4") "/lib")
+            (string-append "--with-hdf5=" (assoc-ref %build-inputs "hdf5") "/lib"))
+
+      #:make-flags
+      (list (string-append "HDFLIB=" (assoc-ref %build-inputs "hdf4") "/lib")
+            (string-append "HDF5LIB=" (assoc-ref %build-inputs "hdf5") "/lib")
+            (string-append "ZLIB=" (assoc-ref %build-inputs "zlib") "/lib/libz.so")
+            (string-append "JPEGLIB="
+                           (assoc-ref %build-inputs "libjpeg") "/lib/libjpeg.so")
+            "LLEXT=so")
+
+      #:phases
+      (modify-phases %standard-phases
+        (add-before 'configure 'chdir-to-source
+          (lambda _ (chdir ,(string-append "hdfjava-" version))))
+        (add-before 'configure 'patch-build
+          (lambda* (#:key inputs outputs #:allow-other-keys)
+            (substitute* "configure"
+              (("COPT=\"") "COPT=\"-O2 ") ; CFLAGS is ignored in Makefiles
+              (("/bin/cat") (which "cat")))
+            ;; Set classpath for compilation
+            (substitute* '("hdf/hdf5lib/Makefile.in"
+                           "hdf/hdf5lib/exceptions/Makefile.in"
+                           "hdf/hdflib/Makefile.in")
+              (("\\$\\(TOP\\)/lib/slf4j-api-1\\.7\\.5\\.jar")
+               (string-append (assoc-ref inputs "slf4j-api")
+                              "/share/java/slf4j-api.jar")))
+            ;; Replace outdated config.sub and config.guess:
+            (with-directory-excursion "config"
+              (for-each (lambda (file)
+                          (copy-file
+                           (string-append (assoc-ref inputs "automake")
+                                          "/share/automake-1.15/" file) file))
+                        '("config.sub" "config.guess")))
+            (mkdir-p (string-append (assoc-ref outputs "out")))
+            ;; Set classpath for tests
+            (let* ((build-dir (getcwd))
+                   (lib (string-append build-dir "/lib"))
+                   (jhdf (string-append lib "/jhdf.jar"))
+                   (jhdf5 (string-append lib "/jhdf5.jar"))
+                   (testjars
+                    (map (lambda (i)
+                           (string-append (assoc-ref inputs i)
+                                          "/share/java/" i ".jar"))
+                         '("junit" "hamcrest-core" "slf4j-api" "slf4j-simple")))
+                   (class-path
+                    (string-join `("." ,build-dir ,jhdf ,jhdf5 ,@testjars) ":")))
+
+              (substitute* '("test/hdf5lib/Makefile.in"
+                             "test/hdf5lib/junit.sh.in"
+                             "examples/runExample.sh.in")
+                (("/usr/bin/test")
+                 (string-append (assoc-ref inputs "coreutils")
+                                "/bin/test"))
+                (("/usr/bin/uname")
+                 (string-append (assoc-ref inputs "coreutils")
+                                "/bin/uname"))
+                (("CLASSPATH=[^\n]*")
+                 (string-append "CLASSPATH=" class-path)))
+              (setenv "CLASSPATH" class-path))
+            #t))
+        (add-before 'check 'build-examples
+          (lambda _
+            (zero? (apply system* `("javac"
+                                    ,@(find-files "examples" ".*\\.java")))))))
+
+      #:parallel-build? #f
+
+      #:parallel-tests? #f ))
+   (home-page "https://support.hdfgroup.org/products/java")
+   (synopsis "Java interface for the HDF4 and HDF5 libraries")
+   (description "Java HDF Interface (JHI) and Java HDF5 Interface (JHI5) use
+the Java Native Interface to wrap the HDF4 and HDF5 libraries, which are
+implemented in C.")
+
+   ;; BSD-style license:
+   (license (license:x11-style
+             "https://support.hdfgroup.org/ftp/HDF5/hdf-java\
+/current/src/unpacked/COPYING"))))
 
 (define-public hdf-eos2
   (package
@@ -1080,7 +1231,7 @@ interfaces.")
 (define-public ceres
   (package
     (name "ceres-solver")
-    (version "1.11.0")
+    (version "1.13.0")
     (home-page "http://ceres-solver.org/")
     (source (origin
               (method url-fetch)
@@ -1088,7 +1239,7 @@ interfaces.")
                                   version ".tar.gz"))
               (sha256
                (base32
-                "0i7qkbf8g6pd8arxzldppga26ckv93y8zldsfz6wbd4n6b1nqrjd"))))
+                "1kbxgab3q1vgyq7hjqasr1lji4b2sgn7ss351amklkb3jyhr1x0x"))))
     (build-system cmake-build-system)
     (arguments
      ;; TODO: Build HTML user documentation and install separately.
@@ -1126,7 +1277,7 @@ can solve two kinds of problems:
     (license license:bsd-3)))
 
 ;; For a fully featured Octave, users  are strongly recommended also to install
-;; the following packages: texinfo, less, ghostscript, gnuplot.
+;; the following packages: less, ghostscript, gnuplot.
 (define-public octave
   (package
     (name "octave")
@@ -1158,6 +1309,7 @@ can solve two kinds of problems:
        ("glu" ,glu)
        ("zlib" ,zlib)
        ("curl" ,curl)
+       ("texinfo" ,texinfo)
        ("graphicsmagick" ,graphicsmagick)))
     (native-inputs
      `(("lzip" ,lzip)
@@ -1172,14 +1324,23 @@ can solve two kinds of problems:
        ;; will still run without them, albeit without the features they
        ;; provide.
        ("less" ,less)
-       ("texinfo" ,texinfo)
        ("ghostscript" ,ghostscript)
        ("gnuplot" ,gnuplot)))
     (arguments
      `(#:configure-flags
        (list (string-append "--with-shell="
                             (assoc-ref %build-inputs "bash")
-                            "/bin/sh"))))
+                            "/bin/sh"))
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'configure 'configure-makeinfo
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "libinterp/corefcn/help.cc"
+               (("Vmakeinfo_program = \"makeinfo\"")
+                (string-append "Vmakeinfo_program = \""
+                               (assoc-ref inputs "texinfo")
+                               "/bin/makeinfo\"")))
+             #t)))))
     (home-page "https://www.gnu.org/software/octave/")
     (synopsis "High-level language for numerical computation")
     (description "GNU Octave is a high-level interpreted language that is
@@ -1316,7 +1477,7 @@ September 2004}")
 (define-public petsc
   (package
     (name "petsc")
-    (version "3.7.6")
+    (version "3.8.0")
     (source
      (origin
       (method url-fetch)
@@ -1324,11 +1485,10 @@ September 2004}")
       (uri (string-append "http://ftp.mcs.anl.gov/pub/petsc/release-snapshots/"
                           "petsc-lite-" version ".tar.gz"))
       (sha256
-       (base32 "1y3f5jjq0v5b62i3sabp4kp5mgfyp3vnk0dxhwkrhpypax77nzxh"))))
+       (base32 "1lajbk3c29hnh83v6cbmm3a8wv6bdykh0p70kwrr4vrnizalk88s"))))
     (build-system gnu-build-system)
     (native-inputs
-     `(("python" ,python-2)
-       ("perl" ,perl)))
+     `(("python" ,python-2)))
     (inputs
      `(("gfortran" ,gfortran)
        ("lapack" ,lapack)
@@ -1450,7 +1610,7 @@ scientific applications modeled by partial differential equations.")
 (define-public slepc
   (package
     (name "slepc")
-    (version "3.7.4")
+    (version "3.8.0")
     (source
      (origin
        (method url-fetch)
@@ -1458,7 +1618,7 @@ scientific applications modeled by partial differential equations.")
                            version ".tar.gz"))
        (sha256
         (base32
-         "12pbl8yd6r8k9xjlr1qw25rs0k1acgic7hw1s6l6bhiv9s285drg"))))
+         "0qyrsdndfdw2g0jmj9iskxj3j20zlkplhv26288s079dhm7cr365"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("python" ,python-2)))
@@ -1725,7 +1885,7 @@ sparse system of linear equations A x = b using Guassian elimination.")
     (build-system r-build-system)
     (native-inputs
      `(("gfortran" ,gfortran)))
-    (home-page "http://cran.r-project.org/web/packages/quadprog")
+    (home-page "https://cran.r-project.org/web/packages/quadprog")
     (synopsis "Functions to solve quadratic programming problems")
     (description
      "This package contains routines and documentation for solving quadratic
@@ -1735,16 +1895,16 @@ programming problems.")
 (define-public r-pracma
   (package
     (name "r-pracma")
-    (version "2.0.7")
+    (version "2.1.1")
     (source (origin
       (method url-fetch)
       (uri (cran-uri "pracma" version))
       (sha256
-        (base32 "0hxa0rbbp54j0c05qj7vfwhqfdmiz5ax8vhqxd09g33x7c0hqbc5"))))
+        (base32 "1mylrrkyycaw9m01mmg6xkn5wgdlabs5l0qyws60r0n2ycblp897"))))
     (build-system r-build-system)
     (propagated-inputs
      `(("r-quadprog" ,r-quadprog)))
-    (home-page "http://cran.r-project.org/web/packages/pracma")
+    (home-page "https://cran.r-project.org/web/packages/pracma")
     (synopsis "Practical numerical math functions")
     (description "This package provides functions for numerical analysis and
 linear algebra, numerical optimization, differential equations, plus some
@@ -1866,12 +2026,12 @@ void mc64ad_ (int *a, int *b, int *c, int *d, int *e, double *f, int *g,
     (arguments
      `(#:parallel-build? #f             ;race conditions using ar
        #:phases
-       (alist-replace
-        'configure
-        (lambda* (#:key inputs outputs #:allow-other-keys)
-          (call-with-output-file "make.inc"
-            (lambda (port)
-              (format port "
+       (modify-phases %standard-phases
+         (replace 'configure
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (call-with-output-file "make.inc"
+               (lambda (port)
+                 (format port "
 PLAT        =
 DSuperLUroot = ~a
 DSUPERLULIB  = ~a/lib/libsuperlu_dist.a
@@ -1894,47 +2054,46 @@ FORTRAN     = mpifort
 FFLAGS      = -O2 -g $(PIC)
 LOADER      = $(CC)
 CDEFS       = -DAdd_"
-                      (getcwd)
-                      (assoc-ref outputs "out")
-                      (assoc-ref inputs "lapack")
-                      (assoc-ref inputs "pt-scotch")))))
-        (alist-cons-after
-         'unpack 'remove-broken-symlinks
-         (lambda _
-           (for-each delete-file
-                     (find-files "MAKE_INC" "\\.#make\\..*")))
-         (alist-cons-before
-          'build 'create-install-directories
-          (lambda* (#:key outputs #:allow-other-keys)
-            (for-each
-             (lambda (dir)
-               (mkdir-p (string-append (assoc-ref outputs "out")
-                                       "/" dir)))
-             '("lib" "include")))
-          (alist-replace
-           'check
+                         (getcwd)
+                         (assoc-ref outputs "out")
+                         (assoc-ref inputs "lapack")
+                         (assoc-ref inputs "pt-scotch"))))
+             #t))
+         (add-after 'unpack 'remove-broken-symlinks
+           (lambda _
+             (for-each delete-file
+                       (find-files "MAKE_INC" "\\.#make\\..*"))
+             #t))
+         (add-before 'build 'create-install-directories
+           (lambda* (#:key outputs #:allow-other-keys)
+             (for-each
+              (lambda (dir)
+                (mkdir-p (string-append (assoc-ref outputs "out")
+                                        "/" dir)))
+              '("lib" "include"))
+             #t))
+         (replace 'check
            (lambda _
              (with-directory-excursion "EXAMPLE"
                (and
                 (zero? (system* "mpirun" "-n" "2"
                                 "./pddrive" "-r" "1" "-c" "2" "g20.rua"))
                 (zero? (system* "mpirun" "-n" "2"
-                                "./pzdrive" "-r" "1" "-c" "2" "cg20.cua")))))
-           (alist-replace
-            'install
-            (lambda* (#:key outputs #:allow-other-keys)
-              ;; Library is placed in lib during the build phase.  Copy over
-              ;; headers to include.
-              (let* ((out    (assoc-ref outputs "out"))
-                     (incdir (string-append out "/include")))
-                (for-each (lambda (file)
-                            (let ((base (basename file)))
-                              (format #t "installing `~a' to `~a'~%"
-                                      base incdir)
-                              (copy-file file
-                                         (string-append incdir "/" base))))
-                          (find-files "SRC" ".*\\.h$"))))
-            %standard-phases)))))))
+                                "./pzdrive" "-r" "1" "-c" "2" "cg20.cua"))))))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             ;; Library is placed in lib during the build phase.  Copy over
+             ;; headers to include.
+             (let* ((out    (assoc-ref outputs "out"))
+                    (incdir (string-append out "/include")))
+               (for-each (lambda (file)
+                           (let ((base (basename file)))
+                             (format #t "installing `~a' to `~a'~%"
+                                     base incdir)
+                             (copy-file file
+                                        (string-append incdir "/" base))))
+                         (find-files "SRC" ".*\\.h$")))
+             #t)))))
     (home-page (package-home-page superlu))
     (synopsis "Parallel supernodal direct solver")
     (description
@@ -2165,7 +2324,7 @@ schemes.")
 (define-public p4est
   (package
     (name "p4est")
-    (version "1.1")
+    (version "2.0")
     (source
      (origin
        (method url-fetch)
@@ -2173,7 +2332,7 @@ schemes.")
                            version ".tar.gz"))
        (sha256
         (base32
-         "0faina2h5qsx3m2izbzaj9bbakma1krbbjmq43wrp1hcbyijflqb"))))
+         "16h267z256kxcxfjs390qqzv19hr58vrj4x8lndb7alnk2vca8n5"))))
     (build-system gnu-build-system)
     (inputs
      `(("fortran" ,gfortran)
@@ -2244,7 +2403,7 @@ to BMP, JPEG or PNG image formats.")
 (define-public maxima
   (package
     (name "maxima")
-    (version "5.40.0")
+    (version "5.41.0")
     (source
      (origin
        (method url-fetch)
@@ -2252,7 +2411,7 @@ to BMP, JPEG or PNG image formats.")
                            version "-source/" name "-" version ".tar.gz"))
        (sha256
         (base32
-         "15pp35ayglv723bjbqc60gcdv2bm54s6pywsm4i4cwbjsf64dzkl"))
+         "0x0n81z0s4pl8nwpf7ivlsbvsdphm9w42250g7qdkizl0132by6s"))
        (patches (search-patches "maxima-defsystem-mkdir.patch"))))
     (build-system gnu-build-system)
     (inputs
@@ -2331,7 +2490,7 @@ point numbers.")
 (define-public wxmaxima
   (package
     (name "wxmaxima")
-    (version "17.05.1")
+    (version "17.10.1")
     (source
      (origin
        (method url-fetch)
@@ -2340,7 +2499,7 @@ point numbers.")
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
         (base32
-         "0dv0cy0cf46v0cbw32izscpkdmpxg1qhwq1f4cz46kkqd8k4yfbj"))))
+         "0qlzc31cqkwpfgrb9cif9bcnkj3rq487plg4rns7jxv6pq4609v1"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("autoconf" ,autoconf)
@@ -2483,7 +2642,6 @@ parts of it.")
        #:make-flags
        (list (string-append "PREFIX=" (assoc-ref %outputs "out"))
              "SHELL=bash"
-             "NO_LAPACK=1"
              ;; Build the library for all supported CPUs.  This allows
              ;; switching CPU targets at runtime with the environment variable
              ;; OPENBLAS_CORETYPE=<type>, where "type" is a supported CPU type.
@@ -2504,11 +2662,21 @@ parts of it.")
                    '("TARGET=ARMV8"))
                   (else '()))))
        ;; no configure script
-       #:phases (alist-delete 'configure %standard-phases)))
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (add-before 'build 'set-extralib
+           (lambda* (#:key inputs #:allow-other-keys)
+             ;; Get libgfortran found when building in utest.
+             (setenv "FEXTRALIB"
+                     (string-append "-L" (assoc-ref inputs "fortran-lib")
+                                    "/lib"))
+             #t)))))
     (inputs
-     `(("fortran" ,gfortran)))
+     `(("fortran-lib" ,gfortran "lib")))
     (native-inputs
      `(("cunit" ,cunit)
+       ("fortran" ,gfortran)
        ("perl" ,perl)))
     (home-page "http://www.openblas.net/")
     (synopsis "Optimized BLAS library based on GotoBLAS")
@@ -2621,7 +2789,7 @@ access to BLIS implementations via traditional BLAS routine calls.")
        (list (string-append "prefix=" (assoc-ref %outputs "out")))
        #:phases
        ;; no configure script
-       (alist-delete 'configure %standard-phases)
+       (modify-phases %standard-phases (delete 'configure))
        #:tests? #f)) ;the tests are part of the default target
     (home-page "http://openlibm.org/")
     (synopsis "Portable C mathematical library (libm)")
@@ -2660,7 +2828,7 @@ environments.")
        #:make-flags
        (list (string-append "prefix=" (assoc-ref %outputs "out")))
        ;; no configure script
-       #:phases (alist-delete 'configure %standard-phases)))
+       #:phases (modify-phases %standard-phases (delete 'configure))))
     (inputs
      `(("fortran" ,gfortran)))
     (home-page "https://github.com/JuliaLang/openspecfun")
@@ -2950,7 +3118,7 @@ revised simplex and the branch-and-bound methods.")
 (define-public dealii
   (package
     (name "dealii")
-    (version "8.5.0")
+    (version "8.5.1")
     (source
      (origin
        (method url-fetch)
@@ -2958,7 +3126,7 @@ revised simplex and the branch-and-bound methods.")
                            "download/v" version "/dealii-" version ".tar.gz"))
        (sha256
         (base32
-         "0yfpy4zh8j7hmqakw17zdlmvfdcmhwgs66wcb716plc4y7v3z4g6"))
+         "1bh9rsmkrg0zi70n27b11djmac9lximghsiy7mg7w7x544n82gnk"))
        (modules '((guix build utils)))
        (snippet
         ;; Remove bundled sources: UMFPACK, TBB, muParser, and boost
@@ -3266,28 +3434,6 @@ structured and unstructured grid problems.")))
 supports compressed MAT files, as well as newer (version 7.3) MAT files.")
     (license license:bsd-2)))
 
-(define-public libhilbert
-  (package
-    (name "libhilbert")
-    (version "0.2-1")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append "http://web.cs.dal.ca/~chamilto/hilbert/"
-                           "libhilbert-" version ".tar.gz"))
-       (sha256
-        (base32
-         "0v48x8405dj95gjn2saja4bzhw86d6zl6d3dg8h7dzac2qr97s34"))))
-    (build-system gnu-build-system)
-    (home-page "http://web.cs.dal.ca/~chamilto/hilbert")
-    (synopsis "Hilbert indices for multidimensional data")
-    (description "The libhilbert library can efficiently calculate Hilbert
-curves and order-preserving representations of Hilbert curve indices that use
-the same amount of space as the original point representation.  This is useful
-when using the Gilbert curve as a space filling curve through a
-high-dimensional space where not all demensions have the same cardinality.")
-    (license license:lgpl2.1+)))
-
 (define-public vc
   (package
     (name "vc")
@@ -3499,9 +3645,9 @@ theories} (SMT) solver.  It provides a C/C++ API, as well as Python bindings.")
                (("\\\\n") "")))))))
     (home-page "http://cubicle.lri.fr/")
     (synopsis "Model checker for array-based systems")
-    (description "Cubicle is an open source model checker for verifying safety
-properties of array-based systems.  This is a syntactically restricted class of
-parametrized transition systems with states represented as arrays indexed by an
-arbitrary number of processes.  Cache coherence protocols and mutual exclusion
-algorithms are typical examples of such systems.")
+    (description "Cubicle is a model checker for verifying safety properties
+of array-based systems.  This is a syntactically restricted class of
+parametrized transition systems with states represented as arrays indexed by
+an arbitrary number of processes.  Cache coherence protocols and mutual
+exclusion algorithms are typical examples of such systems.")
     (license license:asl2.0)))

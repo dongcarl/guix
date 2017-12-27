@@ -18,6 +18,7 @@
 
 (define-module (gnu system file-systems)
   #:use-module (ice-9 match)
+  #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:use-module (guix records)
   #:use-module (gnu system uuid)
@@ -38,6 +39,7 @@
             file-system-check?
             file-system-create-mount-point?
             file-system-dependencies
+            file-system-location
 
             file-system-type-predicate
 
@@ -101,7 +103,10 @@
   (create-mount-point? file-system-create-mount-point? ; Boolean
                        (default #f))
   (dependencies     file-system-dependencies      ; list of <file-system>
-                    (default '())))               ; or <mapped-device>
+                    (default '()))                ; or <mapped-device>
+  (location         file-system-location
+                    (default (current-source-location))
+                    (innate)))
 
 ;; Note: This module is used both on the build side and on the host side.
 ;; Arrange not to pull (guix store) and (guix config) because the latter
@@ -157,7 +162,7 @@ initrd code."
   (match fs
     (($ <file-system> device title mount-point type flags options _ _ check?)
      (list (if (uuid? device)
-               (uuid-bytevector device)
+               `(uuid ,(uuid-type device) ,(uuid-bytevector device))
                device)
            title mount-point type flags options check?))))
 
@@ -166,7 +171,12 @@ initrd code."
   (match sexp
     ((device title mount-point type flags options check?)
      (file-system
-       (device device) (title title)
+       (device (match device
+                 (('uuid (? symbol? type) (? bytevector? bv))
+                  (bytevector->uuid bv type))
+                 (_
+                  device)))
+       (title title)
        (mount-point mount-point) (type type)
        (flags flags) (options options)
        (check? check?)))))
@@ -269,46 +279,47 @@ TARGET in the other system."
                    ;; parent directory.
                    (dependencies (list parent))))
                '("cpuset" "cpu" "cpuacct" "memory" "devices" "freezer"
-                 "blkio" "perf_event" "hugetlb")))))
+                 "blkio" "perf_event")))))
 
 (define %elogind-file-systems
   ;; We don't use systemd, but these file systems are needed for elogind,
   ;; which was extracted from systemd.
-  (list (file-system
-          (device "none")
-          (mount-point "/run/systemd")
-          (type "tmpfs")
-          (check? #f)
-          (flags '(no-suid no-dev no-exec))
-          (options "mode=0755")
-          (create-mount-point? #t))
-        (file-system
-          (device "none")
-          (mount-point "/run/user")
-          (type "tmpfs")
-          (check? #f)
-          (flags '(no-suid no-dev no-exec))
-          (options "mode=0755")
-          (create-mount-point? #t))
-        ;; Elogind uses cgroups to organize processes, allowing it to map PIDs
-        ;; to sessions.  Elogind's cgroup hierarchy isn't associated with any
-        ;; resource controller ("subsystem").
-        (file-system
-          (device "cgroup")
-          (mount-point "/sys/fs/cgroup/elogind")
-          (type "cgroup")
-          (check? #f)
-          (options "none,name=elogind")
-          (create-mount-point? #t)
-          (dependencies (list (car %control-groups))))))
+  (append
+   (list (file-system
+           (device "none")
+           (mount-point "/run/systemd")
+           (type "tmpfs")
+           (check? #f)
+           (flags '(no-suid no-dev no-exec))
+           (options "mode=0755")
+           (create-mount-point? #t))
+         (file-system
+           (device "none")
+           (mount-point "/run/user")
+           (type "tmpfs")
+           (check? #f)
+           (flags '(no-suid no-dev no-exec))
+           (options "mode=0755")
+           (create-mount-point? #t))
+         ;; Elogind uses cgroups to organize processes, allowing it to map PIDs
+         ;; to sessions.  Elogind's cgroup hierarchy isn't associated with any
+         ;; resource controller ("subsystem").
+         (file-system
+           (device "cgroup")
+           (mount-point "/sys/fs/cgroup/elogind")
+           (type "cgroup")
+           (check? #f)
+           (options "none,name=elogind")
+           (create-mount-point? #t)
+           (dependencies (list (car %control-groups)))))
+   %control-groups))
 
 (define %base-file-systems
   ;; List of basic file systems to be mounted.  Note that /proc and /sys are
   ;; currently mounted by the initrd.
-  (append (list %pseudo-terminal-file-system
-                %shared-memory-file-system
-                %immutable-store)
-          %control-groups))
+  (list %pseudo-terminal-file-system
+        %shared-memory-file-system
+        %immutable-store))
 
 ;; File systems for Linux containers differ from %base-file-systems in that
 ;; they impose additional restrictions such as no-exec or need different

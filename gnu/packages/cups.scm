@@ -46,26 +46,18 @@
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages tls))
 
-;; Delay to avoid module circularity problems.
-(define ghostscript/cups
-  (delay
-    (package/inherit ghostscript
-      (name "ghostscript-with-cups")
-      (inputs `(("cups" ,cups-minimal)
-                ,@(package-inputs ghostscript))))))
-
 (define-public cups-filters
   (package
     (name "cups-filters")
-    (version "1.14.1")
+    (version "1.17.7")
     (source(origin
               (method url-fetch)
               (uri
-               (string-append "http://openprinting.org/download/cups-filters/"
+               (string-append "https://openprinting.org/download/cups-filters/"
                               "cups-filters-" version ".tar.xz"))
               (sha256
                (base32
-                "0175jhqpsyn7bkh7w43ydhyws5zsdak05hr1fsadvzslvwqkffgi"))
+                "1mg397kgfx0rs9j852f8ppmvaz2al5l75ildbgiqg6j3gwq5jssw"))
               (modules '((guix build utils)))
               (snippet
                ;; install backends, banners and filters to cups-filters output
@@ -93,6 +85,13 @@
        #:configure-flags
        `("--disable-driverless" ; TODO: enable this
          "--disable-mutool"     ; depends on yet another PDF library (mupdf)
+
+         ;; Look for the "domain socket of CUPS" in /var/run/cups.
+         "--localstatedir=/var"
+
+         ;; Free software for the win.
+         "--with-acroread-path=evince"
+
          ,(string-append "--with-test-font-path="
                          (assoc-ref %build-inputs "font-dejavu")
                          "/share/fonts/truetype/DejaVuSans.ttf")
@@ -103,7 +102,34 @@
                          (assoc-ref %build-inputs "bash")
                          "/bin/bash")
          ,(string-append "--with-rcdir="
-                         (assoc-ref %outputs "out") "/etc/rc.d"))))
+                         (assoc-ref %outputs "out") "/etc/rc.d"))
+
+       #:phases (modify-phases %standard-phases
+                  (add-after 'unpack 'patch-foomatic-hardcoded-file-names
+                    (lambda* (#:key inputs outputs #:allow-other-keys)
+                      ;; Foomatic has hardcoded file names we need to fix.
+                      (let ((out (assoc-ref outputs "out"))
+                            (gs  (assoc-ref inputs "ghostscript")))
+                        (substitute* "filter/foomatic-rip/foomaticrip.c"
+                          (("/usr/local/lib/cups/filter")
+                           (string-append out "/lib/cups/filter")))
+                        #t)))
+                  (add-after 'install 'wrap-filters
+                    (lambda* (#:key inputs outputs #:allow-other-keys)
+                      ;; Some filters expect to find 'gs' in $PATH.  We cannot
+                      ;; just hard-code its absolute file name in the source
+                      ;; because foomatic-rip, for example, has tests like
+                      ;; 'startswith(cmd, "gs")'.
+                      (let ((out         (assoc-ref outputs "out"))
+                            (ghostscript (assoc-ref inputs "ghostscript")))
+                        (for-each (lambda (file)
+                                    (wrap-program file
+                                      `("PATH" ":" prefix
+                                        (,(string-append ghostscript
+                                                         "/bin")))))
+                                  (find-files (string-append
+                                               out "/lib/cups/filter")))
+                        #t))))))
     (native-inputs
      `(("glib" ,glib "bin") ; for gdbus-codegen
        ("pkg-config" ,pkg-config)))
@@ -112,7 +138,7 @@
        ("fontconfig"   ,fontconfig)
        ("freetype"     ,freetype)
        ("font-dejavu"  ,font-dejavu) ; also needed by test suite
-       ("ghostscript"  ,(force ghostscript/cups))
+       ("ghostscript"  ,ghostscript/cups)
        ("ijs"          ,ijs)
        ("dbus"         ,dbus)
        ("lcms"         ,lcms)
@@ -192,13 +218,13 @@ filters for the PDF-centric printing workflow introduced by OpenPrinting.")
     (home-page "https://www.cups.org")
     (synopsis "The Common Unix Printing System")
     (description
-     "CUPS is a printing system that uses the Internet Printing
-Protocol (IPP).  It provides System V and BSD command-line interfaces, as well
+     "CUPS is a printing system that uses the Internet Printing Protocol
+(@dfn{IPP}).  It provides System V and BSD command-line interfaces, as well
 as a Web interface and a C programming interface to manage printers and print
 jobs.  It supports printing to both local (parallel, serial, USB) and
 networked printers, and printers can be shared from one computer to another.
-Internally, CUPS uses PostScript Printer Description (PPD) files to describe
-printer capabilities and features and a wide variety of generic and
+Internally, CUPS uses PostScript Printer Description (@dfn{PPD}) files to
+describe printer capabilities and features, and a wide variety of generic and
 device-specific programs to convert and print many types of files.")
     (license license:gpl2)))
 
@@ -343,14 +369,19 @@ device-specific programs to convert and print many types of files.")
 (define-public hplip
   (package
     (name "hplip")
-    (version "3.17.7")
+    (version "3.17.11")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://sourceforge/hplip/hplip/" version
                                   "/hplip-" version ".tar.gz"))
               (sha256
                (base32
-                "03a0vkbrzvgj15il9rvr93kf5pc706gxcjk6akbkzds0zmdbsxrm"))))
+                "0xda7x7xxjvzn1l0adlvbwcw21crq1r3r79bkf94q3m5i6abx49g"))
+              (modules '((guix build utils)))
+              (snippet
+               ;; Fix type mismatch.
+               '(substitute* "prnt/hpcups/genPCLm.cpp"
+                  (("boolean") "bool")))))
     (build-system gnu-build-system)
     (home-page "http://hplipopensource.com/")
     (synopsis "HP Printer Drivers")
@@ -410,11 +441,11 @@ device-specific programs to convert and print many types of files.")
                           (("/usr/include/libusb-1.0")
                            (string-append (assoc-ref inputs "libusb")
                                           "/include/libusb-1.0"))
-                          (("^\tinstall-dist_hplip_stateDATA")
-                           ;; Remove dependencies on
-                           ;; 'install-dist_hplip_stateDATA' so we don't bail
-                           ;; out while trying to create /var/lib/hplip.
-                           "\t")
+                          (("hplip_statedir =.*$")
+                           ;; Don't bail out while trying to create
+                           ;; /var/lib/hplip.  We can safely change its value
+                           ;; here because it's hard-coded in the code anyway.
+                           "hplip_statedir = $(prefix)\n")
                           (("hplip_confdir = /etc/hp")
                            ;; This is only used for installing the default config.
                            (string-append "hplip_confdir = " out
@@ -443,12 +474,14 @@ device-specific programs to convert and print many types of files.")
               ("cups-minimal" ,cups-minimal)
               ("libusb" ,libusb)
               ("sane-backends" ,sane-backends-minimal)
+              ("zlib" ,zlib)
               ("dbus" ,dbus)
               ("python-wrapper" ,python-wrapper)
               ("python" ,python)
               ;; TODO: Make hp-setup find python-dbus.
               ("python-dbus" ,python-dbus)))
-    (native-inputs `(("pkg-config" ,pkg-config)))))
+    (native-inputs `(("pkg-config" ,pkg-config)
+                     ("perl" ,perl)))))
 
 (define-public foomatic-filters
   (package
@@ -564,4 +597,40 @@ printer/driver specific, but spooler-independent PPD file.")
      "This package provides a printer driver notably for the ZJS and XQX
 protocols, which cover printers made by Konica, HP (LaserJet), Oki, Samsung,
 and more.  See @file{README} for details.")
+    (license license:gpl2+)))
+
+(define-public escpr
+  (package
+    (name "escpr")
+    (version "1.6.17")
+    ;; XXX: This currently works.  But it will break as soon as a newer
+    ;; version is available since the URLs for older versions are not
+    ;; preserved.  An alternative source will be added as soon as
+    ;; available.
+    (source (origin
+              (method url-fetch)
+              ;; The uri has to be chopped up in order to satisfy guix lint.
+              (uri (string-append "https://download3.ebz.epson.net/dsc/f/03/00/06/66/09/"
+                                  "4ac2bf69bb1ddf4a9ad525596615cbb40fe4dad5/"
+                                  "epson-inkjet-printer-escpr-1.6.17-1lsb3.2.tar.gz"))
+              (sha256
+               (base32
+                "0m6v1wdavw4r25jfywqchsx0v9ss1l5fr8vq9d0d8cmjnz8mqblv"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:configure-flags
+       `(,(string-append "--prefix="
+                         (assoc-ref %outputs "out"))
+         ,(string-append "--with-cupsfilterdir="
+                         (assoc-ref %outputs "out") "/lib/cups/filter")
+         ,(string-append "--with-cupsppddir="
+                         (assoc-ref %outputs "out") "/share/ppd"))))
+    (inputs `(("cups" ,cups-minimal)))
+    (synopsis "ESC/P-R printer driver")
+    (description
+     "This package provides a filter for the Common UNIX Printing
+System (CUPS).  It offers high-quality printing with Seiko Epson color ink jet
+printers.  It can only be used with printers that support the Epson ESC/P-R
+language.")
+    (home-page "http://download.ebz.epson.net/dsc/search/01/search")
     (license license:gpl2+)))

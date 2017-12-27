@@ -157,8 +157,8 @@ C++.")
        (list (string-append "PREFIX=" (assoc-ref %outputs "out")))))
     (native-inputs
      `(("unzip" ,unzip)
-       ("vim" ,vim))) ; for xxd
-    (home-page "http://microscheme.org/")
+       ("xxd" ,xxd)))
+    (home-page "https://github.com/ryansuchocki/microscheme/")
     (synopsis "Scheme subset for Atmel microcontrollers")
     (description
      "Microscheme, or @code{(ms)} for short, is a functional programming

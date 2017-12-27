@@ -13,7 +13,9 @@
 ;;; Copyright © 2017 Andy Wingo <wingo@igalia.com>
 ;;; Copyright © 2017 David Thompson <davet@gnu.org>
 ;;; Copyright © 2017 Mathieu Othacehe <m.othacehe@gmail.com>
-;;; Copyright © 2017 Theodoros Foradis <theodoros.for@openmailbox.org>
+;;; Copyright © 2017 Theodoros Foradis <theodoros@foradis.org>
+;;; Copyright © 2017 ng0 <ng0@infotropique.org>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -94,24 +96,24 @@
    (arguments '(#:configure-flags '("--disable-error-on-warning")
 
                 ;; Insert a phase before `configure' to patch things up.
-                #:phases (alist-cons-before
-                           'configure
-                           'patch-stuff
-                           (lambda* (#:key outputs #:allow-other-keys)
-                             ;; Add a call to `lt_dladdsearchdir' so that
-                             ;; `libguile-readline.so' & co. are in the
-                             ;; loader's search path.
-                             (substitute* "libguile/dynl.c"
-                               (("lt_dlinit.*$" match)
-                                (format #f
-                                        "  ~a~%  lt_dladdsearchdir(\"~a/lib\");~%"
-                                        match
-                                        (assoc-ref outputs "out"))))
+                #:phases
+                (modify-phases %standard-phases
+                  (add-before 'configure 'patch-stuff
+                    (lambda* (#:key outputs #:allow-other-keys)
+                      ;; Add a call to `lt_dladdsearchdir' so that
+                      ;; `libguile-readline.so' & co. are in the
+                      ;; loader's search path.
+                      (substitute* "libguile/dynl.c"
+                        (("lt_dlinit.*$" match)
+                         (format #f
+                                 "  ~a~%  lt_dladdsearchdir(\"~a/lib\");~%"
+                                 match
+                                 (assoc-ref outputs "out"))))
 
-                             ;; The usual /bin/sh...
-                             (substitute* "ice-9/popen.scm"
-                               (("/bin/sh") (which "sh"))))
-                           %standard-phases)))
+                      ;; The usual /bin/sh...
+                      (substitute* "ice-9/popen.scm"
+                        (("/bin/sh") (which "sh")))
+                      #t)))))
    (inputs `(("gawk" ,gawk)
              ("readline" ,readline)))
 
@@ -220,7 +222,7 @@ without requiring the source code to be rewritten.")
 (define-public guile-2.2
   (package (inherit guile-2.0)
     (name "guile")
-    (version "2.2.2")
+    (version "2.2.2")                      ;TODO: Update to 2.2.3 (see below).
     (source (origin
               (method url-fetch)
 
@@ -249,6 +251,21 @@ without requiring the source code to be rewritten.")
             (variable "GUILE_LOAD_COMPILED_PATH")
             (files '("lib/guile/2.2/site-ccache"
                      "share/guile/site/2.2")))))))
+
+(define-public guile-2.2.3
+  ;; TODO: Make it the new 'guile-2.2' on the next rebuild cycle.
+  (package
+    (inherit guile-2.2)
+    (version "2.2.3")
+    (source (origin (inherit (package-source guile-2.2))
+                    (uri (list (string-append "mirror://gnu/guile/guile-"
+                                              version ".tar.xz")
+                               (string-append
+                                "https://wingolog.org/priv/guile-"
+                                version ".tar.xz")))
+                    (sha256
+                     (base32
+                      "11j01agvnci2cx32wwpqs9078856yxmvs15gcsz7ganpkj2ahlw3"))))))
 
 (define-public guile-2.2/fixed
   ;; A package of Guile 2.2 that's rarely changed.  It is the one used
@@ -1058,12 +1075,15 @@ inspired by the SCSH regular expression system.")
                 (compile-file
                  (lambda (in-file out-file)
                    (system* guild "compile" "-o" out-file in-file))))
-           ;; Make installation directories.
-           (mkdir-p module-dir)
-           (mkdir-p doc)
-
            ;; Switch directory for compiling and installing
            (chdir source)
+
+           ;; Install the documentation.
+           (install-file "README.md" doc)
+           (copy-recursively "examples" (string-append doc "/examples"))
+
+           ;; Make installation directories.
+           (mkdir-p module-dir)
 
            ;; copy the source
            (copy-file "gdbm.scm" gdbm.scm-dest)
@@ -1077,7 +1097,7 @@ inspired by the SCSH regular expression system.")
            ;; compile to the destination
            (compile-file gdbm.scm-dest gdbm.go-dest)))))
     (inputs
-     `(("guile" ,guile-2.0)))
+     `(("guile" ,guile-2.2)))
     (propagated-inputs
      `(("gdbm" ,gdbm)))
     (home-page "https://github.com/ijp/guile-gdbm")
@@ -1087,8 +1107,11 @@ inspired by the SCSH regular expression system.")
 Guile's foreign function interface.")
     (license license:gpl3+)))
 
+(define-public guile2.0-gdbm-ffi
+  (package-for-guile-2.0 guile-gdbm-ffi))
+
 (define-public guile2.2-gdbm-ffi
-  (package-for-guile-2.2 guile-gdbm-ffi))
+  (deprecated-package "guile2.2-gdbm-ffi" guile-gdbm-ffi))
 
 (define-public guile-sqlite3
   (let ((commit "607721fe1174a299e45d457acacf94eefb964071"))
@@ -1262,7 +1285,7 @@ key-value cache and store.")
 (define-public guile-wisp
   (package
     (name "guile-wisp")
-    (version "0.9.0")
+    (version "0.9.8")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://bitbucket.org/ArneBab/"
@@ -1270,25 +1293,26 @@ key-value cache and store.")
                                   version ".tar.gz"))
               (sha256
                (base32
-                "0y5fxacalkgbv9s71h58vdvm2h2ln3rk024dd0vszwcf953as5fq"))))
+                "1f2bbicq1rxnwmiplrm4r75wj06w385mjkyvi7g4k740bgwcrzxr"))))
     (build-system gnu-build-system)
     (arguments
-     `(#:modules ((system base compile)
-                  ,@%gnu-build-system-modules)
+     `(#:modules ((guix build gnu-build-system)
+                  (guix build utils)
+                  (ice-9 rdelim)
+                  (ice-9 popen))
+
        #:phases
        (modify-phases %standard-phases
-         (add-before
-          'configure 'substitute-before-config
+         (add-before 'configure 'substitute-before-config
 
           (lambda* (#:key inputs #:allow-other-keys)
             (let ((bash (assoc-ref inputs "bash")))
-              ;; configure checks for guile-2.0, but ours is just named "guile" :)
-              (substitute* "configure"
-                (("guile-2.0") "guile"))
               ;; Puts together some test files with /bin/bash hardcoded
               (substitute* "Makefile.in"
-                (("/bin/bash")
-                 (string-append bash "/bin/bash") ))
+                (("/usr/bin/env bash")
+                 (string-append bash "/bin/bash"))
+                (("\\$\\(GUILE_EFFECTIVE_VERSION\\)/site")
+                 "site/$(GUILE_EFFECTIVE_VERSION)")) ;use the right order
               #t)))
 
          ;; auto compilation breaks, but if we set HOME to /tmp,
@@ -1298,37 +1322,33 @@ key-value cache and store.")
           (lambda _
             (setenv "HOME" "/tmp")
             #t))
-         (replace
-          'install
+         (add-after 'install 'install-go-files
           (lambda* (#:key outputs inputs #:allow-other-keys)
             (let* ((out (assoc-ref outputs "out"))
-                   (module-dir (string-append out "/share/guile/site/2.0"))
-                   (language-dir
-                    (string-append module-dir "/language/wisp"))
-                   (guild (string-append (assoc-ref inputs "guile")
-                                         "/bin/guild")))
-              ;; Make installation directories.
-              (mkdir-p module-dir)
-              (mkdir-p language-dir)
-
-              ;; copy the source
-              (copy-file "wisp-scheme.scm"
-                         (string-append module-dir "/wisp-scheme.scm"))
-              (copy-file "language/wisp/spec.scm"
-                         (string-append language-dir "/spec.scm"))
-
+                   (effective (read-line
+                               (open-pipe* OPEN_READ
+                                           "guile" "-c"
+                                           "(display (effective-version))")))
+                   (module-dir (string-append out "/share/guile/site/"
+                                              effective))
+                   (object-dir (string-append out "/lib/guile/" effective
+                                              "/site-ccache"))
+                   (prefix     (string-length module-dir)))
               ;; compile to the destination
-              (compile-file "wisp-scheme.scm"
-                            #:output-file (string-append
-                                           module-dir "/wisp-scheme.go"))
-              (compile-file "language/wisp/spec.scm"
-                            #:output-file (string-append
-                                           language-dir "/spec.go"))
+              (for-each (lambda (file)
+                          (let* ((base (string-drop (string-drop-right file 4)
+                                                    prefix))
+                                 (go   (string-append object-dir base ".go")))
+                           (invoke "guild" "compile" "-L" module-dir
+                                    file "-o" go)))
+                        (find-files module-dir "\\.scm$"))
               #t))))))
     (home-page "http://draketo.de/english/wisp")
     (inputs
-     `(("guile" ,guile-2.0)
-       ("python" ,python)))
+     `(("guile" ,guile-2.2)))
+    (native-inputs
+     `(("python" ,python)
+       ("pkg-config" ,pkg-config)))
     (synopsis "Whitespace to lisp syntax for Guile")
     (description "Wisp is a syntax for Guile which provides a Python-like
 whitespace-significant language.  It may be easier on the eyes for some
@@ -1345,7 +1365,24 @@ users and in some situations.")
                                   version ".tar.gz"))
               (sha256
                (base32
-                "1svzlbz2vripmyq2kjh0rig16bsrnbkwbsm558pjln9l65mcl4qq"))))
+                "1svzlbz2vripmyq2kjh0rig16bsrnbkwbsm558pjln9l65mcl4qq"))
+              (modules '((guix build utils)))
+              (snippet
+               '(begin
+                  (substitute* "configure"
+                    (("_guile_required_version=\"2.0.11\"")
+                     "_guile_required_version=\"2\"")
+                    (("ac_subst_vars='")
+                     "ac_subst_vars='GUILE_EFFECTIVE_VERSION\n"))
+                  (substitute* (find-files "." "Makefile.in")
+                    (("moddir = .*$")
+                     (string-append
+                      "moddir = "
+                      "$(prefix)/share/guile/site/@GUILE_EFFECTIVE_VERSION@\n"))
+                    (("godir = .*$")
+                     (string-append
+                      "godir = "
+                      "$(prefix)/lib/guile/@GUILE_EFFECTIVE_VERSION@/site-ccache\n")))))))
     (build-system gnu-build-system)
     (arguments
      '(#:configure-flags
@@ -1356,11 +1393,11 @@ users and in some situations.")
     (native-inputs
      `(("pkg-config" ,pkg-config)))
     (propagated-inputs
-     `(("guile" ,guile-2.0)
-       ("guile-sdl" ,guile-sdl)
+     `(("guile-sdl" ,guile-sdl)
        ("guile-opengl" ,guile-opengl)))
     (inputs
-     `(("gsl" ,gsl)
+     `(("guile" ,guile-2.2)
+       ("gsl" ,gsl)
        ("freeimage" ,freeimage)
        ("mesa" ,mesa)))
     (synopsis "2D/3D game engine for GNU Guile")
@@ -1473,6 +1510,55 @@ It currently supports MySQL, Postgres and SQLite3.")
      "guile-dbi is a library for Guile that provides a convenient interface to
 SQL databases.  This package implements the interface for SQLite.")
     (license license:gpl2+)))
+
+(define-public guile-dsv
+  (package
+    (name "guile-dsv")
+    (version "0.2.1")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                    (url "https://github.com/artyom-poptsov/guile-dsv")
+                    (commit "bdc5267d007478abc20ea96d7c459b7dd9560b3d")))
+              (file-name (string-append name "-" version "-checkout"))
+              (sha256
+               (base32
+                "1irw6mz8998nwyhzrw9g94jcz60b9zljgqfmipaz1ybn8579qjx0"))))
+    (build-system gnu-build-system)
+    (native-inputs
+     `(("autoconf" ,autoconf)
+       ("automake" ,automake)
+       ("pkg-config" ,pkg-config)
+       ("texinfo" ,texinfo)))
+    (inputs `(("guile" ,guile-2.2)))
+    (propagated-inputs `(("guile-lib" ,guile-lib)))
+    (arguments
+     '(#:phases (modify-phases %standard-phases
+                  (add-before 'configure 'set-guilesitedir
+                    (lambda _
+                      (substitute* "Makefile.in"
+                        (("^guilesitedir =.*$")
+                         "guilesitedir = \
+$(datadir)/guile/site/$(GUILE_EFFECTIVE_VERSION)\n"))
+                      (substitute* "modules/Makefile.in"
+                        (("^guilesitedir =.*$")
+                         "guilesitedir = \
+$(datadir)/guile/site/$(GUILE_EFFECTIVE_VERSION)\n"))
+                      (substitute* "modules/dsv/Makefile.in"
+                        (("^guilesitedir =.*$")
+                         "guilesitedir = \
+$(datadir)/guile/site/$(GUILE_EFFECTIVE_VERSION)\n"))
+                      #t))
+                  (add-after 'unpack 'autoreconf
+                    (lambda _
+                      (zero? (system* "autoreconf" "-vfi")))))))
+    (home-page "https://github.com/artyom-poptsov/guile-dsv")
+    (synopsis "DSV module for Guile")
+    (description
+     "Guile-DSV is a GNU Guile module for working with the
+delimiter-separated values (DSV) data format.  Guile-DSV supports the
+Unix-style DSV format and RFC 4180 format.")
+    (license license:gpl3+)))
 
 (define-public guile-xosd
   (package
@@ -1851,8 +1937,8 @@ is not available for Guile 2.0.")
     (license license:lgpl3+)))
 
 (define-public guile-git
-  (let ((revision "3")
-        (commit "e156a1054cc1d9e58d9be82e36e8acf5c9f9ee8d"))
+  (let ((revision "4")
+        (commit "951a32c56cc4d80f8836e3c7394783e69c1fcbad"))
     (package
       (name "guile-git")
       (version (string-append "0.0-" revision "." (string-take commit 7)))
@@ -1862,7 +1948,7 @@ is not available for Guile 2.0.")
                 (uri (git-reference (url home-page) (commit commit)))
                 (sha256
                  (base32
-                  "1vhr2bqkljy1zzdy02dky2nk1w9bd46afj5wd4gp4kr333pz4ch6"))
+                  "0qri9x73ij6g40ijs4hyhj8knxw39ydgghiafq74dp99bc8hh0qc"))
                 (file-name (git-file-name name version))))
       (build-system gnu-build-system)
       (arguments
@@ -1965,5 +2051,50 @@ HTML (via SXML) or any other format for rendering.")
     (description "guile-sjson is a json reader/writer for Guile.
 It has a nice, simple s-expression based syntax.")
     (license license:lgpl3+)))
+
+(define-public guile-colorized
+  (package
+    (name "guile-colorized")
+    (version "0.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/NalaGinrut/guile-colorized/"
+                                  "archive/v" version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "16xhc3an6aglnca8xl3mvgi8hsqzqn68vsl5ga4bz8bvbap5fn4p"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:modules ((system base compile)
+                  ,@%gnu-build-system-modules)
+       #:tests? #f ;No tests included
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure) ;No configure script
+         (replace 'install
+           (lambda* (#:key outputs inputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (module-dir (string-append out "/share/guile/site/2.2"))
+                    (language-dir (string-append module-dir "/ice-9"))
+                    (guild (string-append (assoc-ref inputs "guile")
+                                          "/bin/guild")))
+               ;; The original 'make install' is too primitive.
+
+               ;; copy the source
+               (install-file "ice-9/colorized.scm" language-dir)
+
+               ;; compile to the destination
+               (compile-file "ice-9/colorized.scm"
+                             #:output-file (string-append
+                                            language-dir "/colorized.go"))
+               #t))))))
+    (inputs
+     `(("guile" ,guile-2.2)))
+    (home-page "https://github.com/NalaGinrut/guile-colorized")
+    (synopsis "Colorized REPL for Guile")
+    (description
+     "Guile-colorized provides you with a colorized REPL for GNU Guile.")
+    (license license:gpl3+)))
 
 ;;; guile.scm ends here

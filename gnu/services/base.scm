@@ -42,7 +42,6 @@
   #:use-module (gnu packages bash)
   #:use-module (gnu packages package-management)
   #:use-module (gnu packages linux)
-  #:use-module (gnu packages lsof)
   #:use-module (gnu packages terminals)
   #:use-module ((gnu build file-systems)
                 #:select (mount-flags->bit-mask))
@@ -58,9 +57,7 @@
             file-system-service-type
             user-unmount-service
             swap-service
-            user-processes-service
-            session-environment-service
-            session-environment-service-type
+            user-processes-service-type
             host-name-service
             console-keymap-service
             %default-console-font
@@ -73,6 +70,7 @@
             udev-service-type
             udev-service
             udev-rule
+            file->udev-rule
 
             login-configuration
             login-configuration?
@@ -120,7 +118,6 @@
             guix-configuration-substitute-urls
             guix-configuration-extra-options
             guix-configuration-log-file
-            guix-configuration-lsof
 
             guix-service
             guix-service-type
@@ -164,6 +161,129 @@
 ;;; use.
 ;;;
 ;;; Code:
+
+
+
+;;;
+;;; User processes.
+;;;
+
+(define %do-not-kill-file
+  ;; Name of the file listing PIDs of processes that must survive when halting
+  ;; the system.  Typical example is user-space file systems.
+  "/etc/shepherd/do-not-kill")
+
+(define (user-processes-shepherd-service requirements)
+  "Return the 'user-processes' Shepherd service with dependencies on
+REQUIREMENTS (a list of service names).
+
+This is a synchronization point used to make sure user processes and daemons
+get started only after crucial initial services have been started---file
+system mounts, etc.  This is similar to the 'sysvinit' target in systemd."
+  (define grace-delay
+    ;; Delay after sending SIGTERM and before sending SIGKILL.
+    4)
+
+  (list (shepherd-service
+         (documentation "When stopped, terminate all user processes.")
+         (provision '(user-processes))
+         (requirement requirements)
+         (start #~(const #t))
+         (stop #~(lambda _
+                   (define (kill-except omit signal)
+                     ;; Kill all the processes with SIGNAL except those listed
+                     ;; in OMIT and the current process.
+                     (let ((omit (cons (getpid) omit)))
+                       (for-each (lambda (pid)
+                                   (unless (memv pid omit)
+                                     (false-if-exception
+                                      (kill pid signal))))
+                                 (processes))))
+
+                   (define omitted-pids
+                     ;; List of PIDs that must not be killed.
+                     (if (file-exists? #$%do-not-kill-file)
+                         (map string->number
+                              (call-with-input-file #$%do-not-kill-file
+                                (compose string-tokenize
+                                         (@ (ice-9 rdelim) read-string))))
+                         '()))
+
+                   (define (now)
+                     (car (gettimeofday)))
+
+                   (define (sleep* n)
+                     ;; Really sleep N seconds.
+                     ;; Work around <http://bugs.gnu.org/19581>.
+                     (define start (now))
+                     (let loop ((elapsed 0))
+                       (when (> n elapsed)
+                         (sleep (- n elapsed))
+                         (loop (- (now) start)))))
+
+                   (define lset= (@ (srfi srfi-1) lset=))
+
+                   (display "sending all processes the TERM signal\n")
+
+                   (if (null? omitted-pids)
+                       (begin
+                         ;; Easy: terminate all of them.
+                         (kill -1 SIGTERM)
+                         (sleep* #$grace-delay)
+                         (kill -1 SIGKILL))
+                       (begin
+                         ;; Kill them all except OMITTED-PIDS.  XXX: We would
+                         ;; like to (kill -1 SIGSTOP) to get a fixed list of
+                         ;; processes, like 'killall5' does, but that seems
+                         ;; unreliable.
+                         (kill-except omitted-pids SIGTERM)
+                         (sleep* #$grace-delay)
+                         (kill-except omitted-pids SIGKILL)
+                         (delete-file #$%do-not-kill-file)))
+
+                   (let wait ()
+                     ;; Reap children, if any, so that we don't end up with
+                     ;; zombies and enter an infinite loop.
+                     (let reap-children ()
+                       (define result
+                         (false-if-exception
+                          (waitpid WAIT_ANY (if (null? omitted-pids)
+                                                0
+                                                WNOHANG))))
+
+                       (when (and (pair? result)
+                                  (not (zero? (car result))))
+                         (reap-children)))
+
+                     (let ((pids (processes)))
+                       (unless (lset= = pids (cons 1 omitted-pids))
+                         (format #t "waiting for process termination\
+ (processes left: ~s)~%"
+                                 pids)
+                         (sleep* 2)
+                         (wait))))
+
+                   (display "all processes have been terminated\n")
+                   #f))
+         (respawn? #f))))
+
+(define user-processes-service-type
+  (service-type
+   (name 'user-processes)
+   (extensions (list (service-extension shepherd-root-service-type
+                                        user-processes-shepherd-service)))
+   (compose concatenate)
+   (extend append)
+
+   ;; The value is the list of Shepherd services 'user-processes' depends on.
+   ;; Extensions can add new services to this list.
+   (default-value '())
+
+   (description "The @code{user-processes} service is responsible for
+terminating all the processes so that the root file system can be re-mounted
+read-only, just before rebooting/halting.  Processes still running after a few
+seconds after @code{SIGTERM} has been sent are terminated with
+@code{SIGKILL}.")))
 
 
 ;;;
@@ -309,7 +429,8 @@ FILE-SYSTEM."
                                                                 '#$packages))))
                            (lambda ()
                              (mount-file-system
-                              '#$(file-system->spec file-system)
+                              (spec->file-system
+                               '#$(file-system->spec file-system))
                               #:root "/"))
                            (lambda ()
                              (setenv "PATH" $PATH)))
@@ -324,9 +445,10 @@ FILE-SYSTEM."
                       (umount #$target)
                       #f))
 
-            ;; We need an additional module.
+            ;; We need additional modules.
             (modules `(((gnu build file-systems)
                         #:select (mount-file-system))
+                       (gnu system file-systems)
                        ,@%default-modules)))))))
 
 (define (file-system-shepherd-services file-systems)
@@ -350,7 +472,11 @@ FILE-SYSTEM."
                  (list (service-extension shepherd-root-service-type
                                           file-system-shepherd-services)
                        (service-extension fstab-service-type
-                                          identity)))
+                                          identity)
+
+                       ;; Have 'user-processes' depend on 'file-systems'.
+                       (service-extension user-processes-service-type
+                                          (const '(file-systems)))))
                 (compose concatenate)
                 (extend append)
                 (description
@@ -390,111 +516,6 @@ file systems, as well as corresponding @file{/etc/fstab} entries.")))
 in KNOWN-MOUNT-POINTS when it is stopped."
   (service user-unmount-service-type known-mount-points))
 
-(define %do-not-kill-file
-  ;; Name of the file listing PIDs of processes that must survive when halting
-  ;; the system.  Typical example is user-space file systems.
-  "/etc/shepherd/do-not-kill")
-
-(define user-processes-service-type
-  (shepherd-service-type
-   'user-processes
-   (lambda (grace-delay)
-     (shepherd-service
-      (documentation "When stopped, terminate all user processes.")
-      (provision '(user-processes))
-      (requirement '(file-systems))
-      (start #~(const #t))
-      (stop #~(lambda _
-                (define (kill-except omit signal)
-                  ;; Kill all the processes with SIGNAL except those listed
-                  ;; in OMIT and the current process.
-                  (let ((omit (cons (getpid) omit)))
-                    (for-each (lambda (pid)
-                                (unless (memv pid omit)
-                                  (false-if-exception
-                                   (kill pid signal))))
-                              (processes))))
-
-                (define omitted-pids
-                  ;; List of PIDs that must not be killed.
-                  (if (file-exists? #$%do-not-kill-file)
-                      (map string->number
-                           (call-with-input-file #$%do-not-kill-file
-                             (compose string-tokenize
-                                      (@ (ice-9 rdelim) read-string))))
-                      '()))
-
-                (define (now)
-                  (car (gettimeofday)))
-
-                (define (sleep* n)
-                  ;; Really sleep N seconds.
-                  ;; Work around <http://bugs.gnu.org/19581>.
-                  (define start (now))
-                  (let loop ((elapsed 0))
-                    (when (> n elapsed)
-                      (sleep (- n elapsed))
-                      (loop (- (now) start)))))
-
-                (define lset= (@ (srfi srfi-1) lset=))
-
-                (display "sending all processes the TERM signal\n")
-
-                (if (null? omitted-pids)
-                    (begin
-                      ;; Easy: terminate all of them.
-                      (kill -1 SIGTERM)
-                      (sleep* #$grace-delay)
-                      (kill -1 SIGKILL))
-                    (begin
-                      ;; Kill them all except OMITTED-PIDS.  XXX: We would
-                      ;; like to (kill -1 SIGSTOP) to get a fixed list of
-                      ;; processes, like 'killall5' does, but that seems
-                      ;; unreliable.
-                      (kill-except omitted-pids SIGTERM)
-                      (sleep* #$grace-delay)
-                      (kill-except omitted-pids SIGKILL)
-                      (delete-file #$%do-not-kill-file)))
-
-                (let wait ()
-                  ;; Reap children, if any, so that we don't end up with
-                  ;; zombies and enter an infinite loop.
-                  (let reap-children ()
-                    (define result
-                      (false-if-exception
-                       (waitpid WAIT_ANY (if (null? omitted-pids)
-                                             0
-                                             WNOHANG))))
-
-                    (when (and (pair? result)
-                               (not (zero? (car result))))
-                      (reap-children)))
-
-                  (let ((pids (processes)))
-                    (unless (lset= = pids (cons 1 omitted-pids))
-                      (format #t "waiting for process termination\
- (processes left: ~s)~%"
-                              pids)
-                      (sleep* 2)
-                      (wait))))
-
-                (display "all processes have been terminated\n")
-                #f))
-      (respawn? #f)))))
-
-(define* (user-processes-service #:key (grace-delay 4))
-  "Return the service that is responsible for terminating all the processes so
-that the root file system can be re-mounted read-only, just before
-rebooting/halting.  Processes still running GRACE-DELAY seconds after SIGTERM
-has been sent are terminated with SIGKILL.
-
-The returned service will depend on 'file-systems', meaning that it is
-considered started after all the auto-mount file systems have been mounted.
-
-All the services that spawn processes must depend on this one so that they are
-stopped before 'kill' is called."
-  (service user-processes-service-type grace-delay))
-
 
 ;;;
 ;;; Preserve entropy to seed /dev/urandom on boot.
@@ -508,7 +529,10 @@ stopped before 'kill' is called."
   (list (shepherd-service
          (documentation "Preserve entropy across reboots for /dev/urandom.")
          (provision '(urandom-seed))
-         (requirement '(user-processes))
+
+         ;; Depend on udev so that /dev/hwrng is available.
+         (requirement '(file-systems udev))
+
          (start #~(lambda _
                     ;; On boot, write random seed into /dev/urandom.
                     (when (file-exists? #$%random-seed-file)
@@ -517,6 +541,24 @@ stopped before 'kill' is called."
                           (call-with-output-file "/dev/urandom"
                             (lambda (urandom)
                               (dump-port seed urandom))))))
+
+                    ;; Try writing from /dev/hwrng into /dev/urandom.
+                    ;; It seems that the file /dev/hwrng always exists, even
+                    ;; when there is no hardware random number generator
+                    ;; available. So, we handle a failed read or any other error
+                    ;; reported by the operating system.
+                    (let ((buf (catch 'system-error
+                                 (lambda ()
+                                   (call-with-input-file "/dev/hwrng"
+                                     (lambda (hwrng)
+                                       (get-bytevector-n hwrng 512))))
+                                 ;; Silence is golden...
+                                 (const #f))))
+                      (when buf
+                        (call-with-output-file "/dev/urandom"
+                          (lambda (urandom)
+                            (put-bytevector urandom buf)))))
+
                     ;; Immediately refresh the seed in case the system doesn't
                     ;; shut down cleanly.
                     (call-with-input-file "/dev/urandom"
@@ -551,13 +593,20 @@ stopped before 'kill' is called."
   (service-type (name 'urandom-seed)
                 (extensions
                  (list (service-extension shepherd-root-service-type
-                                          urandom-seed-shepherd-service)))
+                                          urandom-seed-shepherd-service)
+
+                       ;; Have 'user-processes' depend on 'urandom-seed'.
+                       ;; This ensures that user processes and daemons don't
+                       ;; start until we have seeded the PRNG.
+                       (service-extension user-processes-service-type
+                                          (const '(urandom-seed)))))
+                (default-value #f)
                 (description
                  "Seed the @file{/dev/urandom} pseudo-random number
 generator (RNG) with the value recorded when the system was last shut
 down.")))
 
-(define (urandom-seed-service)
+(define (urandom-seed-service)                    ;deprecated
   (service urandom-seed-service-type #f))
 
 
@@ -600,47 +649,6 @@ to add @var{device} to the kernel's entropy pool.  The service will fail if
             (rng-tools rng-tools)
             (device device))))
 
-
-;;;
-;;; System-wide environment variables.
-;;;
-
-(define (environment-variables->environment-file vars)
-  "Return a file for pam_env(8) that contains environment variables VARS."
-  (apply mixed-text-file "environment"
-         (append-map (match-lambda
-                       ((key . value)
-                        (list key "=" value "\n")))
-                     vars)))
-
-(define session-environment-service-type
-  (service-type
-   (name 'session-environment)
-   (extensions
-    (list (service-extension
-           etc-service-type
-           (lambda (vars)
-             (list `("environment"
-                     ,(environment-variables->environment-file vars)))))))
-   (compose concatenate)
-   (extend append)
-   (description
-    "Populate @file{/etc/environment} with the specified environment
-variables.  The value of this service is a list of name/value pairs for
-environments variables, such as:
-
-@example
-'((\"TZ\" . \"Canada/Pacific\"))
-@end example\n")))
-
-(define (session-environment-service vars)
-  "Return a service that builds the @file{/etc/environment}, which can be read
-by PAM-aware applications to set environment variables for sessions.
-
-VARS should be an association list in which both the keys and the values are
-strings or string-valued gexps."
-  (service session-environment-service-type vars))
-
 
 ;;;
 ;;; Console & co.
@@ -663,21 +671,23 @@ strings or string-valued gexps."
 
 (define (unicode-start tty)
   "Return a gexp to start Unicode support on @var{tty}."
+  (with-imported-modules '((guix build syscalls))
+    #~(let* ((fd (open-fdes #$tty O_RDWR))
+             (termios (tcgetattr fd)))
+        (define (set-utf8-input termios)
+          (set-field termios (termios-input-flags)
+                     (logior (input-flags IUTF8)
+                             (termios-input-flags termios))))
 
-  ;; We have to run 'unicode_start' in a pipe so that when it invokes the
-  ;; 'tty' command, that command returns TTY.
-  #~(begin
-      (let ((pid (primitive-fork)))
-        (case pid
-          ((0)
-           (close-fdes 0)
-           (dup2 (open-fdes #$tty O_RDONLY) 0)
-           (close-fdes 1)
-           (dup2 (open-fdes #$tty O_WRONLY) 1)
-           (execl #$(file-append kbd "/bin/unicode_start")
-                  "unicode_start"))
-          (else
-           (zero? (cdr (waitpid pid))))))))
+        ;; See console_codes(4).
+        (display "\x1b%G" (fdes->outport fd))
+
+        (tcsetattr fd (tcsetattr-action TCSAFLUSH)
+                   (set-utf8-input termios))
+
+        ;; TODO: ioctl(fd, KDSKBMODE, K_UNICODE);
+        (close-fdes fd)
+        #t)))
 
 (define console-keymap-service-type
   (shepherd-service-type
@@ -716,11 +726,29 @@ strings or string-valued gexps."
              (requirement (list (symbol-append 'term-
                                                (string->symbol tty))))
 
+             (modules '((guix build syscalls)     ;for 'tcsetattr'
+                        (srfi srfi-9 gnu)))       ;for 'set-field'
              (start #~(lambda _
+                        ;; It could be that mingetty is not fully ready yet,
+                        ;; which we check by calling 'ttyname'.
+                        (let loop ((i 10))
+                          (unless (or (zero? i)
+                                      (call-with-input-file #$device
+                                        (lambda (port)
+                                          (false-if-exception (ttyname port)))))
+                            (usleep 500)
+                            (loop (- i 1))))
+
                         (and #$(unicode-start device)
-                             (zero?
-                              (system* #$(file-append kbd "/bin/setfont")
-                                       "-C" #$device #$font)))))
+                             ;; 'setfont' returns EX_OSERR (71) when an
+                             ;; KDFONTOP ioctl fails, for example.  Like
+                             ;; systemd's vconsole support, let's not treat
+                             ;; this as an error.
+                             (case (status:exit-val
+                                    (system* #$(file-append kbd "/bin/setfont")
+                                             "-C" #$device #$font))
+                               ((0 71) #t)
+                               (else #f)))))
              (stop #~(const #t))
              (respawn? #f)))))
        tty+font))
@@ -1387,7 +1415,7 @@ failed to register hydra.gnu.org public key: ~a~%" status))))))))
 (define %default-authorized-guix-keys
   ;; List of authorized substitute keys.
   (list (file-append guix "/share/guix/hydra.gnu.org.pub")
-        (file-append guix "/share/guix/bayfront.guixsd.org.pub")))
+        (file-append guix "/share/guix/berlin.guixsd.org.pub")))
 
 (define-record-type* <guix-configuration>
   guix-configuration make-guix-configuration
@@ -1414,8 +1442,6 @@ failed to register hydra.gnu.org public key: ~a~%" status))))))))
                     (default '()))
   (log-file         guix-configuration-log-file   ;string
                     (default "/var/log/guix-daemon.log"))
-  (lsof             guix-configuration-lsof       ;<package>
-                    (default lsof))
   (http-proxy       guix-http-proxy               ;string | #f
                     (default #f))
   (tmpdir           guix-tmpdir                   ;string | #f
@@ -1432,7 +1458,7 @@ failed to register hydra.gnu.org public key: ~a~%" status))))))))
                              use-substitutes? substitute-urls
                              max-silent-time timeout
                              extra-options
-                             log-file lsof http-proxy tmpdir)
+                             log-file http-proxy tmpdir)
      (list (shepherd-service
             (documentation "Run the Guix daemon.")
             (provision '(guix-daemon))
@@ -1449,10 +1475,8 @@ failed to register hydra.gnu.org public key: ~a~%" status))))))))
                       "--substitute-urls" #$(string-join substitute-urls)
                       #$@extra-options)
 
-                ;; Add 'lsof' (for the GC) to the daemon's $PATH.
                 #:environment-variables
-                (list (string-append "PATH=" #$lsof "/bin")
-                      #$@(if http-proxy
+                (list #$@(if http-proxy
                              (list (string-append "http_proxy=" http-proxy))
                              '())
                       #$@(if tmpdir
@@ -1481,7 +1505,7 @@ failed to register hydra.gnu.org public key: ~a~%" status))))))))
   (match config
     (($ <guix-configuration> guix build-group build-accounts authorize-key? keys)
      ;; Assume that the store has BUILD-GROUP as its group.  We could
-     ;; otherwise call 'chown' here, but the problem is that on a COW unionfs,
+     ;; otherwise call 'chown' here, but the problem is that on a COW overlayfs,
      ;; chown leads to an entire copy of the tree, which is a bad idea.
 
      ;; Optionally authorize hydra.gnu.org's key.
@@ -1671,6 +1695,22 @@ item of @var{packages}."
                          (lambda (port)
                            (display #$contents port)))))))
 
+(define (file->udev-rule file-name file)
+  "Return a directory with a udev rule file FILE-NAME which is a copy of FILE."
+  (computed-file file-name
+                 (with-imported-modules '((guix build utils))
+                   #~(begin
+                       (use-modules (guix build utils))
+
+                       (define rules.d
+                         (string-append #$output "/lib/udev/rules.d"))
+
+                       (define file-copy-dest
+                         (string-append rules.d "/" #$file-name))
+
+                       (mkdir-p rules.d)
+                       (copy-file #$file file-copy-dest)))))
+
 (define kvm-udev-rule
   ;; Return a directory with a udev rule that changes the group of /dev/kvm to
   ;; "kvm" and makes it #o660.  Apparently QEMU-KVM used to ship this rule,
@@ -1737,6 +1777,17 @@ item of @var{packages}."
                     (setenv "EUDEV_RULES_DIRECTORY"
                             #$(file-append rules "/lib/udev/rules.d"))
 
+                    (let* ((kernel-release
+                            (utsname:release (uname)))
+                           (linux-module-directory
+                            (getenv "LINUX_MODULE_DIRECTORY"))
+                           (directory
+                            (string-append linux-module-directory "/"
+                                           kernel-release))
+                           (old-umask (umask #o022)))
+                      (make-static-device-nodes directory)
+                      (umask old-umask))
+
                     (let ((pid (primitive-fork)))
                       (case pid
                         ((0)
@@ -1760,7 +1811,10 @@ item of @var{packages}."
          ;; When halting the system, 'udev' is actually killed by
          ;; 'user-processes', i.e., before its own 'stop' method was called.
          ;; Thus, make sure it is not respawned.
-         (respawn? #f)))))))
+         (respawn? #f)
+         ;; We need additional modules.
+         (modules `((gnu build linux-boot)
+                    ,@%default-modules))))))))
 
 (define udev-service-type
   (service-type (name 'udev)
@@ -1934,7 +1988,7 @@ This service is not part of @var{%base-services}."
                                           (ip "127.0.0.1")
                                           (provision '(loopback)))))
         (syslog-service)
-        (urandom-seed-service)
+        (service urandom-seed-service-type)
         (guix-service)
         (nscd-service)
 

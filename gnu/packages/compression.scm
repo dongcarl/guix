@@ -14,9 +14,12 @@
 ;;; Copyright © 2016 David Craven <david@craven.ch>
 ;;; Copyright © 2016 Kei Kebreau <kkebreau@posteo.net>
 ;;; Copyright © 2016 Marius Bakke <mbakke@fastmail.com>
-;;; Copyright © 2017 ng0 <contact.ng0@cryptolab.net>
+;;; Copyright © 2017 ng0 <ng0@n0.is>
 ;;; Copyright © 2017 Manolis Fragkiskos Ragkousis <manolis837@gmail.com>
-;;; Copyright © 2017 Theodoros Foradis <theodoros.for@openmailbox.org>
+;;; Copyright © 2017 Theodoros Foradis <theodoros@foradis.org>
+;;; Copyright © 2017 Stefan Reichör <stefan@xsteve.at>
+;;; Copyright © 2017 Petter <petter@mykolab.ch>
+;;; Copyright © 2017 Julien Lepiller <julien@lepiller.eu>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -39,6 +42,7 @@
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix git-download)
+  #:use-module (guix build-system ant)
   #:use-module (guix build-system cmake)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system perl)
@@ -50,6 +54,9 @@
   #:use-module (gnu packages base)
   #:use-module (gnu packages check)
   #:use-module (gnu packages curl)
+  #:use-module (gnu packages file)
+  #:use-module (gnu packages java)
+  #:use-module (gnu packages maths)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
@@ -364,7 +371,7 @@ compression algorithm is currently LZMA2, which is used inside the .xz
 container format.  With typical files, XZ Utils create 30 % smaller output
 than gzip and 15 % smaller output than bzip2.")
    (license (list license:gpl2+ license:lgpl2.1+)) ; bits of both
-   (home-page "http://tukaani.org/xz/")))
+   (home-page "https://tukaani.org/xz/")))
 
 (define-public lzo
   (package
@@ -470,7 +477,7 @@ some compression ratio).")
     (description
      "Lzip is a lossless data compressor with a user interface similar to the
 one of gzip or bzip2.  Lzip decompresses almost as fast as gzip and compresses
-more than bzip2, which makes it well suited for software distribution and data
+more than bzip2, which makes it well-suited for software distribution and data
 archiving.  Lzip is a clean implementation of the LZMA algorithm.")
     (license license:gpl3+)))
 
@@ -521,14 +528,14 @@ decompressors when faced with corrupted input.")
      `(("which" ,which)))
     (arguments
      `(#:phases
-        (alist-cons-after
-         'patch-source-shebangs 'unpatch-source-shebang
-         ;; revert the patch-shebang phase on a script which is
-         ;; in fact test data
-         (lambda _
-           (substitute* "tests/shar-1.ok"
-             (((which "sh")) "/bin/sh")))
-         %standard-phases)))
+       (modify-phases %standard-phases
+         (add-after 'patch-source-shebangs 'unpatch-source-shebang
+           ;; revert the patch-shebang phase on a script which is
+           ;; in fact test data
+           (lambda _
+             (substitute* "tests/shar-1.ok"
+               (((which "sh")) "/bin/sh"))
+             #t)))))
     (home-page "https://www.gnu.org/software/sharutils/")
     (synopsis "Archives in shell scripts, uuencode/uudecode")
     (description
@@ -645,7 +652,7 @@ compression library.")
 (define-public perl-compress-raw-zlib
   (package
     (name "perl-compress-raw-zlib")
-    (version "2.074")
+    (version "2.076")
     (source
      (origin
        (method url-fetch)
@@ -653,7 +660,7 @@ compression library.")
                            "Compress-Raw-Zlib-" version ".tar.gz"))
        (sha256
         (base32
-         "08bpx9v6i40n54rdcj6invlj294z20amrl8wvwf9b83aldwdwsd3"))))
+         "1al2h0i6mspldmlf5c09fy5a4j8swsxd31v6zi8zx9iyqk1lw7in"))))
     (build-system perl-build-system)
     (inputs
      `(("zlib" ,zlib)))
@@ -978,7 +985,7 @@ respectively, based on the reference implementation from Google.")
            (lambda _ (chdir "xdelta3")))
          (add-after 'enter-build-directory 'autoconf
            (lambda _ (zero? (system* "autoreconf" "-vfi")))))))
-    (home-page "http://xdelta.com")
+    (home-page "http://xdelta.org")
     (synopsis "Delta encoder for binary files")
     (description "xdelta encodes only the differences between two binary files
 using the VCDIFF algorithm and patch file format described in RFC 3284.  It can
@@ -1023,6 +1030,32 @@ well as bzip2.")
     (license (list license:gpl3+
                    license:public-domain)))) ; most files in lzma/
 
+(define-public bitshuffle
+  (package
+    (name "bitshuffle")
+    (version "0.3.4")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "bitshuffle" version))
+              (sha256
+               (base32
+                "0ydawb01ghsvmw0lraczhrgvkjj97bpg98f1qqs1cnfp953mdd5v"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:tests? #f))           ; fail: https://github.com/h5py/h5py/issues/769
+    (inputs
+     `(("numpy" ,python-numpy)
+       ("h5py" ,python-h5py)
+       ("hdf5" ,hdf5)))
+    (native-inputs
+     `(("cython" ,python-cython)))
+    (home-page "https://github.com/kiyo-masui/bitshuffle")
+    (synopsis "Filter for improving compression of typed binary data")
+    (description "Bitshuffle is an algorithm that rearranges typed, binary data
+for improving compression, as well as a python/C package that implements this
+algorithm within the Numpy framework.")
+    (license license:expat)))
+
 (define-public snappy
   (package
     (name "snappy")
@@ -1045,6 +1078,275 @@ compared to the fastest mode of zlib, Snappy is an order of magnitude faster
 for most inputs, but the resulting compressed files are anywhere from 20% to
 100% bigger.")
     (license license:asl2.0)))
+
+(define bitshuffle-for-snappy
+  (package
+    (inherit bitshuffle)
+    (name "bitshuffle-for-snappy")
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'configure
+           (lambda* (#:key outputs #:allow-other-keys)
+             (with-output-to-file "Makefile"
+               (lambda _
+                 (format #t "\
+libbitshuffle.so: src/bitshuffle.o src/bitshuffle_core.o src/iochain.o lz4/lz4.o
+\tgcc -O3 -ffast-math -std=c99 -o $@ -shared -fPIC $^
+
+%.o: %.c
+\tgcc -O3 -ffast-math -std=c99 -fPIC -Isrc -Ilz4 -c $< -o $@
+
+PREFIX:=~a
+LIBDIR:=$(PREFIX)/lib
+INCLUDEDIR:=$(PREFIX)/include
+
+install: libbitshuffle.so
+\tinstall -dm755 $(LIBDIR)
+\tinstall -dm755 $(INCLUDEDIR)
+\tinstall -m755 libbitshuffle.so $(LIBDIR)
+\tinstall -m644 src/bitshuffle.h $(INCLUDEDIR)
+\tinstall -m644 src/bitshuffle_core.h $(INCLUDEDIR)
+\tinstall -m644 src/iochain.h $(INCLUDEDIR)
+\tinstall -m644 lz4/lz4.h $(INCLUDEDIR)
+" (assoc-ref outputs "out"))))
+             #t)))))
+    (inputs '())
+    (native-inputs '())))
+
+(define-public java-snappy
+  (package
+    (name "java-snappy")
+    (version "1.1.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/xerial/snappy-java/archive/"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1w58diryma7qz7aa24yv8shf3flxcbbw8jgcn2lih14wgmww58ww"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "snappy.jar"
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'remove-binaries
+           (lambda _
+             (delete-file "lib/org/xerial/snappy/OSInfo.class")
+             (delete-file-recursively "src/main/resources/org/xerial/snappy/native")
+             #t))
+         (add-before 'build 'build-jni
+           (lambda _
+             ;; Rebuild one of the binaries we removed earlier
+             (system* "javac" "src/main/java/org/xerial/snappy/OSInfo.java"
+                      "-d" "lib")
+             ;; Link to the dynamic bitshuffle and snappy, not the static ones
+             (substitute* "Makefile.common"
+               (("-shared")
+                "-shared -lbitshuffle -lsnappy"))
+             (substitute* "Makefile"
+               ;; Don't try to use git, don't download bitshuffle source
+               ;; and don't build it.
+               (("\\$\\(SNAPPY_GIT_UNPACKED\\) ")
+                "")
+               ((": \\$\\(SNAPPY_GIT_UNPACKED\\)")
+                ":")
+               (("\\$\\(BITSHUFFLE_UNPACKED\\) ")
+                "")
+               ((": \\$\\(SNAPPY_SOURCE_CONFIGURED\\)") ":")
+               ;; What we actually want to build
+               (("SNAPPY_OBJ:=.*")
+                "SNAPPY_OBJ:=$(addprefix $(SNAPPY_OUT)/, \
+                 SnappyNative.o BitShuffleNative.o)\n")
+               ;; Since we removed the directory structure in "native" during
+               ;; the previous phase, we need to recreate it.
+               (("NAME\\): \\$\\(SNAPPY_OBJ\\)")
+                "NAME): $(SNAPPY_OBJ)\n\t@mkdir -p $(@D)"))
+             ;; Finally we can run the Makefile to build the dynamic library.
+             (zero? (system* "make" "native"))))
+         ;; Once we have built the shared library, we need to place it in the
+         ;; "build" directory so it can be added to the jar file.
+         (add-after 'build-jni 'copy-jni
+           (lambda _
+             (copy-recursively "src/main/resources/org/xerial/snappy/native"
+                               "build/classes/org/xerial/snappy/native")))
+         (add-before 'check 'fix-failing
+           (lambda _
+             ;; This package assumes maven build, which puts results in "target".
+             ;; We put them in "build" instead, so fix that.
+             (substitute* "src/test/java/org/xerial/snappy/SnappyLoaderTest.java"
+               (("target/classes") "build/classes"))
+             ;; FIXME: probably an error
+             (substitute* "src/test/java/org/xerial/snappy/SnappyOutputStreamTest.java"
+               (("91080") "91013")))))))
+    (inputs
+     `(("osgi-framework" ,java-osgi-framework)))
+    (propagated-inputs
+     `(("bitshuffle" ,bitshuffle-for-snappy)
+       ("snappy" ,snappy)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)
+       ("xerial-core" ,java-xerial-core)
+       ("classworlds" ,java-plexus-classworlds)
+       ("perl" ,perl)))
+    (home-page "https://github.com/xerial/snappy-java")
+    (synopsis "Compression/decompression algorithm in Java")
+    (description "Snappy-java is a Java port of the snappy, a fast C++
+compresser/decompresser.")
+    (license license:asl2.0)))
+
+(define-public java-snappy-1
+  (package
+    (inherit java-snappy)
+    (version "1.0.3-rc3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/xerial/snappy-java/archive/"
+                                  "snappy-java-" version ".tar.gz"))
+              (sha256
+               (base32
+                "08hsxlqidiqck0q57fshwyv3ynyxy18vmhrai9fyc8mz17m7gsa3"))))
+    (arguments
+     `(#:jar-name "snappy.jar"
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'remove-binaries
+           (lambda _
+             (delete-file "lib/org/xerial/snappy/OSInfo.class")
+             (delete-file-recursively "src/main/resources/org/xerial/snappy/native")
+             #t))
+         (add-before 'build 'build-jni
+           (lambda _
+             ;; Rebuild one of the binaries we removed earlier
+             (system* "javac" "src/main/java/org/xerial/snappy/OSInfo.java"
+                      "-d" "lib")
+             ;; Link to the dynamic snappy, not the static ones
+             (substitute* "Makefile.common"
+               (("-shared") "-shared -lsnappy"))
+             (substitute* "Makefile"
+               ;; Don't download the sources here.
+               (("\\$\\(SNAPPY_UNPACKED\\) ") "")
+               ((": \\$\\(SNAPPY_UNPACKED\\) ") ":")
+               ;; What we actually want to build
+               (("SNAPPY_OBJ:=.*")
+                "SNAPPY_OBJ:=$(addprefix $(SNAPPY_OUT)/, SnappyNative.o)\n")
+               ;; Since we removed the directory structure in "native" during
+               ;; the previous phase, we need to recreate it.
+               (("NAME\\): \\$\\(SNAPPY_OBJ\\)")
+                "NAME): $(SNAPPY_OBJ)\n\t@mkdir -p $(@D)"))
+             ;; Finally we can run the Makefile to build the dynamic library.
+             (zero? (system* "make" "native"))))
+         ;; Once we have built the shared library, we need to place it in the
+         ;; "build" directory so it can be added to the jar file.
+         (add-after 'build-jni 'copy-jni
+           (lambda _
+             (copy-recursively "src/main/resources/org/xerial/snappy/native"
+                               "build/classes/org/xerial/snappy/native")
+             #t))
+         (add-before 'check 'fix-tests
+           (lambda _
+             (mkdir-p "src/test/resources/org/xerial/snappy/")
+             (copy-recursively "src/test/java/org/xerial/snappy/testdata"
+                               "src/test/resources/org/xerial/snappy/testdata")
+             (install-file "src/test/java/org/xerial/snappy/alice29.txt"
+                           "src/test/resources/org/xerial/snappy/")
+             #t)))))))
+
+(define-public java-iq80-snappy
+  (package
+    (name "java-iq80-snappy")
+    (version "0.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/dain/snappy/archive/snappy-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0rb3zhci7w9wzd65lfnk7p3ip0n6gb58a9qpx8n7r0231gahyamf"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "iq80-snappy.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'check
+           (lambda _
+             (define (test class)
+               (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH")
+                                                           ":build/classes"
+                                                           ":build/test-classes")
+                               "-Dtest.resources.dir=src/test/resources"
+                               "org.testng.TestNG" "-testclass"
+                               class)))
+             (system* "ant" "compile-tests")
+             (and
+               (test "org.iq80.snappy.SnappyFramedStreamTest")
+               (test "org.iq80.snappy.SnappyStreamTest"))))
+         (add-before 'build 'remove-hadoop-dependency
+           (lambda _
+             ;; We don't have hadoop
+             (delete-file "src/main/java/org/iq80/snappy/HadoopSnappyCodec.java")
+             (delete-file "src/test/java/org/iq80/snappy/TestHadoopSnappyCodec.java")
+             #t)))))
+    (home-page "https://github.com/dain/snappy")
+    (native-inputs
+     `(("guava" ,java-guava)
+       ("java-snappy" ,java-snappy)
+       ("hamcrest" ,java-hamcrest-core)
+       ("testng" ,java-testng)))
+    (synopsis "Java port of snappy")
+    (description "Iq80-snappy is a rewrite (port) of Snappy writen in pure
+Java.  This compression code produces a byte-for-byte exact copy of the output
+created by the original C++ code, and extremely fast.")
+    (license license:asl2.0)))
+
+(define-public java-jbzip2
+  (package
+    (name "java-jbzip2")
+    (version "0.9.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://storage.googleapis.com/"
+                                  "google-code-archive-source/v2/"
+                                  "code.google.com/jbzip2/"
+                                  "source-archive.zip"))
+              (file-name (string-append name "-" version ".zip"))
+              (sha256
+               (base32
+                "0ncmhlqmrfmj96nqf6p77b9ws35lcfsvpfxzwxi2asissc83z1l3"))))
+    (build-system ant-build-system)
+    (native-inputs
+     `(("unzip" ,unzip)
+       ("java-junit" ,java-junit)))
+    (arguments
+     `(#:tests? #f                      ; no tests
+       #:jar-name "jbzip2.jar"
+       #:source-dir "tags/release-0.9.1/src"
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'fix-encoding-problems
+           (lambda _
+             ;; Some of the files we're patching are
+             ;; ISO-8859-1-encoded, so choose it as the default
+             ;; encoding so the byte encoding is preserved.
+             (with-fluids ((%default-port-encoding #f))
+               (substitute* "tags/release-0.9.1/src/org/itadaki/bzip2/HuffmanAllocator.java"
+                 (("Milidi.") "Milidiu")))
+             #t)))))
+    (home-page "https://code.google.com/archive/p/jbzip2/")
+    (synopsis "Java bzip2 compression/decompression library")
+    (description "Jbzip2 is a Java bzip2 compression/decompression library.
+It can be used as a replacement for the Apache @code{CBZip2InputStream} /
+@code{CBZip2OutputStream} classes.")
+    (license license:expat)))
 
 (define-public p7zip
   (package
@@ -1282,28 +1584,10 @@ or junctions, and always follows hard links.")
  archives from InstallShield installers.")
     (license license:expat)))
 
-(define-public unrar
-  (package
-    (name "unrar")
-    (version "0.0.1")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append
-                    "http://download.gna.org/unrar/unrar-" version ".tar.gz"))
-              (sha256
-               (base32
-                "1fgmjaxffj3shyxgy765jhxwz1cq88hk0fih1bsdzyvymyyz6mz7"))))
-    (build-system gnu-build-system)
-    (home-page "http://download.gna.org/unrar")
-    (synopsis "RAR archive extraction tool")
-    (description "Unrar is a simple command-line program to list and extract
-RAR archives.")
-    (license license:gpl2+)))
-
 (define-public zstd
   (package
     (name "zstd")
-    (version "1.3.1")
+    (version "1.3.3")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/facebook/zstd/archive/v"
@@ -1311,17 +1595,7 @@ RAR archives.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1imddqjhczira626nf3nqmjwj3wb37xcfcwgkjydv2k6fpfbjbri"))
-              (modules '((guix build utils)))
-              (snippet
-               ;; Remove non-free source files.
-               '(begin
-                  (for-each delete-file-recursively
-                            (list
-                             ;; Commercial use of the following is not allowed.
-                             "examples"
-                             "LICENSE-examples"))
-                  #t))))
+                "0yr91gwi380632w9y7p6idl72svq0mq0jajvdii05pp77qalfz57"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
@@ -1329,8 +1603,13 @@ RAR archives.")
          (delete 'configure))           ; no configure script
        #:make-flags
        (list "CC=gcc"
-             (string-append "PREFIX=" (assoc-ref %outputs "out")))
-       #:test-target "test"))
+             (string-append "PREFIX=" (assoc-ref %outputs "out"))
+             ;; Skip auto-detection of, and creating a dependency on, the build
+             ;; environment's ‘xz’ for what amounts to a dubious feature anyway.
+             "HAVE_LZMA=0"
+             ;; Not currently detected, but be explicit & avoid surprises later.
+             "HAVE_LZ4=0"
+             "HAVE_ZLIB=0")))
     (home-page "http://zstd.net/")
     (synopsis "Zstandard real-time compression algorithm")
     (description "Zstandard (@command{zstd}) is a lossless compression algorithm
@@ -1340,7 +1619,10 @@ zlib.  In most scenarios, both compression and decompression can be performed in
 trade-off between compression ratio and speed, without affecting decompression
 speed.")
     (license (list license:bsd-3         ; the main top-level LICENSE file
-                   license:bsd-2         ; quite a few files have but 2 clauses
+                   license:bsd-2         ; many files explicitly state 2-Clause
+                   license:gpl2          ; the mail top-level COPYING file
+                   license:gpl3+         ; tests/gzip/*.sh
+                   license:expat         ; lib/dictBuilder/divsufsort.[ch]
                    license:public-domain ; zlibWrapper/examples/fitblk*
                    license:zlib))))      ; zlibWrapper/{gz*.c,gzguts.h}
 
@@ -1542,33 +1824,226 @@ manipulate, read, and write Zip archive files.")
 (define-public libzip
   (package
     (name "libzip")
-    (version "1.3.0")
+    (version "1.3.2")
     (source (origin
               (method url-fetch)
               (uri (string-append
-                    "https://nih.at/libzip/libzip-" version ".tar.xz"))
+                    "https://libzip.org/download/" name "-" version ".tar.xz"))
               (sha256
                (base32
-                "0wykw0q9dwdzx0gssi2dpgckx9ggr2spzc1amjnff6wi6kz6x4xa"))))
-    (arguments
-     '(#:phases
-       (modify-phases %standard-phases
-         (add-after 'build 'remove-failing-tests
-           ;; These tests are known to fail on 32-bit architectures.
-           ;; see thread: https://nih.at/listarchive/libzip-discuss/msg00713.html
-           (lambda _
-             (substitute* "regress/Makefile"
-               (("encryption-nonrandom") "#encryption-nonrandom"))
-             #t)))))
+                "11g1hvm2bxa2v5plakfzcwyk5hb5fz4kgrkp38l0xhnv21888xv2"))))
     (native-inputs
      `(("perl" ,perl)))
     (inputs
      `(("zlib" ,zlib)))
     (build-system gnu-build-system)
-    (home-page "https://nih.at/libzip/index.html")
+    (home-page "https://libzip.org")
     (synopsis "C library for reading, creating, and modifying zip archives")
     (description "Libzip is a C library for reading, creating, and modifying
 zip archives.  Files can be added from data buffers, files, or compressed data
 copied directly from other zip archives.  Changes made without closing the
 archive can be reverted.")
     (license license:bsd-3)))
+
+(define-public atool
+  (package
+    (name "atool")
+    (version "0.39.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "http://savannah.nongnu.org/download/atool/atool-"
+                           version ".tar.gz"))
+       (sha256
+        (base32
+         "0fvhzip2v08jgnlfpyj6rapan39xlsl1ksgq4lp8gfsai2ah1xma"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'embed-absolute-file-name
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "atool"
+               (("(^\\$::cfg_path_file.*= )'file'" _ pre)
+                (string-append pre "'" (assoc-ref inputs "file")
+                               "/bin/file'")))
+             #t)))))
+    (inputs
+     `(("perl" ,perl)
+       ("file" ,file)))
+    (home-page "http://www.nongnu.org/atool/")
+    (synopsis  "Universal tool to manage file archives of various types")
+    (description "The main command is @command{aunpack} which extracts files
+from an archive.  The other commands provided are @command{apack} (to create
+archives), @command{als} (to list files in archives), and @command{acat} (to
+extract files to standard out).  As @command{atool} invokes external programs
+to handle the archives, not all commands may be supported for a certain type
+of archives.")
+    (license license:gpl2+)))
+
+(define-public perl-archive-extract
+  (package
+    (name "perl-archive-extract")
+    (version "0.80")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "mirror://cpan/authors/id/B/BI/BINGOS/Archive-Extract-"
+                           version ".tar.gz"))
+       (sha256
+        (base32
+         "1x15j1q6w6z8hqyqgap0lz4qbq2174wfhksy1fdd653ccbaw5jr5"))))
+    (build-system perl-build-system)
+    (home-page "http://search.cpan.org/dist/Archive-Extract/")
+    (synopsis "Generic archive extracting mechanism")
+    (description "It allows you to extract any archive file of the type .tar,
+.tar.gz, .gz, .Z, tar.bz2, .tbz, .bz2, .zip, .xz,, .txz, .tar.xz or .lzma
+without having to worry how it does so, or use different interfaces for each
+type by using either Perl modules, or command-line tools on your system.")
+    (license license:perl-license)))
+
+(define-public java-tukaani-xz
+  (package
+    (name "java-tukaani-xz")
+    (version "1.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://tukaani.org/xz/xz-java-" version ".zip"))
+              (sha256
+               (base32
+                "1z3p1ri1gvl07inxn0agx44ck8n7wrzfmvkz8nbq3njn8r9wba8x"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'chdir
+           (lambda _
+             ;; Our build system enters the first directory in the archive, but
+             ;; the package is not contained in a subdirectory
+             (chdir "..")))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             ;; Do we want to install *Demo.jar?
+             (install-file "build/jar/xz.jar"
+                           (string-append
+                             (assoc-ref outputs "out")
+                             "/share/java/xz.jar")))))))
+    (native-inputs
+     `(("unzip" ,unzip)))
+    (home-page "https://tukaani.org")
+    (synopsis "XZ in Java")
+    (description "Tukaani-xz is an implementation of xz compression/decompression
+algorithms in Java.")
+    (license license:public-domain)))
+
+(define-public lunzip
+  (package
+    (name "lunzip")
+    (version "1.9")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "http://download.savannah.gnu.org/releases/lzip/"
+                           name "/" name "-" version ".tar.gz"))
+       (sha256
+        (base32 "1ax3d9cp66z1qb9q7lfzg5bpx9630xrxgq9a5sw569wm0qqgpg2q"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:configure-flags
+       (list "CC=gcc")))
+    (home-page "http://www.nongnu.org/lzip/lunzip.html")
+    (synopsis "Small, stand-alone lzip decompressor")
+    (description
+     "Lunzip is a decompressor for files in the lzip compression format (.lz),
+written as a single small C tool with no dependencies.  This makes it
+well-suited to embedded and other systems without a C++ compiler, or for use in
+applications such as software installers that need only to decompress files,
+not compress them.
+Lunzip is intended to be fully compatible with the regular lzip package.")
+    (license (list license:bsd-2        ; carg_parser.[ch]
+                   license:gpl2+))))    ; everything else
+
+(define-public clzip
+  (package
+    (name "clzip")
+    (version "1.9")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "http://download.savannah.gnu.org/releases/lzip/"
+                           name "/" name "-" version ".tar.gz"))
+       (sha256
+        (base32 "1brvsnpihzj81cf4wk2x5bnr2qldlq0wncpdbzxmzvxapm1cq2yc"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:configure-flags
+       (list "CC=gcc")))
+    (home-page "http://www.nongnu.org/lzip/clzip.html")
+    (synopsis "Small, stand-alone lzip compressor and decompressor")
+    (description
+     "Clzip is a compressor and decompressor for files in the lzip compression
+format (.lz), written as a single small C tool with no dependencies.  This makes
+it well-suited to embedded and other systems without a C++ compiler, or for use
+in other applications like package managers.
+Clzip is intended to be fully compatible with the regular lzip package.")
+    (license (list license:bsd-2        ; carg_parser.[ch], lzd in clzip.texi
+                   license:gpl2+))))
+
+(define-public lzlib
+  (package
+    (name "lzlib")
+    (version "1.9")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "http://download.savannah.gnu.org/releases/lzip/"
+                           name "/" name "-" version ".tar.gz"))
+       (sha256
+        (base32 "13mssf3hrcnmd4ijbqnxfk0zgj1q5lvpxxkm1hmrbl1h73czhwi4"))))
+    (build-system gnu-build-system)
+    ;; The included minilzip binary is only ~16 smaller than the ‘real’ lzip.
+    ;; It's used during the test suite, but don't be tempted to install it.
+    (arguments
+     `(#:configure-flags
+       (list "CC=gcc"
+             "--enable-shared")))       ; only static (.a) is built by default
+    (home-page "http://www.nongnu.org/lzip/lzlib.html")
+    (synopsis "Lzip data compression C library")
+    (description
+     "Lzlib is a C library for in-memory LZMA compression and decompression in
+the lzip format.  It supports integrity checking of the decompressed data, and
+all functions are thread-safe.  The library should never crash, even in case of
+corrupted input.")
+    (license (list license:bsd-2        ; the library itself
+                   license:gpl2+))))    ; main.c (i.e. minilzip used by tests)
+
+(define-public plzip
+  (package
+    (name "plzip")
+    (version "1.6")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "http://download.savannah.gnu.org/releases/lzip/"
+                           name "/" name "-" version ".tar.gz"))
+       (sha256
+        (base32 "0z2cs6vn4xl65wakd013xl3sdfpg8dr0cvcjwc2slh8y9bz7j7ax"))))
+    (build-system gnu-build-system)
+    (inputs
+     `(("lzlib" ,lzlib)))
+    (home-page "http://www.nongnu.org/lzip/plzip.html")
+    (synopsis "Parallel lossless data compressor for the lzip format")
+    (description
+     "Plzip is a massively parallel (multi-threaded) lossless data compressor
+and decompressor that uses the lzip file format (.lz).  Files produced by plzip
+are fully compatible with lzip and can be rescued with lziprecover.
+On multiprocessor machines, plzip can compress and decompress large files much
+faster than lzip, at the cost of a slightly reduced compression ratio (0.4% to
+2%).  The number of usable threads is limited by file size: on files of only a
+few MiB, plzip is no faster than lzip.
+Files that were compressed with regular lzip will also not be decompressed
+faster by plzip, unless the @code{-b} option was used: lzip usually produces
+single-member files which can't be decompressed in parallel.")
+    (license (list license:bsd-2        ; arg_parser.{cc,h}
+                   license:gpl2+))))    ; everything else

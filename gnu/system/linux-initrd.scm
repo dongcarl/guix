@@ -78,6 +78,19 @@ the derivations referenced by EXP are automatically copied to the initrd."
           (use-modules (gnu build linux-initrd))
 
           (mkdir #$output)
+
+          ;; The guile used in the initrd must be present in the store, so
+          ;; that module loading works once the root is switched.
+          ;;
+          ;; To ensure that is the case, add an explicit reference to the
+          ;; guile package used in the initrd to the output.
+          ;;
+          ;; This fixes guix-patches bug #28399, "Fix mysql activation, and
+          ;; add a basic test".
+          (call-with-output-file (string-append #$ output "/references")
+            (lambda (port)
+              (simple-format port "~A\n" #$guile)))
+
           (build-initrd (string-append #$output "/initrd")
                         #:guile #$guile
                         #:init #$init
@@ -174,9 +187,11 @@ to it are lost."
                            '((gnu build linux-boot)
                              (guix build utils)
                              (guix build bournish)
+                             (gnu system file-systems)
                              (gnu build file-systems)))
      #~(begin
          (use-modules (gnu build linux-boot)
+                      (gnu system file-systems)
                       (guix build utils)
                       (guix build bournish)   ;add the 'bournish' meta-command
                       (srfi srfi-26)
@@ -193,7 +208,9 @@ to it are lost."
              (set-path-environment-variable "PATH" '("bin" "sbin")
                                             '#$helper-packages)))
 
-         (boot-system #:mounts '#$(map file-system->spec file-systems)
+         (boot-system #:mounts
+                      (map spec->file-system
+                           '#$(map file-system->spec file-systems))
                       #:pre-mount (lambda ()
                                     (and #$@device-mapping-commands))
                       #:linux-modules '#$linux-modules
@@ -217,9 +234,6 @@ FILE-SYSTEMS."
           '())
     ,@(if (find (file-system-type-predicate "btrfs") file-systems)
           (list btrfs-progs/static)
-          '())
-    ,@(if volatile-root?
-          (list unionfs-fuse/static)
           '())))
 
 (define* (base-initrd file-systems
@@ -291,7 +305,7 @@ loaded at boot time in the order in which they appear."
             '("isofs")
             '())
       ,@(if volatile-root?
-            '("fuse")
+            '("overlay")
             '())
       ,@extra-modules))
 

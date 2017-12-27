@@ -20,6 +20,7 @@
 ;;; Copyright © 2017 Clément Lassieur <clement@lassieur.org>
 ;;; Copyright © 2017 Brendan Tildesley <brendan.tildesley@openmailbox.org>
 ;;; Copyright © 2017 Arun Isaac <arunisaac@systemreboot.net>
+;;; Copyright © 2017 Mohammed Sadiq <sadiq@sadiqpk.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -167,6 +168,45 @@ itself."))))
     (synopsis "Cantarell sans-serif typeface")
     (description "The Cantarell font family is a contemporary Humanist
 sans-serif designed for on-screen reading.  It is used by GNOME@tie{}3.")
+    (license license:silofl1.1)))
+
+(define-public font-lato
+  (package
+    (name "font-lato")
+    (version "2.010")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://www.latofonts.com/download/Lato2OFL.zip"))
+              (sha256
+               (base32
+                "1f5540g0ja1nx3ddd3ywn77xc81ssrxpq8n3gyb9sabyq2b4xda2"))))
+    (build-system trivial-build-system)
+    (arguments
+     `(#:modules ((guix build utils))
+       #:builder (begin
+                   (use-modules (guix build utils)
+                                (srfi srfi-26))
+
+                   (let ((PATH     (string-append (assoc-ref %build-inputs
+                                                             "unzip")
+                                                  "/bin"))
+                         (font-dir (string-append %output
+                                                  "/share/fonts/truetype")))
+                     (setenv "PATH" PATH)
+                     (system* "unzip" (assoc-ref %build-inputs "source"))
+
+                     (mkdir-p font-dir)
+                     (for-each (lambda (ttf)
+                                 (install-file ttf font-dir))
+                               (find-files "." "\\.ttf$"))))))
+
+    (native-inputs `(("unzip" ,unzip)))
+    (home-page "http://www.latofonts.com/lato-free-fonts/")
+    (synopsis "Lato sans-serif typeface")
+    (description
+     "Lato is a sanserif typeface family.  It covers over 3000 glyphs per style.
+The Lato 2.010 family supports more than 100 Latin-based languages, over
+50 Cyrillic-based languages as well as Greek and IPA phonetics.")
     (license license:silofl1.1)))
 
 (define-public font-gnu-freefont-ttf
@@ -514,6 +554,32 @@ fonts.")
     ;; exceptions.
     (license license:gpl3)))
 
+(define-public font-rachana
+  (package
+    (name "font-rachana")
+    (version "7.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "https://gitlab.com/smc/rachana/repository/archive.tar.gz?ref=Version"
+             version))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32
+         "0jc091gshna6p1dd6lf507jxkgk6rsja835fc9dm71mcplq53bm1"))))
+    (build-system font-build-system)
+    (home-page "https://smc.org.in")
+    (synopsis "Malayalam font")
+    (description
+     "Rachana is a Malayalam font designed by Hussain K H.  The project was
+part of Rachana Aksharavedi for the original script of Malayalam in computing.
+Rachana has about 1,200+ glyphs for Malayalam and contains glyphs required for
+printing old Malayalam books without compromising the writing style.")
+    ;; This font is licensed under SIL 1.1 or GPLv3+ with font embedding
+    ;; exceptions.
+    (license (list license:silofl1.1 license:gpl3+))))
+
 (define-public font-tex-gyre
   (package
     (name "font-tex-gyre")
@@ -737,17 +803,15 @@ glyph designs, not just an added slant.")
 (define-public font-hack
   (package
     (name "font-hack")
-    (version "2.020")
+    (version "3.000")
     (source (origin
               (method url-fetch/zipbomb)
               (uri (string-append
-                    "https://github.com/chrissimpkins/Hack/releases/download/v"
-                    version "/Hack-v"
-                    (string-replace-substring version "." "_")
-                    "-ttf.zip"))
+                    "https://github.com/source-foundry/Hack/releases/download/v"
+                    version "/Hack-v" version "-ttf.zip"))
               (sha256
                (base32
-                "16kkmc3psckw1b7k07ccn1gi5ymhlg9djh43nqjzg065g6p6d184"))))
+                "0h6slqg25a6cq57k6rh5hmnk8dxbprmf8shs4iyj1pc83sw6b1r3"))))
     (build-system font-build-system)
     (home-page "https://sourcefoundry.org/hack/")
     (synopsis "Typeface designed for source code")
@@ -755,9 +819,12 @@ glyph designs, not just an added slant.")
      "Hack is designed to be a workhorse typeface for code.  It expands upon
 the Bitstream Vera & DejaVu projects, provides 1561 glyphs, and includes
 Powerline support.")
-    (license (license:x11-style
-              "https://github.com/chrissimpkins/Hack/blob/master/LICENSE.md"
-              "Hack Open Font License v2.0"))))
+    (license
+     ;; See https://github.com/source-foundry/Hack/issues/271 for details.
+     (list license:expat                ; the Hack modifications to...
+           license:public-domain        ; ...the DejaVu modifications to...
+           (license:x11-style           ; ...the Bitstream Vera typeface
+            "file://LICENSE.md" "Bitstream Vera License")))))
 
 (define-public font-adobe-source-code-pro
   (package
@@ -800,6 +867,24 @@ designed to work well in user interface environments.")
     (build-system font-build-system)
     (home-page "http://mozilla.github.io/Fira/")
     (synopsis "Mozilla's monospace font")
+    (description "This is the typeface used by Mozilla in Firefox OS.")
+    (license license:silofl1.1)))
+
+(define-public font-fira-sans
+  (package
+    (name "font-fira-sans")
+    (version "4.202")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/mozilla/Fira/archive/"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1r6zdnqqp4bgq5nmgqbj0vvj7x1h9w912851ggbl9wc7fdjnjqnq"))))
+    (build-system font-build-system)
+    (home-page "http://mozilla.github.io/Fira/")
+    (synopsis "Mozilla's Fira Sans Font")
     (description "This is the typeface used by Mozilla in Firefox OS.")
     (license license:silofl1.1)))
 
@@ -999,7 +1084,7 @@ monospace, slab-serif fonts.")
                     version ".tar.gz"))
               (sha256
                (base32
-                "183n0qv3q8w6n27libarq1fhc4mqv2d3sasbfmbn7x9r5pw9c6ga"))
+                "018i3za9r6kf6svci33z09lc5pr5yz4164m8gzzwjzzqcrng0p5j"))
               (file-name (string-append name "-" version ".tar.gz"))))
     (build-system font-build-system)
     (home-page "http://google.github.io/material-design-icons")
@@ -1042,3 +1127,52 @@ emphasis while still being readable.")
       "The Font Software may be sold as part of a larger software package but
 no copy of one or more of the Font Software typefaces may be sold by
 itself."))))
+
+(define-public font-dosis
+  (package
+    (name "font-dosis")
+    (version "1.7")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "http://www.impallari.com/media/releases/dosis-"
+                           "v" version ".zip"))
+       (sha256
+        (base32
+         "1qhci68f68mf87jd69vjf9qjq3wydgw1q7ivn3amjb65ls1s0c4s"))))
+    (build-system trivial-build-system)
+    (arguments
+     `(#:modules ((guix build utils))
+       #:builder (begin
+                   (use-modules (guix build utils)
+                                (srfi srfi-26))
+
+                   (let ((PATH     (string-append (assoc-ref %build-inputs
+                                                             "unzip")
+                                                  "/bin"))
+                         (ttf-dir (string-append %output
+                                                 "/share/fonts/truetype"))
+                         (otf-dir (string-append %output
+                                                 "/share/fonts/opentype")))
+                     (setenv "PATH" PATH)
+                     (system* "unzip" (assoc-ref %build-inputs "source"))
+
+                     (mkdir-p ttf-dir)
+                     (mkdir-p otf-dir)
+                     (for-each (lambda (ttf)
+                                 (install-file ttf ttf-dir))
+                               (find-files "." "\\.ttf$"))
+                     (for-each (lambda (otf)
+                                 (install-file otf otf-dir))
+                               (find-files "." "\\.otf$"))))))
+    (native-inputs `(("unzip" ,unzip)))
+    (home-page "http://www.impallari.com/dosis")
+    (synopsis "Very simple, rounded, sans serif family")
+    (description
+     "Dosis is a very simple, rounded, sans serif family.
+The lighter weights are minimalist.  The bolder weights have more personality.
+The medium weight is nice and balanced.  The overall result is a family
+that's clean and modern, and can express a wide range of voices & feelings.
+It comes in 7 incremental weights:
+ExtraLight, Light, Book, Medium, Semibold, Bold & ExtraBold")
+    (license license:silofl1.1)))

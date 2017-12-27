@@ -37,6 +37,7 @@
   #:use-module (gnu packages gtk)
   #:use-module (gnu packages icu4c)
   #:use-module (gnu packages readline)
+  #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages curl)
   #:use-module (gnu packages documentation)
@@ -75,7 +76,7 @@ interfacing MPD in the C, C++ & Objective C languages.")
 (define-public mpd
   (package
     (name "mpd")
-    (version "0.20.10")
+    (version "0.20.13")
     (source (origin
               (method url-fetch)
               (uri
@@ -84,7 +85,7 @@ interfacing MPD in the C, C++ & Objective C languages.")
                               "/mpd-" version ".tar.xz"))
               (sha256
                (base32
-                "089i9lh3fa8bix6v0sq0jgs7rkpk8l6q5lmdk6lip96vbh9c3ysj"))))
+                "0h7z90dnpwlyad4kfi1ja9v9vzqic0xg93iy4q0dwlhav0scbha6"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
@@ -195,7 +196,7 @@ terminal using ncurses.")
 (define-public ncmpcpp
   (package
     (name "ncmpcpp")
-    (version "0.8")
+    (version "0.8.1")
     (source (origin
               (method url-fetch)
               (uri
@@ -203,7 +204,7 @@ terminal using ncurses.")
                               version ".tar.bz2"))
               (sha256
                (base32
-                "0nj6ky805a55acj0w57sbn3vfmmkbqp97rhbi0q9848n10f2l3rg"))))
+                "1zw8d07b2bkssbsybg6jnmpq001w525viajrnz4jvfml3l55gyad"))))
     (build-system gnu-build-system)
     (inputs `(("libmpdclient" ,libmpdclient)
               ("boost"  ,boost)

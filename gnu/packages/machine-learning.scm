@@ -1,7 +1,8 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2015, 2016 Ricardo Wurmus <rekado@elephly.net>
+;;; Copyright © 2015, 2016, 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
-;;; Copyright © 2016 Marius Bakke <mbakke@fastmail.com>
+;;; Copyright © 2016, 2017 Marius Bakke <mbakke@fastmail.com>
+;;; Copyright © 2016 Hartmut Goebel <h.goebel@crazy-compilers.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -27,10 +28,12 @@
   #:use-module (guix build-system cmake)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system ocaml)
+  #:use-module (guix build-system python)
   #:use-module (guix build-system r)
   #:use-module (gnu packages)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages boost)
+  #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages cran)
   #:use-module (gnu packages dejagnu)
@@ -376,54 +379,50 @@ sample proximities between pairs of cases.")
     (arguments
      '(#:tests? #f ;no check target
        #:phases
-       (alist-cons-after
-        'unpack 'delete-broken-symlinks
-        (lambda _
-          (for-each delete-file '("applications/arts/data"
-                                  "applications/asp/data"
-                                  "applications/easysvm/data"
-                                  "applications/msplicer/data"
-                                  "applications/ocr/data"
-                                  "examples/documented/data"
-                                  "examples/documented/matlab_static"
-                                  "examples/documented/octave_static"
-                                  "examples/undocumented/data"
-                                  "examples/undocumented/matlab_static"
-                                  "examples/undocumented/octave_static"
-                                  "tests/integration/data"
-                                  "tests/integration/matlab_static"
-                                  "tests/integration/octave_static"
-                                  "tests/integration/python_modular/tests"))
-          #t)
-        (alist-cons-after
-         'unpack 'change-R-target-path
-         (lambda* (#:key outputs #:allow-other-keys)
-           (substitute* '("src/interfaces/r_modular/CMakeLists.txt"
-                          "src/interfaces/r_static/CMakeLists.txt"
-                          "examples/undocumented/r_modular/CMakeLists.txt")
-             (("\\$\\{R_COMPONENT_LIB_PATH\\}")
-              (string-append (assoc-ref outputs "out")
-                             "/lib/R/library/")))
-           #t)
-         (alist-cons-after
-          'unpack 'fix-octave-modules
-          (lambda* (#:key outputs #:allow-other-keys)
-            (substitute* '("src/interfaces/octave_modular/CMakeLists.txt"
-                           "src/interfaces/octave_static/CMakeLists.txt")
-              (("^include_directories\\(\\$\\{OCTAVE_INCLUDE_DIRS\\}")
-               "include_directories(${OCTAVE_INCLUDE_DIRS} ${OCTAVE_INCLUDE_DIRS}/octave"))
+       (modify-phases %standard-phases
+         (add-after 'unpack 'delete-broken-symlinks
+           (lambda _
+             (for-each delete-file '("applications/arts/data"
+                                     "applications/asp/data"
+                                     "applications/easysvm/data"
+                                     "applications/msplicer/data"
+                                     "applications/ocr/data"
+                                     "examples/documented/data"
+                                     "examples/documented/matlab_static"
+                                     "examples/documented/octave_static"
+                                     "examples/undocumented/data"
+                                     "examples/undocumented/matlab_static"
+                                     "examples/undocumented/octave_static"
+                                     "tests/integration/data"
+                                     "tests/integration/matlab_static"
+                                     "tests/integration/octave_static"
+                                     "tests/integration/python_modular/tests"))
+             #t))
+         (add-after 'unpack 'change-R-target-path
+           (lambda* (#:key outputs #:allow-other-keys)
+             (substitute* '("src/interfaces/r_modular/CMakeLists.txt"
+                            "src/interfaces/r_static/CMakeLists.txt"
+                            "examples/undocumented/r_modular/CMakeLists.txt")
+               (("\\$\\{R_COMPONENT_LIB_PATH\\}")
+                (string-append (assoc-ref outputs "out")
+                               "/lib/R/library/")))
+             #t))
+         (add-after 'unpack 'fix-octave-modules
+           (lambda* (#:key outputs #:allow-other-keys)
+             (substitute* '("src/interfaces/octave_modular/CMakeLists.txt"
+                            "src/interfaces/octave_static/CMakeLists.txt")
+               (("^include_directories\\(\\$\\{OCTAVE_INCLUDE_DIRS\\}")
+                "include_directories(${OCTAVE_INCLUDE_DIRS} ${OCTAVE_INCLUDE_DIRS}/octave"))
 
-            ;; change target directory
-            (substitute* "src/interfaces/octave_modular/CMakeLists.txt"
-              (("\\$\\{OCTAVE_OCT_LOCAL_API_FILE_DIR\\}")
-               (string-append (assoc-ref outputs "out")
-                              "/share/octave/packages")))
-            #t)
-          (alist-cons-before
-           'build 'set-HOME
+             ;; change target directory
+             (substitute* "src/interfaces/octave_modular/CMakeLists.txt"
+               (("\\$\\{OCTAVE_OCT_LOCAL_API_FILE_DIR\\}")
+                (string-append (assoc-ref outputs "out")
+                               "/share/octave/packages")))
+             #t))
+         (add-before 'build 'set-HOME
            ;; $HOME needs to be set at some point during the build phase
-           (lambda _ (setenv "HOME" "/tmp") #t)
-           %standard-phases))))
+           (lambda _ (setenv "HOME" "/tmp") #t)))
        #:configure-flags
        (list "-DCMAKE_BUILD_WITH_INSTALL_RPATH=TRUE"
              "-DUSE_SVMLIGHT=OFF" ;disable proprietary SVMLIGHT
@@ -491,7 +490,9 @@ in terms of new algorithms.")
     (propagated-inputs
      `(("r-rcpp" ,r-rcpp)
        ("r-rcpparmadillo" ,r-rcpparmadillo)))
-    (home-page "http://cran.r-project.org/web/packages/AdaptiveSparsity")
+    (inputs
+     `(("armadillo" ,armadillo)))
+    (home-page "https://cran.r-project.org/web/packages/AdaptiveSparsity")
     (synopsis "Adaptive sparsity models")
     (description
      "This package implements the Figueiredo machine learning algorithm for
@@ -511,7 +512,7 @@ geometric models.")
         (base32
          "0qnaq9x3j2xc6jrmmd98wc6hkzch487s4p3a9lnc00xvahkhgpmr"))))
     (build-system r-build-system)
-    (home-page "http://cran.r-project.org/web/packages/kernlab")
+    (home-page "https://cran.r-project.org/web/packages/kernlab")
     (synopsis "Kernel-based machine learning tools")
     (description
      "This package provides kernel-based machine learning methods for
@@ -524,14 +525,14 @@ and a QP solver.")
 (define-public dlib
   (package
     (name "dlib")
-    (version "19.3")
+    (version "19.7")
     (source (origin
               (method url-fetch)
               (uri (string-append
                     "http://dlib.net/files/dlib-" version ".tar.bz2"))
               (sha256
                (base32
-                "0gfy83av717qymv53yv7ki6mgh6mdw4xcxxbjk8lrs72f8qvnrcw"))
+                "1mljz02kwkrbggyncxv5fpnyjdybw2qihaacb3js8yfkw12vwpc2"))
               (modules '((guix build utils)))
               (snippet
                '(begin
@@ -541,7 +542,11 @@ and a QP solver.")
                   #t))))
     (build-system cmake-build-system)
     (arguments
-     `(#:phases
+     ;; Recent releases defaults to "lib64" on 64bit.
+     `(#:configure-flags (list (string-append "-DCMAKE_INSTALL_LIBDIR="
+                                              (assoc-ref %outputs "out")
+                                              "/lib"))
+       #:phases
        (modify-phases %standard-phases
          (add-after 'unpack 'disable-asserts
            (lambda _
@@ -576,7 +581,6 @@ and a QP solver.")
              ;; No test target, so we build and run the unit tests here.
              (let ((test-dir (string-append "../dlib-" ,version "/dlib/test")))
                (with-directory-excursion test-dir
-                 (setenv "CXXFLAGS" "-std=gnu++11")
                  (and (zero? (system* "make" "-j" (number->string (parallel-job-count))))
                       (zero? (system* "./dtest" "--runall")))))))
          (add-after 'install 'delete-static-library
@@ -603,3 +607,54 @@ including robotics, embedded devices, mobile phones, and large high performance
 computing environments.")
     (home-page "http://dlib.net")
     (license license:boost1.0)))
+
+(define-public python-scikit-learn
+  (package
+    (name "python-scikit-learn")
+    (version "0.19.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "https://github.com/scikit-learn/scikit-learn/archive/"
+             version ".tar.gz"))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32
+         "18n8775kyfwbvcjjjzda9c5sqy4737c0hrmj6qj1ps2jmlqzair9"))
+       (patches (search-patches
+                "python-scikit-learn-fix-test-non-determinism.patch"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (delete 'check)
+         (add-after 'install 'check
+           ;; Running tests from the source directory requires
+           ;; an "inplace" build with paths relative to CWD.
+           ;; http://scikit-learn.org/stable/developers/advanced_installation.html#testing
+           ;; Use the installed version instead.
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (add-installed-pythonpath inputs outputs)
+             ;; some tests require access to "$HOME"
+             (setenv "HOME" "/tmp")
+             ;; Step out of the source directory just to be sure.
+             (chdir "..")
+             (zero? (system* "nosetests" "-v" "sklearn")))))))
+    (inputs
+     `(("openblas" ,openblas)))
+    (native-inputs
+     `(("python-nose" ,python-nose)
+       ("python-cython" ,python-cython)))
+    (propagated-inputs
+     `(("python-numpy" ,python-numpy)
+       ("python-scipy" ,python-scipy)))
+    (home-page "http://scikit-learn.org/")
+    (synopsis "Machine Learning in Python")
+    (description
+     "Scikit-learn provides simple and efficient tools for data
+mining and data analysis.")
+    (license license:bsd-3)))
+
+(define-public python2-scikit-learn
+  (package-with-python2 python-scikit-learn))

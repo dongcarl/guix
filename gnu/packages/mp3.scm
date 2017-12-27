@@ -4,6 +4,7 @@
 ;;; Copyright © 2015 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2017 Thomas Danckaert <post@thomasdanckaert.be>
+;;; Copyright © 2017 Pierre Langlois <pierre.langlois@gmx.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -43,6 +44,7 @@
   #:use-module (gnu packages video)               ;ffmpeg
   #:use-module (guix packages)
   #:use-module (guix download)
+  #:use-module (guix utils)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system python)
   #:use-module (guix build-system cmake))
@@ -66,12 +68,12 @@
    (build-system gnu-build-system)
    (arguments
     `(#:phases
-       (alist-cons-before
-        'configure 'remove-unsupported-gcc-flags
-        (lambda _
-          ;; remove option that is not supported by gcc any more
-          (substitute* "configure" ((" -fforce-mem") "")))
-       %standard-phases)))
+      (modify-phases %standard-phases
+        (add-before 'configure 'remove-unsupported-gcc-flags
+          (lambda _
+            ;; remove option that is not supported by gcc any more
+            (substitute* "configure" ((" -fforce-mem") ""))
+            #t)))))
    (synopsis "MPEG audio decoder")
    (description
     "MAD (MPEG Audio Decoder) supports MPEG-1 and the MPEG-2 extension to
@@ -123,20 +125,20 @@ versions of ID3v2.")
    (inputs `(("zlib" ,zlib)))
    (arguments
     `(#:phases
-       (alist-cons-before
-        'configure 'apply-patches
-        ;; TODO: create a patch for origin instead?
-        (lambda _
-          (substitute* "configure"
-            (("iomanip.h") "")) ; drop check for unused header
-          ;; see http://www.linuxfromscratch.org/patches/downloads/id3lib/
-          (substitute* "include/id3/id3lib_strings.h"
-            (("include <string>") "include <cstring>\n#include <string>"))
-          (substitute* "include/id3/writers.h"
-            (("//\\#include <string.h>") "#include <cstring>"))
-          (substitute* "examples/test_io.cpp"
-            (("dami;") "dami;\nusing namespace std;")))
-         %standard-phases)))
+      (modify-phases %standard-phases
+        (add-before 'configure 'apply-patches
+          ;; TODO: create a patch for origin instead?
+          (lambda _
+            (substitute* "configure"
+              (("iomanip.h") "")) ; drop check for unused header
+            ;; see http://www.linuxfromscratch.org/patches/downloads/id3lib/
+            (substitute* "include/id3/id3lib_strings.h"
+              (("include <string>") "include <cstring>\n#include <string>"))
+            (substitute* "include/id3/writers.h"
+              (("//\\#include <string.h>") "#include <cstring>"))
+            (substitute* "examples/test_io.cpp"
+              (("dami;") "dami;\nusing namespace std;"))
+            #t)))))
    (synopsis "Library for reading, writing, and manipulating ID3v1 and ID3v2 tags")
    (description
     "Id3lib is a cross-platform software development library for reading,
@@ -150,18 +152,20 @@ a highly stable and efficient implementation.")
 (define-public taglib
   (package
     (name "taglib")
-    (version "1.10")
+    (version "1.11.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "http://taglib.github.io/releases/taglib-"
                                   version ".tar.gz"))
               (sha256
                (base32
-                "1alv6vp72p0x9i9yscmz2a71anjwqy53y9pbcbqxvc1c0i82vhr4"))))
+                "0ssjcdjv4qf9liph5ry1kngam1y7zp8fzr9xv4wzzrma22kabldn"))))
     (build-system cmake-build-system)
-    (arguments '(#:tests? #f))                    ;no 'test' target
+    (arguments
+      '(#:tests? #f ; Tests are not ran with BUILD_SHARED_LIBS on.
+        #:configure-flags (list "-DBUILD_SHARED_LIBS=ON")))
     (inputs `(("zlib" ,zlib)))
-    (home-page "http://developer.kde.org/~wheeler/taglib.html")
+    (home-page "http://taglib.org")
     (synopsis "Library to access audio file meta-data")
     (description
      "TagLib is a C++ library for reading and editing the meta-data of several
@@ -194,29 +198,30 @@ Speex, WavPack TrueAudio, WAV, AIFF, MP4 and ASF files.")
     (build-system gnu-build-system)
     (outputs '("out" "gui"))                      ;GTK+ interface in "gui"
     (arguments
-     '(#:phases (alist-replace
-                 'configure
-                 (lambda* (#:key outputs #:allow-other-keys)
-                   (let ((out (assoc-ref outputs "out")))
-                     (substitute* "Makefile"
-                       (("prefix=.*")
-                        (string-append "prefix := " out "\n")))))
-                 (alist-cons-before
-                  'install 'pre-install
-                  (lambda* (#:key outputs #:allow-other-keys)
-                    (let ((out (assoc-ref outputs "out")))
-                      (mkdir-p (string-append out "/bin"))
-                      (mkdir-p (string-append out "/share/man/man1"))))
-                  (alist-cons-after
-                   'install 'post-install
-                   (lambda* (#:key outputs #:allow-other-keys)
-                     ;; Move the GTK+ interface to "gui".
-                     (let ((out (assoc-ref outputs "out"))
-                           (gui (assoc-ref outputs "gui")))
-                       (mkdir-p (string-append gui "/bin"))
-                       (rename-file (string-append out "/bin/gmp3info")
-                                    (string-append gui "/bin/gmp3info"))))
-                   %standard-phases)))
+     '(#:phases
+       (modify-phases %standard-phases
+         (replace 'configure
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out")))
+               (substitute* "Makefile"
+                 (("prefix=.*")
+                  (string-append "prefix := " out "\n"))))
+             #t))
+         (add-before 'install 'pre-install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out")))
+               (mkdir-p (string-append out "/bin"))
+               (mkdir-p (string-append out "/share/man/man1")))
+             #t))
+         (add-after 'install 'post-install
+           (lambda* (#:key outputs #:allow-other-keys)
+             ;; Move the GTK+ interface to "gui".
+             (let ((out (assoc-ref outputs "out"))
+                   (gui (assoc-ref outputs "gui")))
+               (mkdir-p (string-append gui "/bin"))
+               (rename-file (string-append out "/bin/gmp3info")
+                            (string-append gui "/bin/gmp3info")))
+             #t)))
         #:tests? #f))
     (native-inputs
      `(("pkg-config" ,pkg-config)))
@@ -295,7 +300,7 @@ This package contains the binary.")
 (define-public mpg123
   (package
     (name "mpg123")
-    (version "1.25.6")
+    (version "1.25.7")
     (source (origin
               (method url-fetch)
               (uri (list (string-append "mirror://sourceforge/mpg123/mpg123/"
@@ -305,7 +310,7 @@ This package contains the binary.")
                           version ".tar.bz2")))
               (sha256
                (base32
-                "13jsbh1gwypjksim2fxlblj5wc2driwm4igrkcnbr6bpp34mh10g"))))
+                "1ws40fglyyk51jvmz8gfapjkw1g51pkch1rffdsbh4b1yay5xc9i"))))
     (build-system gnu-build-system)
     (arguments '(#:configure-flags '("--with-default-audio=pulse")))
     (native-inputs `(("pkg-config" ,pkg-config)))
@@ -347,14 +352,15 @@ use with CD-recording software).")
 (define-public lame
   (package
     (name "lame")
-    (version "3.99.5")
+    (version "3.100")
     (source (origin
              (method url-fetch)
-             (uri (string-append "mirror://sourceforge/lame/lame/3.99/lame-"
+             (uri (string-append "mirror://sourceforge/lame/lame/"
+                                 (version-major+minor version) "/lame-"
                                  version ".tar.gz"))
              (sha256
               (base32
-               "1zr3kadv35ii6liia0bpfgxpag27xcivp571ybckpbz4b10nnd14"))))
+               "07nsn5sy3a8xbmw1bidxnsj5fj6kg9ai04icmqw40ybkp353dznx"))))
     (build-system gnu-build-system)
     ;; XXX FIXME: Use gcc-4.8 on i686 to work around
     ;; <http://bugs.gnu.org/20856>.
@@ -494,14 +500,15 @@ command-line tool.")
 (define-public chromaprint
   (package
     (name "chromaprint")
-    (version "1.3.2")
+    (version "1.4.2")
     (source (origin
       (method url-fetch)
       (uri (string-append
             "https://bitbucket.org/acoustid/chromaprint/downloads/"
             "chromaprint-" version ".tar.gz"))
       (sha256
-       (base32 "0lln8dh33gslb9cbmd1hcv33pr6jxdwipd8m8gbsyhksiq6r1by3"))))
+       (base32
+        "1m5l4rfkwz6m77m3qjs41n7rmscw0hfvv4z79srpbpa1x2khk5lq"))))
     (build-system cmake-build-system)
     (arguments
      `(#:tests? #f ; tests require googletest *sources*

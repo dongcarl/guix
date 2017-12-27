@@ -25,7 +25,10 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
   #:use-module (gnu packages gcc)
+  #:use-module (gnu packages bioinformatics)
   #:use-module (gnu packages compression)
+  #:use-module (gnu packages cran)
+  #:use-module (gnu packages graphviz)
   #:use-module (gnu packages maths)
   #:use-module (gnu packages multiprecision)
   #:use-module (gnu packages pkg-config)
@@ -116,3 +119,56 @@ It can handle large graphs very well and provides functions for generating
 random and regular graphs, graph visualization, centrality methods and much
 more.")
     (license license:gpl2+)))
+
+(define-public r-diffusionmap
+  (package
+    (name "r-diffusionmap")
+    (version "1.1-0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (cran-uri "diffusionMap" version))
+       (sha256
+        (base32
+         "1l985q2hfc8ss5afajik4p25dx628yikvhdimz5s0pql800q2yv3"))))
+    (properties `((upstream-name . "diffusionMap")))
+    (build-system r-build-system)
+    (propagated-inputs
+     `(("r-igraph" ,r-igraph)
+       ("r-matrix" ,r-matrix)
+       ("r-scatterplot3d" ,r-scatterplot3d)))
+    (home-page "http://www.r-project.org")
+    (synopsis "Diffusion map")
+    (description "This package implements the diffusion map method of data
+parametrization, including creation and visualization of diffusion maps,
+clustering with diffusion K-means and regression using the adaptive regression
+model.")
+    (license license:gpl2)))
+
+(define-public r-rgraphviz
+  (package
+    (name "r-rgraphviz")
+    (version "2.22.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (bioconductor-uri "Rgraphviz" version))
+       (sha256
+        (base32
+         "1y9nyjffa9644jch0p2i3w302fmnyc2kb0c3z1f3d5zp1p4qmyqv"))))
+    (properties `((upstream-name . "Rgraphviz")))
+    (build-system r-build-system)
+    ;; FIXME: Rgraphviz bundles the sources of an older variant of
+    ;; graphviz.  It does not build with the latest version of graphviz, so
+    ;; we do not add graphviz to the inputs.
+    (inputs `(("zlib" ,zlib)))
+    (propagated-inputs
+     `(("r-graph" ,r-graph)))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (home-page "http://bioconductor.org/packages/Rgraphviz")
+    (synopsis "Plotting capabilities for R graph objects")
+    (description
+     "This package interfaces R with the graphviz library for plotting R graph
+objects from the @code{graph} package.")
+    (license license:epl1.0)))

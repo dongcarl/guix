@@ -1,6 +1,7 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2017 Corentin Bocquillon <corentin@nybble.fr>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -70,15 +71,15 @@ makes a few sacrifices to acquire fast full and incremental build times.")
 (define-public meson
   (package
     (name "meson")
-    (version "0.42.0")
+    (version "0.44.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/mesonbuild/meson/"
-                                  "archive/" version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
+                                  "releases/download/" version  "/meson-"
+                                  version ".tar.gz"))
               (sha256
                (base32
-                "0vyp9rkymzzzilhnf04ryszslyp9a0y0wf4agyijd4w5lcnqlcbc"))))
+                "06r8limj38mv884s5riiz6lpzw37cvhbf9jd0smzcbi7fwmv3yah"))))
     (build-system python-build-system)
     (inputs `(("ninja", ninja)))
     (propagated-inputs `(("python" ,python)))
@@ -97,7 +98,7 @@ Python.")
   (package
     (inherit meson)
     (name "meson-for-build")
-    (version "0.42.0")
+    (version "0.42.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/mesonbuild/meson/"
@@ -105,7 +106,7 @@ Python.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0vyp9rkymzzzilhnf04ryszslyp9a0y0wf4agyijd4w5lcnqlcbc"))
+                "1494hdnd40g2v6pky34j0f2iwc6kwn51vck37qwz7nl2xr17b18q"))
               (patches (search-patches "meson-for-build-rpath.patch"))))
 
     ;; People should probably install "meson", not "meson-for-build".

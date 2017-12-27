@@ -1,7 +1,7 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2016 Christopher Allan Webber <cwebber@dustycloud.org>
-;;; Copyright © 2016 Leo Famulari <leo@famulari.name>
+;;; Copyright © 2016, 2017 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2017 Mathieu Othacehe <m.othacehe@gmail.com>
 ;;; Copyright © 2017 Marius Bakke <mbakke@fastmail.com>
 ;;;
@@ -29,6 +29,7 @@
   #:use-module (guix monads)
   #:use-module (guix records)
   #:use-module (guix modules)
+  #:use-module (guix utils)
 
   #:use-module ((gnu build vm)
                 #:select (qemu-command))
@@ -49,7 +50,7 @@
   #:use-module (gnu packages admin)
 
   #:use-module (gnu bootloader)
-  #:use-module ((gnu bootloader grub) #:select (grub-mkrescue-bootloader))
+  #:use-module (gnu bootloader grub)
   #:use-module (gnu system shadow)
   #:use-module (gnu system pam)
   #:use-module (gnu system linux-initrd)
@@ -174,6 +175,10 @@ made available under the /xchg CIFS share."
                                 #:memory-size #$memory-size
                                 #:make-disk-image? #$make-disk-image?
                                 #:single-file-output? #$single-file-output?
+                                ;; FIXME: ‘target-arm32?’ may not operate on
+                                ;; the right system/target values.  Rewrite
+                                ;; using ‘let-system’ when available.
+                                #:target-arm32? #$(target-arm32?)
                                 #:disk-image-format #$disk-image-format
                                 #:disk-image-size size
                                 #:references-graphs graphs)))))
@@ -272,12 +277,15 @@ register INPUTS in the store database of the image so that Guix can be used in
 the image."
   (expression->derivation-in-linux-vm
    name
-   (with-imported-modules (source-module-closure '((gnu build vm)
+   (with-imported-modules (source-module-closure '((gnu build bootloader)
+                                                   (gnu build vm)
                                                    (guix build utils)))
      #~(begin
-         (use-modules (gnu build vm)
+         (use-modules (gnu build bootloader)
+                      (gnu build vm)
                       (guix build utils)
-                      (srfi srfi-26))
+                      (srfi srfi-26)
+                      (ice-9 binary-ports))
 
          (let ((inputs
                 '#$(append (list qemu parted e2fsprogs dosfstools)
@@ -304,31 +312,43 @@ the image."
                                #:register-closures? #$register-closures?
                                #:system-directory #$os-drv))
                   (root-size  #$(if (eq? 'guess disk-image-size)
-                                    #~(estimated-partition-size
-                                       (map (cut string-append "/xchg/" <>)
-                                            graphs))
+                                    #~(max
+                                       ;; Minimum 20 MiB root size
+                                       (* 20 (expt 2 20))
+                                       (estimated-partition-size
+                                        (map (cut string-append "/xchg/" <>)
+                                             graphs)))
                                     (- disk-image-size
                                        (* 50 (expt 2 20)))))
-                  (partitions (list (partition
-                                     (size root-size)
-                                     (label #$file-system-label)
-                                     (uuid #$(and=> file-system-uuid
-                                                    uuid-bytevector))
-                                     (file-system #$file-system-type)
-                                     (flags '(boot))
-                                     (initializer initialize))
-                                    ;; Append a small EFI System Partition for
-                                    ;; use with UEFI bootloaders.
-                                    (partition
-                                     ;; The standalone grub image is about 10MiB, but
-                                     ;; leave some room for custom or multiple images.
-                                     (size (* 40 (expt 2 20)))
-                                     (label "GNU-ESP")             ;cosmetic only
-                                     ;; Use "vfat" here since this property is used
-                                     ;; when mounting. The actual FAT-ness is based
-                                     ;; on filesystem size (16 in this case).
-                                     (file-system "vfat")
-                                     (flags '(esp))))))
+                  (partitions
+                   (append
+                    (list (partition
+                           (size root-size)
+                           (label #$file-system-label)
+                           (uuid #$(and=> file-system-uuid
+                                          uuid-bytevector))
+                           (file-system #$file-system-type)
+                           (flags '(boot))
+                           (initializer initialize)))
+                    ;; Append a small EFI System Partition for use with UEFI
+                    ;; bootloaders if we are not targeting ARM because UEFI
+                    ;; support in U-Boot is experimental.
+                    ;;
+                    ;; FIXME: ‘target-arm32?’ may be not operate on the right
+                    ;; system/target values.  Rewrite using ‘let-system’ when
+                    ;; available.
+                    (if #$(target-arm32?)
+                        '()
+                        (list (partition
+                               ;; The standalone grub image is about 10MiB, but
+                               ;; leave some room for custom or multiple images.
+                               (size (* 40 (expt 2 20)))
+                               (label "GNU-ESP")             ;cosmetic only
+                               ;; Use "vfat" here since this property is used
+                               ;; when mounting. The actual FAT-ness is based
+                               ;; on filesystem size (16 in this case).
+                               (file-system "vfat")
+                               (flags '(esp))))))))
              (initialize-hard-disk "/dev/vda"
                                    #:partitions partitions
                                    #:grub-efi #$grub-efi
@@ -369,13 +389,13 @@ TYPE (one of 'iso9660 or 'dce).  Return a UUID object."
       (bytevector->uuid
        (uint-list->bytevector
         (list (hash file-system-type
-                    (expt 2 32))
+                    (- (expt 2 32) 1))
               (hash (operating-system-host-name os)
-                    (expt 2 32))
+                    (- (expt 2 32) 1))
               (hash (operating-system-services os)
-                    (expt 2 32))
+                    (- (expt 2 32) 1))
               (hash (operating-system-file-systems os)
-                    (expt 2 32)))
+                    (- (expt 2 32) 1)))
         (endianness little)
         4)
        type)))
@@ -420,7 +440,8 @@ to USB sticks meant to be read-only."
               ;; install QEMU networking or anything like that.  Assume USB
               ;; mass storage devices (usb-storage.ko) are available.
               (initrd (lambda (file-systems . rest)
-                        (apply base-initrd file-systems
+                        (apply (operating-system-initrd os)
+                               file-systems
                                #:volatile-root? #t
                                rest)))
 
@@ -485,7 +506,8 @@ of the GNU system as described by OS."
   (let ((os (operating-system (inherit os)
               ;; Use an initrd with the whole QEMU shebang.
               (initrd (lambda (file-systems . rest)
-                        (apply base-initrd file-systems
+                        (apply (operating-system-initrd os)
+                               file-systems
                                #:virtio? #t
                                rest)))
 
@@ -532,7 +554,7 @@ of the GNU system as described by OS."
        (device (file-system->mount-tag source))
        (type "9p")
        (flags (if writable? '() '(read-only)))
-       (options (string-append "trans=virtio"))
+       (options "trans=virtio,cache=loose")
        (check? #f)
        (create-mount-point? #t)))))
 
@@ -549,7 +571,13 @@ environment with the store shared with the host.  MAPPINGS is a list of
                 (or (string=? target (%store-prefix))
                     (string=? target "/")
                     (and (eq? 'device (file-system-title fs))
-                         (string-prefix? "/dev/" source)))))
+                         (string-prefix? "/dev/" source))
+
+                    ;; Labels and UUIDs are necessarily invalid in the VM.
+                    (and (file-system-mount? fs)
+                         (or (eq? 'label (file-system-title fs))
+                             (eq? 'uuid (file-system-title fs))
+                             (uuid? source))))))
             (operating-system-file-systems os)))
 
   (define virtual-file-systems
@@ -562,8 +590,17 @@ environment with the store shared with the host.  MAPPINGS is a list of
                   user-file-systems)))
 
   (operating-system (inherit os)
+
+    ;; XXX: Until we run QEMU with UEFI support (with the OVMF firmware),
+    ;; force the traditional i386/BIOS method.
+    ;; See <https://bugs.gnu.org/28768>.
+    (bootloader (bootloader-configuration
+                  (bootloader grub-bootloader)
+                  (target "/dev/vda")))
+
     (initrd (lambda (file-systems . rest)
-              (apply base-initrd file-systems
+              (apply (operating-system-initrd os)
+                     file-systems
                      #:volatile-root? #t
                      #:virtio? #t
                      rest)))
@@ -629,6 +666,8 @@ with '-virtfs' options for the host file systems listed in SHARED-FS."
 
      "-no-reboot"
      "-net nic,model=virtio"
+     "-object" "rng-random,filename=/dev/urandom,id=guixsd-vm-rng"
+     "-device" "virtio-rng-pci,rng=guixsd-vm-rng"
 
      #$@(map virtfs-option shared-fs)
      "-vga std"
@@ -706,6 +745,8 @@ it is mostly useful when FULL-BOOT?  is true."
                     (default #f))
   (memory-size      virtual-machine-memory-size   ;integer (MiB)
                     (default 256))
+  (disk-image-size  virtual-machine-disk-image-size   ;integer (bytes)
+                    (default 'guess))
   (port-forwardings virtual-machine-port-forwardings ;list of integer pairs
                     (default '())))
 
@@ -734,12 +775,15 @@ FORWARDINGS is a list of host-port/guest-port pairs."
                                                 system target)
   ;; XXX: SYSTEM and TARGET are ignored.
   (match vm
-    (($ <virtual-machine> os qemu graphic? memory-size ())
+    (($ <virtual-machine> os qemu graphic? memory-size disk-image-size ())
      (system-qemu-image/shared-store-script os
                                             #:qemu qemu
                                             #:graphic? graphic?
-                                            #:memory-size memory-size))
-    (($ <virtual-machine> os qemu graphic? memory-size forwardings)
+                                            #:memory-size memory-size
+                                            #:disk-image-size
+                                            disk-image-size))
+    (($ <virtual-machine> os qemu graphic? memory-size disk-image-size
+                          forwardings)
      (let ((options
             `("-net" ,(string-append
                        "user,"
@@ -748,6 +792,8 @@ FORWARDINGS is a list of host-port/guest-port pairs."
                                               #:qemu qemu
                                               #:graphic? graphic?
                                               #:memory-size memory-size
+                                              #:disk-image-size
+                                              disk-image-size
                                               #:options options)))))
 
 ;;; vm.scm ends here

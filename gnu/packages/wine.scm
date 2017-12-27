@@ -3,6 +3,7 @@
 ;;; Copyright © 2016 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2017 Rutger Helling <rhelling@mykolab.com>
+;;; Copyright © 2017 Nicolas Goaziou <mail@nicolasgoaziou.fr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -26,6 +27,7 @@
   #:use-module (guix utils)
   #:use-module (guix build-system gnu)
   #:use-module (gnu packages)
+  #:use-module (gnu packages admin)
   #:use-module (gnu packages audio)
   #:use-module (gnu packages bison)
   #:use-module (gnu packages compression)
@@ -38,6 +40,8 @@
   #:use-module (gnu packages ghostscript)
   #:use-module (gnu packages gl)
   #:use-module (gnu packages glib)
+  #:use-module (gnu packages gstreamer)
+  #:use-module (gnu packages gtk)
   #:use-module (gnu packages linux)
   #:use-module (gnu packages openldap)
   #:use-module (gnu packages perl)
@@ -49,20 +53,21 @@
   #:use-module (gnu packages samba)
   #:use-module (gnu packages scanner)
   #:use-module (gnu packages tls)
+  #:use-module (gnu packages video)
   #:use-module (gnu packages xml)
   #:use-module (gnu packages xorg))
 
 (define-public wine
   (package
     (name "wine")
-    (version "2.0.2")
+    (version "2.0.3")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://dl.winehq.org/wine/source/2.0"
                                   "/wine-" version ".tar.xz"))
               (sha256
                (base32
-                "16iwf48cfi39aqyy8131jz4x7lr551c9yc0mnks7g24j77sq867p"))))
+                "0mmyc94r5drffir8zr8jx6iawhgfzjk96fj494aa18vhz1jcc4d8"))))
     (build-system gnu-build-system)
     (native-inputs `(("pkg-config" ,pkg-config)
                      ("gettext" ,gettext-minimal)
@@ -73,10 +78,12 @@
      `(("alsa-lib" ,alsa-lib)
        ("dbus" ,dbus)
        ("cups" ,cups)
+       ("eudev" ,eudev)
        ("fontconfig" ,fontconfig)
        ("freetype" ,freetype)
        ("glu" ,glu)
        ("gnutls" ,gnutls)
+       ("gst-plugins-base" ,gst-plugins-base)
        ("lcms" ,lcms)
        ("libxml2" ,libxml2)
        ("libxslt" ,libxslt)
@@ -85,6 +92,7 @@
        ("libldap" ,openldap)
        ("libnetapi" ,samba)
        ("libsane" ,sane-backends)
+       ("libpcap" ,libpcap)
        ("libpng" ,libpng)
        ("libjpeg" ,libjpeg)
        ("libtiff" ,libtiff)
@@ -102,6 +110,7 @@
        ("openal" ,openal)
        ("pulseaudio" ,pulseaudio)
        ("unixodbc" ,unixodbc)
+       ("v4l-utils" ,v4l-utils)
        ("zlib" ,zlib)))
     (arguments
      `(;; Force a 32-bit build (under the assumption that this package is
@@ -151,13 +160,16 @@ integrate Windows applications into your desktop.")
     (inherit wine)
     (name "wine64")
     (arguments
-     `(#:configure-flags
+     `(#:make-flags
+       (list "SHELL=bash"
+             (string-append "libdir=" %output "/lib"))
+       #:configure-flags
        (list "--enable-win64"
-             (string-append "LDFLAGS=-Wl,-rpath=" %output "/lib64"))
-       ,@(strip-keyword-arguments '(#:configure-flags #:system)
+             (string-append "LDFLAGS=-Wl,-rpath=" %output "/lib"))
+       ,@(strip-keyword-arguments '(#:configure-flags #:make-flags #:system)
                                   (package-arguments wine))))
     (synopsis "Implementation of the Windows API (64-bit version)")
-    (supported-systems '("x86_64-linux"))))
+    (supported-systems '("x86_64-linux" "aarch64-linux"))))
 
 ;; TODO: This is wine development version, provided for historical reasons.
 ;; We can remove it as soon as a new stable release is out.
@@ -173,3 +185,51 @@ integrate Windows applications into your desktop.")
                (base32
                 "0g6cwjyqwc660w33453aklh3hpc0b8rrb88dryn23ah6wannvagg"))))))
 
+(define-public wine-staging
+  (package
+    (inherit wine)
+    (name "wine-staging")
+    (version "2.21")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "https://github.com/wine-compholio/wine-patched/archive/"
+                    "staging-" version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1pjaxj7h3q6y356np908fvsx0bf7yx5crqvgl4hza6gfssdmsr5r"))))
+    (inputs `(("gtk+", gtk+)
+              ("libva", libva)
+              ,@(package-inputs wine)))
+    (synopsis "Implementation of the Windows API (staging branch)")
+    (description "Wine-Staging is the testing area of Wine.  It
+contains bug fixes and features, which have not been integrated into
+the development branch yet.  The idea of Wine-Staging is to provide
+experimental features faster to end users and to give developers the
+possibility to discuss and improve their patches before they are
+integrated into the main branch.")
+    (home-page "https://wine-staging.com")
+    ;; In addition to the regular Wine license (lgpl2.1+), Wine-Staging
+    ;; provides Liberation and WenQuanYi Micro Hei fonts.  Those use
+    ;; different licenses.  In particular, the latter is licensed under
+    ;; both GPL3+ and Apache 2 License.
+    (license
+     (list license:lgpl2.1+ license:silofl1.1 license:gpl3+ license:asl2.0))))
+
+(define-public wine64-staging
+  (package
+    (inherit wine-staging)
+    (name "wine64-staging")
+    (arguments
+     `(#:make-flags
+       (list "SHELL=bash"
+             (string-append "libdir=" %output "/lib"))
+       #:configure-flags
+       (list "--enable-win64"
+             (string-append "LDFLAGS=-Wl,-rpath=" %output "/lib"))
+       ,@(strip-keyword-arguments '(#:configure-flags #:make-flags #:system)
+                                  (package-arguments wine-staging))))
+    (synopsis "Implementation of the Windows API (staging branch, 64-bit
+version)")
+    (supported-systems '("x86_64-linux" "aarch64-linux"))))

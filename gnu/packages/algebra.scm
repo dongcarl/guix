@@ -7,6 +7,7 @@
 ;;; Copyright © 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2017 Marius Bakke <mbakke@fastmail.com>
+;;; Copyright © 2017 Eric Bavier <bavier@member.fsf.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -207,7 +208,7 @@ GP2C, the GP to C compiler, translates GP scripts to PARI programs.")
 (define-public giac-xcas
   (package
     (name "giac-xcas")
-    (version "1.2.3-57")
+    (version "1.4.9-33")
     (source (origin
               (method url-fetch)
               ;; "~parisse/giac" is not used because the maintainer regularly
@@ -219,7 +220,7 @@ GP2C, the GP to C compiler, translates GP scripts to PARI programs.")
                                   "source/giac_" version ".tar.gz"))
               (sha256
                (base32
-                "0a7c1r2rgsin671qy98yvwgkg6a81d0pp0p4p7sydhrfi1k9xpr1"))))
+                "1f071j4l9ayri2cxka6bfdb6c0fsdl7q7wk345r7hxjfga69g9mv"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
@@ -229,13 +230,6 @@ GP2C, the GP to C compiler, translates GP scripts to PARI programs.")
              ;; Some Makefiles contain hard-coded "/bin/cp".
              (substitute* (find-files "doc" "^Makefile")
                (("/bin/cp") (which "cp")))
-             #t))
-         (add-after 'unpack 'disable-broken-test
-           (lambda _
-             ;; Disable failing test.  Actually, the results are correct but
-             ;; a sorting discrepancy prevents the test from being validated.
-             (substitute* "check/Makefile.in"
-               (("chk_fhan16") ""))
              #t)))))
     (inputs
      `(("fltk" ,fltk)
@@ -334,22 +328,21 @@ fast arithmetic.")
       ("mpfr" ,mpfr)))
    (arguments
     `(#:phases
-        (alist-replace
-         'configure
-         (lambda* (#:key inputs outputs #:allow-other-keys)
-           (let ((out (assoc-ref outputs "out"))
-                 (flint (assoc-ref inputs "flint"))
-                 (gmp (assoc-ref inputs "gmp"))
-                 (mpfr (assoc-ref inputs "mpfr")))
-             ;; do not pass "--enable-fast-install", which makes the
-             ;; homebrew configure process fail
-             (zero? (system*
-                     "./configure"
-                     (string-append "--prefix=" out)
-                     (string-append "--with-flint=" flint)
-                     (string-append "--with-gmp=" gmp)
-                     (string-append "--with-mpfr=" mpfr)))))
-         %standard-phases)))
+      (modify-phases %standard-phases
+        (replace 'configure
+          (lambda* (#:key inputs outputs #:allow-other-keys)
+            (let ((out (assoc-ref outputs "out"))
+                  (flint (assoc-ref inputs "flint"))
+                  (gmp (assoc-ref inputs "gmp"))
+                  (mpfr (assoc-ref inputs "mpfr")))
+              ;; do not pass "--enable-fast-install", which makes the
+              ;; homebrew configure process fail
+              (zero? (system*
+                      "./configure"
+                      (string-append "--prefix=" out)
+                      (string-append "--with-flint=" flint)
+                      (string-append "--with-gmp=" gmp)
+                      (string-append "--with-mpfr=" mpfr)))))))))
    (synopsis "Arbitrary precision floating-point ball arithmetic")
    (description
     "Arb is a C library for arbitrary-precision floating-point ball
@@ -585,27 +578,34 @@ cosine/ sine transforms or DCT/DST).")
 (define-public eigen
   (package
     (name "eigen")
-    (version "3.2.9")
+    (version "3.3.4")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://bitbucket.org/eigen/eigen/get/"
                                   version ".tar.bz2"))
               (sha256
                (base32
-                "1zs5b210mq7nyanky07li6456rrd0xv2nxf6sl2lhkzdq5p067jd"))
+                "19m4406jvqnwh7kpcvx1lfx2vdc5zwia5q9ayv89bimg1gmln9fx"))
               (file-name (string-append name "-" version ".tar.bz2"))
+	      (patches (search-patches "eigen-arm-neon-fixes.patch"))
               (modules '((guix build utils)))
               (snippet
                ;; There are 3 test failures in the "unsupported" directory,
                ;; but maintainers say it's a known issue and it's unsupported
                ;; anyway, so just skip them.
-               '(substitute* "CMakeLists.txt"
-                  (("add_subdirectory\\(unsupported\\)")
-                   "# Do not build the tests for unsupported features.\n")
-                  ;; Work around
-                  ;; <http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1114>.
-                  (("\"include/eigen3\"")
-                   "\"${CMAKE_INSTALL_PREFIX}/include/eigen3\"")))))
+               '(begin
+		  (substitute* "CMakeLists.txt"
+                    (("add_subdirectory\\(unsupported\\)")
+                     "# Do not build the tests for unsupported features.\n")
+                    ;; Work around
+                    ;; <http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1114>.
+                    (("\"include/eigen3\"")
+                     "\"${CMAKE_INSTALL_PREFIX}/include/eigen3\""))
+		  (substitute* "test/bdcsvd.cpp"
+                    ;; See
+                    ;; https://bitbucket.org/eigen/eigen/commits/ea8c22ce6920e982d15245ee41d0531a46a28e5d
+                    ((".*svd_preallocate[^\n]*" &)
+                     (string-append "//" & " // Not supported by BDCSVD")))))))
     (build-system cmake-build-system)
     (arguments
      '(;; Turn off debugging symbols to save space.
@@ -616,6 +616,7 @@ cosine/ sine transforms or DCT/DST).")
                     (lambda _
                       (let* ((cores  (parallel-job-count))
                              (dash-j (format #f "-j~a" cores)))
+			(setenv "EIGEN_SEED" "1") ;for reproducibility
                         ;; First build the tests, in parallel.  See
                         ;; <http://eigen.tuxfamily.org/index.php?title=Tests>.
                         (and (zero? (system* "make" "buildtests" dash-j))

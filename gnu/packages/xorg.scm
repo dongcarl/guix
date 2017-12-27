@@ -13,6 +13,7 @@
 ;;; Copyright © 2016, 2017 John Darrington <jmd@gnu.org>
 ;;; Copyright © 2017 Marius Bakke <mbakke@fastmail.com>
 ;;; Copyright © 2017 Rutger Helling <rhelling@mykolab.com>
+;;; Copyright © 2017 Arun Isaac <arunisaac@systemreboot.net>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -39,10 +40,12 @@
   #:use-module (guix build-system python)
   #:use-module (guix utils)
   #:use-module (gnu packages)
+  #:use-module (gnu packages anthy)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages bison)
   #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
+  #:use-module (gnu packages emacs)
   #:use-module (gnu packages flex)
   #:use-module (gnu packages fontutils)
   #:use-module (gnu packages freedesktop)
@@ -54,14 +57,18 @@
   #:use-module (gnu packages gtk)
   #:use-module (gnu packages image)
   #:use-module (gnu packages libbsd)
+  #:use-module (gnu packages libedit)
   #:use-module (gnu packages linux)
   #:use-module (gnu packages llvm)
   #:use-module (gnu packages m4)
   #:use-module (gnu packages ncurses)
   #:use-module (gnu packages pciutils)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages perl-check)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-crypto)
+  #:use-module (gnu packages qt)
   #:use-module (gnu packages spice)
   #:use-module (gnu packages video)
   #:use-module (gnu packages xiph)
@@ -114,27 +121,26 @@
         ("xproto" ,xproto)))
     (arguments
      `(#:phases
-       (alist-cons-after
-        'install 'install-data
-        (lambda* (#:key inputs outputs #:allow-other-keys)
-          (let ((cf-files (assoc-ref inputs "xorg-cf-files"))
-                (out (assoc-ref outputs "out"))
-                (unpack (assoc-ref %standard-phases 'unpack))
-                (patch-source-shebangs
-                 (assoc-ref %standard-phases 'patch-source-shebangs)))
-            (mkdir "xorg-cf-files")
-            (with-directory-excursion "xorg-cf-files"
-              (apply unpack (list #:source cf-files))
-              (apply patch-source-shebangs (list #:source cf-files))
-              (substitute* '("mingw.cf" "Imake.tmpl" "nto.cf" "os2.cf"
-                             "linux.cf" "Amoeba.cf" "cygwin.cf")
-                (("/bin/sh") (which "bash")))
-              (and (zero? (system* "./configure"
-                                   (string-append "SHELL=" (which "bash"))
-                                   (string-append "--prefix=" out)))
-                   (zero? (system* "make" "install"))))))
-        %standard-phases)))
-    (home-page "http://www.x.org")
+       (modify-phases %standard-phases
+         (add-after 'install 'install-data
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let ((cf-files (assoc-ref inputs "xorg-cf-files"))
+                   (out (assoc-ref outputs "out"))
+                   (unpack (assoc-ref %standard-phases 'unpack))
+                   (patch-source-shebangs
+                    (assoc-ref %standard-phases 'patch-source-shebangs)))
+               (mkdir "xorg-cf-files")
+               (with-directory-excursion "xorg-cf-files"
+                 (apply unpack (list #:source cf-files))
+                 (apply patch-source-shebangs (list #:source cf-files))
+                 (substitute* '("mingw.cf" "Imake.tmpl" "nto.cf" "os2.cf"
+                                "linux.cf" "Amoeba.cf" "cygwin.cf")
+                   (("/bin/sh") (which "bash")))
+                 (and (zero? (system* "./configure"
+                                      (string-append "SHELL=" (which "bash"))
+                                      (string-append "--prefix=" out)))
+                      (zero? (system* "make" "install"))))))))))
+    (home-page "https://www.x.org/")
     (synopsis "Source code configuration and build system")
     (description
      "Imake is a deprecated source code configuration and build system which
@@ -163,7 +169,7 @@ autotools system.")
      `(("pkg-config" ,pkg-config)))
     (inputs
      `(("xproto" ,xproto)))
-    (home-page "http://www.x.org")
+    (home-page "https://www.x.org/")
     (synopsis "Symlink directory into tree")
     (description "Create a shadow directory of symbolic links to another
 directory tree.")
@@ -172,7 +178,7 @@ directory tree.")
 (define-public bdftopcf
   (package
     (name "bdftopcf")
-    (version "1.0.5")
+    (version "1.1")
     (source
       (origin
         (method url-fetch)
@@ -182,10 +188,10 @@ directory tree.")
                ".tar.bz2"))
         (sha256
           (base32
-            "09i03sk878cmx2i40lkpsysn7zqcvlczb30j7x3lryb11jz4gx1q"))))
+            "18hiscgljrz10zjcws25bis32nyrg3hzgmiq6scrh7izqmgz0kab"))))
     (build-system gnu-build-system)
     (inputs
-      `(("libxfont" ,libxfont)))
+      `(("libxfont" ,libxfont2)))
     (native-inputs
        `(("pkg-config" ,pkg-config)))
     (home-page "https://www.x.org/wiki/")
@@ -1033,7 +1039,7 @@ of new capabilities and controls for text keyboards.")
     (build-system gnu-build-system)
     (native-inputs `(("pkg-config" ,pkg-config)))
     (inputs `(("xproto" ,xproto)))
-    (home-page "http://xorg.freedesktop.org")
+    (home-page "https://www.x.org/")
     (synopsis "Xorg shared memory fences library")
     (description
      "This library provides an interface to shared-memory fences for
@@ -1410,7 +1416,7 @@ treat it as part of their software base when porting.")
 (define-public libxres
   (package
     (name "libxres")
-    (version "1.0.7")
+    (version "1.2.0")
     (source
       (origin
         (method url-fetch)
@@ -1420,7 +1426,7 @@ treat it as part of their software base when porting.")
                ".tar.bz2"))
         (sha256
           (base32
-            "1rd0bzn67cpb2qkc946gch2183r4bdjfhs6cpqbipy47m9a91296"))))
+            "1m0jr0lbz9ixpp9ihk68349q0i7ry2379lnfzdy4mrl86ijc2xgz"))))
     (build-system gnu-build-system)
     (inputs
       `(("xproto" ,xproto)
@@ -2885,8 +2891,8 @@ X server.")
 
 
 (define-public xf86-video-intel
-  (let ((commit "2100efa105e8c9615eda867d39471d78e500b1bb")
-        (revision "7"))
+  (let ((commit "c89905754b929f0421db7ea6d60b8942ccdbd8af")
+        (revision "8"))
     (package
       (name "xf86-video-intel")
       (version (string-append "2.99.917-" revision "-"
@@ -2900,7 +2906,7 @@ X server.")
                (commit commit)))
          (sha256
           (base32
-           "15fg844msmixsvlxcd5wm2awmns652sxcxj2wmp6819lr32lc4ir"))
+           "1xiyxhlq88vvgjavhxdkk933b5q7vm4jn6db144a6sqzifwaj672"))
          (file-name (string-append name "-" version))))
       (build-system gnu-build-system)
       (inputs `(("mesa" ,mesa)
@@ -4450,7 +4456,7 @@ formatted dump file, such as produced by xwd.")
      `(("xproto" ,xproto)))
     (native-inputs
      `(("pkg-config" ,pkg-config)))
-    (home-page "http://www.x.org/wiki/")
+    (home-page "https://www.x.org/wiki/")
     (synopsis "X color name database")
     (description
      "This package provides the X color name database.")
@@ -4849,7 +4855,7 @@ an X Window System display.")
 (define-public libxfont
   (package
     (name "libxfont")
-    (version "1.5.2")
+    (version "1.5.4")
     (source
       (origin
         (method url-fetch)
@@ -4859,7 +4865,7 @@ an X Window System display.")
                ".tar.bz2"))
         (sha256
           (base32
-            "0w8d07bkmjiarkx09579bl8zsq903mn8javc7qpi0ix4ink5x502"))))
+            "0hiji1bvpl78aj3a3141hkk353aich71wv8l5l2z51scfy878zqs"))))
     (build-system gnu-build-system)
     (propagated-inputs
       `(("fontsproto" ,fontsproto)
@@ -4886,6 +4892,7 @@ new API's in libXft, or the legacy API's in libX11.")
   (package
     (inherit libxfont)
     (version "2.0.1")
+    (replacement libxfont2-2.0.3)
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://xorg/individual/lib/libXfont2-"
@@ -4893,6 +4900,23 @@ new API's in libXft, or the legacy API's in libX11.")
               (sha256
                (base32
                 "0znvwk36nhmyqpmhbm9mzisgixp1mp5qkfald8x1n5yxbm3vpyz9"))))))
+
+;; Fixes the following security vulnerabilities:
+;; https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-13720
+;; https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-13722
+;; https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-16612
+(define-public libxfont2-2.0.3
+  (package
+    (inherit libxfont2)
+    (version "2.0.3")
+    (source
+     (origin
+       (inherit (package-source libxfont2))
+       (uri (string-append "mirror://xorg/individual/lib/libXfont2-"
+                           version ".tar.bz2"))
+       (sha256
+        (base32
+         "0klwmimmhm3axpj8pwn5l41lbggh47r5aazhw63zxkbwfgyvg2hf"))))))
 
 (define-public libxi
   (package
@@ -5062,7 +5086,7 @@ over Xlib, including:
 (define-public xorg-server
   (package
     (name "xorg-server")
-    (version "1.19.3")
+    (version "1.19.5")
     (source
       (origin
         (method url-fetch)
@@ -5071,10 +5095,21 @@ over Xlib, including:
               name "-" version ".tar.bz2"))
         (sha256
          (base32
-          "162s1v901djr57gxmmk4airk8hiwcz79dqyz72972x1lw1k82yk7"))
+          "0iql4pgsgpyqcrd3256pv227cdadvz01ych61n0d41ixp67gmzqq"))
         (patches
-         (search-patches "xorg-server-CVE-2017-10971.patch"
-                         "xorg-server-CVE-2017-10972.patch"))))
+         (list
+          ;; See:
+          ;;   https://lists.fedoraproject.org/archives/list/devel@lists.
+          ;;      fedoraproject.org/message/JU655YB7AM4OOEQ4MOMCRHJTYJ76VFOK/
+          (origin
+            (method url-fetch)
+            (uri (string-append
+                  "http://pkgs.fedoraproject.org/cgit/rpms/xorg-x11-server.git"
+                  "/plain/06_use-intel-only-on-pre-gen4.diff"))
+            (sha256
+             (base32
+              "0mm70y058r8s9y9jiv7q2myv0ycnaw3iqzm7d274410s0ik38w7q"))
+            (file-name "xorg-server-use-intel-only-on-pre-gen4.diff"))))))
     (build-system gnu-build-system)
     (propagated-inputs
       `(("dri2proto" ,dri2proto)
@@ -5151,6 +5186,12 @@ over Xlib, including:
              ;; It's not used anyway, so set it to empty.
              "--with-default-font-path="
 
+             ;; The default is to use "uname -srm", which captures the kernel
+             ;; version and makes builds non-reproducible.
+             "--with-os-name=GNU"
+
+             "--with-os-vendor=GuixSD"    ;not strictly needed, but looks nice
+
 
              ;; For the log file, etc.
              "--localstatedir=/var"
@@ -5160,17 +5201,25 @@ over Xlib, including:
 
        #:phases
        (modify-phases %standard-phases
-         (add-before
-          'configure 'pre-configure
-          (lambda _
-            (substitute* (find-files "." "\\.c$")
-              (("/bin/sh") (which "sh")))
+         (add-before 'configure 'pre-configure
+           (lambda _
+             (substitute* (find-files "." "\\.c$")
+               (("/bin/sh") (which "sh")))
 
-            ;; Don't try to 'mkdir /var'.
-            (substitute* "hw/xfree86/Makefile.in"
-              (("\\$\\(MKDIR_P\\).*logdir.*")
-               "true\n"))
-            #t)))))
+             ;; Don't try to 'mkdir /var'.
+             (substitute* "hw/xfree86/Makefile.in"
+               (("\\$\\(MKDIR_P\\).*logdir.*")
+                "true\n"))
+
+             ;; Strip timestamps that would otherwise end up in the 'Xorg'
+             ;; binary.
+             (substitute* "configure"
+               (("^BUILD_DATE=.*$")
+                "BUILD_DATE=19700101\n")
+               (("^BUILD_TIME=.*$")
+                "BUILD_TIME=000001\n"))
+
+             #t)))))
     (home-page "https://www.x.org/wiki/")
     (synopsis "Xorg implementation of the X Window System")
     (description
@@ -5266,6 +5315,7 @@ draggable titlebars and borders.")
   (package
     (name "libxcursor")
     (version "1.1.14")
+    (replacement libxcursor-1.1.15)
     (source
       (origin
         (method url-fetch)
@@ -5284,11 +5334,32 @@ draggable titlebars and borders.")
         ("xproto" ,xproto)))
     (native-inputs
       `(("pkg-config" ,pkg-config)))
+;; TODO: add XCURSOR_PATH=.../share/icons to profile search paths, so
+;; libXcursor finds cursors installed into a profile.  If we solve bugs
+;; <http://bugs.gnu.org/20255> and <http://bugs.gnu.org/22138>, we can fix
+;; this with a search-path as follows:
+;;
+;;    (native-search-paths
+;;     (list (search-path-specification
+;;            (variable "XCURSOR_PATH")
+;;            (files '("share/icons")))))
     (home-page "https://www.x.org/wiki/")
     (synopsis "Xorg Cursor management library")
     (description "Xorg Cursor management library.")
     (license license:x11)))
 
+;; For CVE-2017-16612.
+(define-public libxcursor-1.1.15
+  (package
+    (inherit libxcursor)
+    (version "1.1.15")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://xorg/individual/lib/libXcursor-"
+                                  version ".tar.bz2"))
+              (sha256
+               (base32
+                "0syzlfvh29037p0vnlc8f3jxz8nl55k65blswsakklkwsc6nfki9"))))))
 
 (define-public libxt
   (package
@@ -5605,7 +5676,7 @@ The XCB util-wm module provides the following libraries:
      `(("pkg-config" ,pkg-config)))
     (propagated-inputs
      `(("xauth" ,xauth)))
-    (home-page "http://x.org")
+    (home-page "https://www.x.org/")
     (synopsis "Commands to start the X Window server")
     (description
      "The xinit program is used to start the X Window System server and a
@@ -5739,7 +5810,7 @@ to answer a question.  Xmessage can also exit after a specified time.")
        ("libXt" ,libxt)
        ("xproto" ,xproto)
        ("libXaw" ,libxaw)))
-    (home-page "http://invisible-island.net/xterm")
+    (home-page "http://invisible-island.net/xterm/")
     (synopsis "Terminal emulator for the X Window System")
     (description
      "The xterm program is a terminal emulator for the X Window System.  It
@@ -5881,7 +5952,7 @@ basic eye-candy effects.")
 (define-public xpra
   (package
     (name "xpra")
-    (version "2.1.1")
+    (version "2.2.1")
     (source
      (origin
        (method url-fetch)
@@ -5889,40 +5960,44 @@ basic eye-candy effects.")
                            version ".tar.xz"))
        (sha256
         (base32
-         "0fgdddhafxnpjlw5nhfyfyimxp43hdn4yhp1vbsjrz3ypfsfhxq7"))))
+         "052w92w21ywgip5p90nifn8vxqzg09by4a0ai22znhqm5mqh7qc1"))))
     (build-system python-build-system)
-    (inputs `(("ffmpeg", ffmpeg)
-              ("flac", flac)
+    (inputs `(("ffmpeg" ,ffmpeg)
+              ("flac" ,flac)
               ("gtk+-2" ,gtk+-2) ;; no full GTK3 support yet
-              ("libjpeg", libjpeg)
-              ("libpng", libpng)
-              ("libvpx", libvpx)
-              ("libx264", libx264)
-              ("libxcomposite", libxcomposite)
-              ("libxdamage", libxdamage)
-              ("libxkbfile", libxkbfile)
-              ("libxrandr", libxrandr)
-              ("libxtst", libxtst)
-              ("lzo", lzo)
-              ("python2-cryptography", python2-cryptography)
-              ("python2-dbus", python2-dbus)
-              ("python2-lz4", python2-lz4)
-              ("python2-lzo", python2-lzo)
-              ("python2-numpy", python2-numpy)
+              ("libjpeg" ,libjpeg)
+              ("libpng" ,libpng)
+              ("libvpx" ,libvpx)
+              ("libx264" ,libx264)
+              ("libxcomposite" ,libxcomposite)
+              ("libxdamage" ,libxdamage)
+              ("libxkbfile" ,libxkbfile)
+              ("libxrandr" ,libxrandr)
+              ("libxtst" ,libxtst)
+              ("lzo" ,lzo)
+              ("python2-cryptography" ,python2-cryptography)
+              ("python2-dbus" ,python2-dbus)
+              ("python2-lz4" ,python2-lz4)
+              ("python2-lzo" ,python2-lzo)
+              ("python2-netifaces" ,python2-netifaces)
+              ("python2-numpy" ,python2-numpy)
               ("python2-pillow" ,python2-pillow)
-              ("python2-pycairo", python2-pycairo)
-              ("python2-pycrypto", python2-pycrypto)
-              ("python2-pygobject", python2-pygobject)
-              ("python2-pyopengl", python2-pyopengl)
-              ("python2-pygtk", python2-pygtk)
-              ("python2-rencode", python2-rencode)
-              ("xorg-server", xorg-server)))
+              ("python2-pycairo" ,python2-pycairo)
+              ("python2-pycrypto" ,python2-pycrypto)
+              ("python2-pygobject" ,python2-pygobject)
+              ("python2-pyopengl" ,python2-pyopengl)
+              ("python2-pyopengl-accelerate" ,python2-pyopengl-accelerate)
+              ("python2-pygtk" ,python2-pygtk)
+              ("python2-rencode" ,python2-rencode)
+              ("xorg-server" ,xorg-server)))
     (native-inputs `(("pkg-config" ,pkg-config)
                      ("python2-cython", python2-cython)))
     (arguments
      `(#:python ,python-2 ;; no full Python 3 support yet
        #:configure-flags '("--with-tests"
                            "--with-bundle_tests"
+                           "--without-Xdummy" ;; We use Xvfb instead.
+                           "--without-Xdummy_wrapper"
                            "--without-strict")
        #:modules ((guix build python-build-system)
                   (guix build utils))
@@ -5951,13 +6026,15 @@ basic eye-candy effects.")
              (substitute* "setup.py"
                (("/usr/lib/")
                 (string-append (assoc-ref outputs "out") "/lib/")))
-             (substitute* "./etc/xpra/conf.d/55_server_x11.conf.in"
-               (("xvfb = %.*")
-                (string-append "xvfb = "
-                               (assoc-ref inputs "xorg-server")
-                               "/bin/Xvfb +extension Composite -nolisten tcp"
-                               " -noreset -auth $XAUTHORITY"
-                               " -screen 0 5760x2560x24+32")))
+             (substitute* "./xpra/scripts/config.py"
+               ((":.*join.*xvfb.*")
+                (string-append ": \"" (assoc-ref inputs "xorg-server")
+                               "/bin/Xvfb +extension Composite"
+                               " -screen 0 5760x2560x24+32 -dpi 96 -nolisten"
+                               " tcp -noreset -auth $XAUTHORITY\",\n")))
+             (substitute* "./xpra/scripts/config.py"
+               (("socket-dir.*: \"\",")
+                "socket-dir\"        : \"~/.xpra\","))
              #t)))))
     (home-page "https://www.xpra.org/")
     (synopsis "Remote access to individual applications or full desktops")
@@ -5970,3 +6047,96 @@ disconnect from these programs and reconnect from the same or another machine,
 without losing any state.  It can also be used to forward full desktops from
 X11 servers, Windows, or macOS.")
     (license license:gpl2+)))
+
+(define-public uim
+  (package
+    (name "uim")
+    (version "1.8.6")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://github.com/uim/uim/releases/download/uim-"
+                           version "/uim-" version ".tar.bz2"))
+       (sha256
+        (base32
+         "0pr3rfqpxha8p6cxzdjsxbbmmr76riklzw36f68phd1zqw1sh7kv"))))
+    (build-system gnu-build-system)
+    (inputs
+     `(("anthy" ,anthy)
+       ("libedit" ,libedit)
+       ("libxft" ,libxft)
+       ("m17n-lib" ,m17n-lib)))
+    (native-inputs
+     `(("emacs" ,emacs-minimal)
+       ("intltool" ,intltool)
+       ("pkg-config" ,pkg-config)))
+    (arguments
+     `(#:modules ((guix build gnu-build-system)
+                  (guix build utils)
+                  (guix build emacs-utils))
+       #:imported-modules (,@%gnu-build-system-modules
+                           (guix build emacs-utils))
+       #:configure-flags
+       (list "--with-anthy-utf8"
+             (string-append "--with-lispdir=" %output
+                            "/share/emacs/site-lisp/guix.d")
+             ;; Set proper runpath
+             (string-append "LDFLAGS=-Wl,-rpath=" %output "/lib"))
+       #:phases
+       (modify-phases %standard-phases
+         ;; Set path of uim-el-agent and uim-el-helper-agent executables
+         (add-after 'configure 'configure-uim-el
+           (lambda* (#:key outputs #:allow-other-keys)
+             (substitute* "emacs/uim-var.el"
+               (("\"(uim-el-agent|uim-el-helper-agent)\"" _ executable)
+                (string-append "\"" (assoc-ref outputs "out")
+                               "/bin/" executable "\"")))
+             #t))
+         ;; Generate emacs autoloads for uim.el
+         (add-after 'install 'make-autoloads
+           (lambda* (#:key outputs #:allow-other-keys)
+             (emacs-generate-autoloads
+              ,name (string-append (assoc-ref outputs "out")
+                                   "/share/emacs/site-lisp"))
+             #t)))))
+    (home-page "https://github.com/uim/uim")
+    (synopsis "Multilingual input method framework")
+    (description "Uim is a multilingual input method library and environment.
+It provides a simple, easily extensible and high code-quality input method
+development platform, and useful input method environment for users of desktop
+and embedded platforms.")
+    (license (list license:lgpl2.1+ ; scm/py.scm, pixmaps/*.{svg,png} (see pixmaps/README)
+                   license:gpl2+ ; scm/pinyin-big5.scm
+                   license:gpl3+ ; scm/elatin-rules.cm
+                   license:public-domain ; scm/input-parse.scm, scm/match.scm
+                   ;; gtk2/toolbar/eggtrayicon.{ch},
+                   ;; qt3/chardict/kseparator.{cpp,h},
+                   ;; qt3/pref/kseparator.{cpp,h}
+                   license:lgpl2.0+
+                   ;; pixmaps/*.{svg,png} (see pixmaps/README),
+                   ;; all other files
+                   license:bsd-3))))
+
+(define-public uim-gtk
+  (package
+    (inherit uim)
+    (name "uim-gtk")
+    (inputs
+     `(("gtk" ,gtk+)
+       ("gtk" ,gtk+-2)
+       ,@(package-inputs uim)))
+    (synopsis "Multilingual input method framework (GTK+ support)")))
+
+(define-public uim-qt
+  (package
+    (inherit uim)
+    (name "uim-qt")
+    (inputs
+     `(("qt" ,qt-4)
+       ,@(package-inputs uim)))
+    (arguments
+     (substitute-keyword-arguments (package-arguments uim)
+       ((#:configure-flags configure-flags)
+        (append configure-flags (list "--with-qt4-immodule"
+                                      "--with-qt4")))))
+    (synopsis "Multilingual input method framework (Qt support)")))

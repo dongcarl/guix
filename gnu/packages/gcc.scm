@@ -136,6 +136,7 @@ where the OS part is overloaded to denote a specific ABI---into GCC
                (method url-fetch)
                (uri (string-append "mirror://gnu/gcc/gcc-"
                                    version "/gcc-" version ".tar.bz2"))
+               (patches (search-patches "gcc-4-compile-with-gcc-5.patch"))
                (sha256
                 (base32
                  "10k2k71kxgay283ylbbhhs51cl55zn2q38vj5pk4k950qdnirrlj"))))
@@ -407,6 +408,8 @@ Go.  It also includes runtime support libraries for these languages.")
                (base32
                 "1m0lr7938lw5d773dkvwld90hjlcq2282517d1gwvrfzmwgg42w5"))
               (patches (search-patches "gcc-strmov-store-file-names.patch"
+                                       "gcc-6-source-date-epoch-1.patch"
+                                       "gcc-6-source-date-epoch-2.patch"
                                        "gcc-5.0-libvtv-runpath.patch"))))
     (inputs
      `(("isl" ,isl)

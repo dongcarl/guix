@@ -1,11 +1,13 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2014, 2015 Eric Bavier <bavier@member.fsf.org>
 ;;; Copyright © 2014 Ian Denhardt <ian@zenhack.net>
-;;; Copyright © 2015, 2016 Leo Famulari <leo@famulari.name>
+;;; Copyright © 2015, 2016, 2017 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2017 Thomas Danckaert <post@thomasdanckaert.be>
 ;;; Copyright © 2017 Arun Isaac <arunisaac@systemreboot.net>
 ;;; Copyright © 2017 Kei Kebreau <kkebreau@posteo.net>
+;;; Copyright © 2017 Christopher Allan Webber <cwebber@dustycloud.org>
+;;; Copyright © 2017 Rutger Helling <rhelling@mykolab.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -33,6 +35,7 @@
   #:use-module (gnu packages acl)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages base)
+  #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages databases)
   #:use-module (gnu packages dejagnu)
@@ -48,6 +51,8 @@
   #:use-module (gnu packages perl)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-crypto)
+  #:use-module (gnu packages python-web)
   #:use-module (gnu packages rsync)
   #:use-module (gnu packages ssh)
   #:use-module (gnu packages tls)
@@ -118,7 +123,7 @@ spying and/or modification by the server.")
 (define-public par2cmdline
   (package
     (name "par2cmdline")
-    (version "0.7.3")
+    (version "0.8.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/Parchive/par2cmdline/archive/v"
@@ -126,7 +131,7 @@ spying and/or modification by the server.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0dqwarc2aw5clgpf24d9dxh43b0k0z3l6kksn30arx9bdlmrk5rx"))))
+                "1jpshmmcr81mxly0md2rr231qz9c8c680bbvcmhh100dg9i4a6s6"))))
     (native-inputs
      `(("automake" ,automake)
        ("autoconf" ,autoconf)))
@@ -249,7 +254,8 @@ random access nor for in-place modification.")
        (method url-fetch)
        (uri (string-append "http://libarchive.org/downloads/libarchive-"
                            version ".tar.gz"))
-       (patches (search-patches "libarchive-CVE-2017-14166.patch"))
+       (patches (search-patches "libarchive-CVE-2017-14166.patch"
+                                "libarchive-CVE-2017-14502.patch"))
        (sha256
         (base32
          "1km0mzfl6in7l5vz9kl09a88ajx562rw93ng9h2jqavrailvsbgd"))))))
@@ -293,20 +299,20 @@ random access nor for in-place modification.")
        ("nettle" ,nettle)))
     (arguments
      `(#:parallel-build? #f             ;race conditions
-       #:phases (alist-cons-before
-                 'build 'remove-Werror
-                 ;; rdup uses a deprecated function from libarchive
-                 (lambda _
-                   (substitute* "GNUmakefile"
-                     (("^(CFLAGS=.*)-Werror" _ front) front)))
-                 (alist-cons-before
-                  'check 'pre-check
-                  (lambda _
-                    (setenv "HOME" (getcwd))
-                    (substitute* "testsuite/rdup/rdup.rdup-up-t-with-file.exp"
-                      (("/bin/cat") (which "cat"))))
-
-                  %standard-phases))))
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'remove-Werror
+           ;; rdup uses a deprecated function from libarchive
+           (lambda _
+             (substitute* "GNUmakefile"
+               (("^(CFLAGS=.*)-Werror" _ front) front))
+             #t))
+         (add-before 'check 'pre-check
+           (lambda _
+             (setenv "HOME" (getcwd))
+             (substitute* "testsuite/rdup/rdup.rdup-up-t-with-file.exp"
+               (("/bin/cat") (which "cat")))
+             #t)))))
     (home-page "http://archive.miek.nl/projects/rdup/index.html")
     (synopsis "Provide a list of files to backup")
     (description
@@ -336,9 +342,9 @@ list and implement the backup strategy.")
                       "CC=gcc")
        #:tests? #f                      ;test input not distributed
        #:phases
-       (alist-delete
-        'configure                      ;no configure phase
-        %standard-phases)))
+       ;; no configure phase
+       (modify-phases %standard-phases
+         (delete 'configure))))
     (home-page "http://viric.name/cgi-bin/btar/doc/trunk/doc/home.wiki")
     (synopsis "Tar-compatible archiver")
     (description
@@ -462,13 +468,14 @@ detection, and lossless compression.")
 (define-public borg
   (package
     (name "borg")
-    (version "1.0.11")
+    (version "1.1.3")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "borgbackup" version))
+              (patches (search-patches "borg-fix-archive-corruption-bug.patch"))
               (sha256
                (base32
-                "14fjk5dfwmjkn7nmkbhhbrk3g1wfrn8arvqd5r9jaij534nzsvpw"))
+                "1rvn8b6clzd1r317r9jkvk34r31risi0dxfjc7jffhnwasck4anc"))
               (modules '((guix build utils)))
               (snippet
                '(for-each
@@ -505,6 +512,7 @@ detection, and lossless compression.")
                           (string-append
                             ;; These tests need to write to '/var'.
                             "not test_get_cache_dir "
+                            "and not test_get_config_dir "
                             "and not test_get_keys_dir "
                             "and not test_get_security_dir "
                             ;; These tests assume there is a root user in
@@ -516,9 +524,10 @@ detection, and lossless compression.")
                             "and not benchmark "
                             ;; These tests assume the kernel supports FUSE.
                             "and not test_fuse "
-                            "and not test_fuse_allow_damaged_files"))))))
+                            "and not test_fuse_allow_damaged_files "
+                            "and not test_mount_hardlinks"))))))
          (add-after 'install 'install-doc
-           (lambda* (#:key outputs #:allow-other-keys)
+           (lambda* (#:key inputs outputs #:allow-other-keys)
              (let* ((out (assoc-ref outputs "out"))
                     (man (string-append out "/share/man/man1"))
                     (misc (string-append out "/share/borg/misc")))
@@ -526,11 +535,11 @@ detection, and lossless compression.")
                          '("docs/misc/create_chunker-params.txt"
                            "docs/misc/internals-picture.txt"
                            "docs/misc/prune-example.txt"))
+               (add-installed-pythonpath inputs outputs)
                (and
-                 (zero? (system* "python3" "setup.py" "build_ext" "--inplace"))
-                 (zero? (system* "make" "-C" "docs" "man"))
+                 (zero? (system* "python3" "setup.py" "build_man"))
                  (begin
-                   (install-file "docs/_build/man/borg.1" man)
+                   (copy-recursively "docs/man" man)
                    #t))))))))
     (native-inputs
      `(("python-cython" ,python-cython)
@@ -540,7 +549,7 @@ detection, and lossless compression.")
        ("python-pytest" ,python-pytest-3.0)
        ;; For generating the documentation.
        ("python-sphinx" ,python-sphinx)
-       ("python-sphinx-rtd-theme" ,python-sphinx-rtd-theme)))
+       ("python-guzzle-sphinx-theme" ,python-guzzle-sphinx-theme)))
     (inputs
      `(("acl" ,acl)
        ("lz4" ,lz4)
@@ -554,7 +563,7 @@ provide an efficient and secure way to backup data.  The data deduplication
 technique used makes Borg suitable for daily backups since only changes are
 stored.  The authenticated encryption technique makes it suitable for backups
 to not fully trusted targets.  Borg is a fork of Attic.")
-    (home-page "https://borgbackup.github.io/borgbackup/")
+    (home-page "https://www.borgbackup.org/")
     (license license:bsd-3)))
 
 (define-public attic
@@ -690,3 +699,110 @@ using GnuPG.  Backups can be stored on local hard disks, or online via
 the SSH SFTP protocol.  The backup server, if used, does not require
 any special software, on top of SSH.")
     (license license:gpl3+)))
+
+(define-public dirvish
+  (package
+    (name "dirvish")
+    (version "1.2.1")
+    (build-system gnu-build-system)
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "http://dirvish.org/dirvish-" version ".tgz"))
+              (sha256
+               (base32
+                "1kbxa1irszp2zw8hd5qzqnrrzb4vxfivs1vn64yxnj0lak1jjzvb"))))
+    (arguments
+     `(#:modules ((ice-9 match) (ice-9 rdelim)
+                  ,@%gnu-build-system-modules)
+       #:phases
+       ;; This mostly mirrors the steps taken in the install.sh that ships
+       ;; with dirvish, but simplified because we aren't prompting interactively
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (delete 'build)
+         (delete 'check)
+         (replace 'install
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             ;; These are mostly the same steps the install.sh that comes with
+             ;; dirvish does
+             (let* (;; Files we'll be copying
+                    (executables
+                     '("dirvish" "dirvish-runall"
+                       "dirvish-expire" "dirvish-locate"))
+                    (man-pages
+                     '(("dirvish" "8") ("dirvish-runall" "8")
+                       ("dirvish-expire" "8") ("dirvish-locate" "8")
+                       ("dirvish.conf" "5")))
+
+                    (output-dir
+                     (assoc-ref outputs "out"))
+
+                    ;; Just a default... not so useful on guixsd though
+                    ;; You probably want to a service with file(s) to point to.
+                    (confdir "/etc/dirvish")
+
+                    (perl (string-append (assoc-ref %build-inputs "perl")
+                                         "/bin/perl"))
+                    (loadconfig.pl (call-with-input-file "loadconfig.pl"
+                                     read-string)))
+
+
+               (define (write-pl filename)
+                 (define pl-header
+                   (string-append "#!" perl "\n\n"
+                                  "$CONFDIR = \"" confdir "\";\n\n"))
+                 (define input-file-location
+                   (string-append filename ".pl"))
+                 (define target-file-location
+                   (string-append output-dir "/bin/" filename ".pl"))
+                 (define text-to-write
+                   (string-append pl-header
+                                  (call-with-input-file input-file-location
+                                    read-string)
+                                  "\n" loadconfig.pl))
+                 (with-output-to-file target-file-location
+                   (lambda ()
+                     (display text-to-write)))
+                 (chmod target-file-location #o755)
+                 (wrap-program target-file-location
+                   `("PERL5LIB" ":" prefix
+                     ,(map (lambda (l) (string-append (assoc-ref %build-inputs l)
+                                                      "/lib/perl5/site_perl"))
+                           '("perl-libtime-period"
+                             "perl-libtime-parsedate")))))
+
+               (define write-man
+                 (match-lambda
+                   ((file-base man-num)
+                    (let* ((filename
+                            (string-append file-base "." man-num))
+                           (output-path
+                            (string-append output-dir
+                                           "/share/man/man" man-num
+                                           "/" filename)))
+                      (copy-file filename output-path)))))
+
+               ;; Make directories
+               (mkdir-p (string-append output-dir "/bin/"))
+               (mkdir-p (string-append output-dir "/share/man/man8/"))
+               (mkdir-p (string-append output-dir "/share/man/man5/"))
+
+               ;; Write out executables
+               (for-each write-pl executables)
+               ;; Write out man pages
+               (for-each write-man man-pages)
+               #t))))))
+    (inputs
+     `(("perl" ,perl)
+       ("rsync" ,rsync)
+       ("perl-libtime-period" ,perl-libtime-period)
+       ("perl-libtime-parsedate" ,perl-libtime-parsedate)))
+    (home-page "http://dirvish.org/")
+    (synopsis "Fast, disk based, rotating network backup system")
+    (description
+     "With dirvish you can maintain a set of complete images of your
+filesystems with unattended creation and expiration.  A dirvish backup vault
+is like a time machine for your data. ")
+    (license (license:fsf-free "file://COPYING"
+                               "Open Software License 2.0"))))

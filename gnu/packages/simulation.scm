@@ -84,6 +84,8 @@
      `(("gzip" ,gzip)
        ("gnuplot" ,gnuplot)
        ("openmpi" ,openmpi)))
+    (outputs '("debug"                  ;~60MB
+               "out"))
     (arguments
      `( ;; Executable files and shared libraries are located in the 'platforms'
        ;; subdirectory.
@@ -171,6 +173,15 @@
                         (("lockDir=.*$")
                          "lockDir=$HOME/.$WM_PROJECT/.wmake\n"))
                       #t))
+                  (add-after 'build 'cleanup
+                    ;; Avoid unncessary, voluminous object and dep files.
+                    (lambda _
+                      (delete-file-recursively
+                       "platforms/linux64GccDPInt32Opt/src")
+                      (delete-file-recursively
+                       "platforms/linux64GccDPInt32OptSYSTEMOPENMPI")
+                      (for-each delete-file (find-files "." "\\.o$"))
+                      #t))
                   (replace 'install
                     (lambda _
                       ;; use 'OpenFOAM-version' convention
@@ -195,8 +206,8 @@
     ;;  $ source $GUIX_PROFILE/lib/OpenFOAM-4.1/etc/bashrc
     ;;  $ mkdir -p $FOAM_RUN
     ;;  $ cd $FOAM_RUN
-    ;;  $ cp -r $FOAM_TUTORIALS/incompressible/simpleFoam/pitzdaily .
-    ;;  $ cd pitzdaily
+    ;;  $ cp -r $FOAM_TUTORIALS/incompressible/simpleFoam/pitzDaily .
+    ;;  $ cd pitzDaily
     ;;  $ chmod -R u+w .
     ;;  $ blockMesh
     (synopsis "Framework for numerical simulation of fluid flow")

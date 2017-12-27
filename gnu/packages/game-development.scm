@@ -11,6 +11,8 @@
 ;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2017 Manolis Fragkiskos Ragkousis <manolis837@gmail.com>
 ;;; Copyright © 2017 Peter Mikkelsen <petermikkelsen10@gmail.com>
+;;; Copyright © 2017 Arun Isaac <arunisaac@systemreboot.net>
+;;; Copyright © 2017 Rutger Helling <rhelling@mykolab.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -36,6 +38,7 @@
   #:use-module (guix build-system cmake)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system python)
+  #:use-module (guix build-system scons)
   #:use-module (gnu packages)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages boost)
@@ -109,7 +112,7 @@ is used in some video games and movies.")
 (define-public deutex
   (package
    (name "deutex")
-   (version "5.0.0")
+   (version "5.1.0")
    (source (origin
             (method url-fetch)
             (uri (string-append "https://github.com/Doom-Utils/" name
@@ -117,7 +120,7 @@ is used in some video games and movies.")
                                 name "-" version ".tar.xz"))
             (sha256
              (base32
-              "1jvffcpq64hk3jysz4q6zi9hqkksy151ci9553h8q7wrrkbw0i9z"))))
+              "0hwkm0q2w16ddmiwh7x3jcfp58zjb40a5dh7c3sybwm9bar37pn1"))))
    (build-system gnu-build-system)
    (native-inputs `(("asciidoc" ,asciidoc)))
    (home-page "https://github.com/Doom-Utils/deutex")
@@ -192,6 +195,31 @@ necessary.
     ;; The MD5 implementation contained in GRFID is under the zlib license.
     (license (list license:gpl2 license:gpl2+ license:zlib))))
 
+(define-public catcodec
+  (package
+    (name "catcodec")
+    (version "1.0.5")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://binaries.openttd.org/extra/catcodec/"
+                           version "/catcodec-" version "-source.tar.xz"))
+       (sha256
+        (base32
+         "1qg0c2i4p29sxj0q6qp2jynlrzm5pphz2xhcjqlxa69ycrnlxzs7"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f ; no tests
+       #:make-flags (list (string-append "prefix=" %output))
+       #:phases (modify-phases %standard-phases
+                  (delete 'configure))))
+    (home-page "http://dev.openttdcoop.org/projects/catcodec")
+    (synopsis "Encode/decode OpenTTD sounds")
+    (description "catcodec encodes and decodes sounds for OpenTTD.  These
+sounds are not much more than some metadata (description and filename) and raw
+PCM data.")
+    (license license:gpl2)))
+
 (define-public gzochi
   (package
     (name "gzochi")
@@ -254,7 +282,10 @@ files) into @file{.grf} and/or @file{.nfo} files.")
     (source
      (origin
        (method url-fetch)
-       (uri (pypi-uri "sge-pygame" version))
+       (uri (string-append "mirror://savannah/stellarengine/"
+                           (version-major+minor version) "/sge-pygame-"
+                           version ".tar.gz"))
+       (file-name (string-append name "-" version ".tar.gz"))
        (sha256
         (base32
          "1rl3xjzh78sl0sq3xl8rl7cgp9v9v3h7s2pfwn7nj1vrmffzkcpd"))))
@@ -984,7 +1015,7 @@ of use.")
 (define-public openmw
   (package
     (name "openmw")
-    (version "0.42.0")
+    (version "0.43.0")
     (source
      (origin
        (method url-fetch)
@@ -993,7 +1024,7 @@ of use.")
                        name "-" version ".tar.gz"))
        (sha256
         (base32
-         "1pla8016lpbg8cgm9kia318a860f26dmiayc72p3zl35mqrc7g7w"))))
+         "11phjx7b3mv4n295xgq25lkcwq0mgr35i5k05hf1h77y6n6jbw64"))))
     (build-system cmake-build-system)
     (arguments
      `(#:tests? #f                      ; No test target
@@ -1013,12 +1044,12 @@ of use.")
        ("qtbase" ,qtbase)
        ("sdl" ,sdl2)
        ("unshield" ,unshield)))
-    (synopsis "Free software re-implementation of the RPG Morrowind engine")
+    (synopsis "Re-implementation of the RPG Morrowind engine")
     (description
-     "OpenMW is a free, open source and modern engine which reimplements and
-extends the one that runs the 2002 open-world RPG Morrowind.  The engine comes
-with its own editor, called OpenMW-CS which allows the user to edit or create
-their own original games.")
+     "OpenMW is a game engine which reimplements and extends the one that runs
+the 2002 open-world RPG Morrowind.  The engine comes with its own editor,
+called OpenMW-CS which allows the user to edit or create their own original
+games.")
     (home-page "https://openmw.org")
     (license license:gpl3)))
 
@@ -1034,12 +1065,26 @@ their own original games.")
               (file-name (string-append name "-" version))
               (sha256
                (base32 "1mz89nafc1m7srbqvy7iagxrxmqvf5hbqi7i0lwaapkx6q0kpkq7"))))
-    (build-system gnu-build-system)
+    (build-system scons-build-system)
     (arguments
-     `(#:tests? #f ; There are no tests
+     `(#:scons ,scons-python2
+       #:scons-flags (list "platform=x11"
+                           ;; Avoid using many of the bundled libs.
+                           ;; Note: These options can be found in the SConstruct file.
+                           "builtin_freetype=no"
+                           "builtin_glew=no"
+                           "builtin_libmpdec=no"
+                           "builtin_libogg=no"
+                           "builtin_libpng=no"
+                           "builtin_libtheora=no"
+                           "builtin_libvorbis=no"
+                           "builtin_libwebp=no"
+                           "builtin_openssl=no"
+                           "builtin_opus=no"
+                           "builtin_zlib=no")
+       #:tests? #f ; There are no tests
        #:phases
        (modify-phases %standard-phases
-         (delete 'configure)
          (add-after 'unpack 'scons-use-env
            (lambda _
              ;; Scons does not use the environment variables by default,
@@ -1050,24 +1095,6 @@ their own original games.")
                  "env_base = Environment(tools=custom_tools)\n"
                  "env_base = Environment(ENV=os.environ)")))
              #t))
-         (replace 'build
-           (lambda _
-             (zero? (system*
-                     "scons"
-                     "platform=x11"
-                     ;; Avoid using many of the bundled libs.
-                     ;; Note: These options can be found in the SConstruct file.
-                     "builtin_freetype=no"
-                     "builtin_glew=no"
-                     "builtin_libmpdec=no"
-                     "builtin_libogg=no"
-                     "builtin_libpng=no"
-                     "builtin_libtheora=no"
-                     "builtin_libvorbis=no"
-                     "builtin_libwebp=no"
-                     "builtin_openssl=no"
-                     "builtin_opus=no"
-                     "builtin_zlib=no"))))
          (replace 'install
            (lambda* (#:key outputs #:allow-other-keys)
              (let* ((out (assoc-ref outputs "out"))
@@ -1099,8 +1126,7 @@ their own original games.")
                            Type=Application~%"
                            out)))
                #t))))))
-    (native-inputs `(("pkg-config" ,pkg-config)
-                     ("scons" ,scons)))
+    (native-inputs `(("pkg-config" ,pkg-config)))
     (inputs `(("alsa-lib" ,alsa-lib)
               ("freetype" ,freetype)
               ("glew" ,glew)
@@ -1115,8 +1141,7 @@ their own original games.")
               ("mesa" ,mesa)
               ("openssl" ,openssl)
               ("opusfile" ,opusfile)
-              ("pulseaudio" ,pulseaudio)
-              ("python2" ,python-2)))
+              ("pulseaudio" ,pulseaudio)))
     (home-page "https://godotengine.org/")
     (synopsis "Advanced 2D and 3D game engine")
     (description

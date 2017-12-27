@@ -38,6 +38,7 @@
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system cmake)
   #:use-module (guix build-system trivial)
+  #:use-module (guix build-system python)
   #:use-module (gnu packages)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages compression)
@@ -53,14 +54,14 @@
 (define-public dos2unix
   (package
     (name "dos2unix")
-    (version "7.3.4")
+    (version "7.4.0")
     (source
      (origin
        (method url-fetch)
        (uri (string-append "https://waterlan.home.xs4all.nl/" name "/"
                            name "-" version ".tar.gz"))
        (sha256
-        (base32 "1i9hbxn0br7xa18z4bjpkdv7mrzmbfxhm44mzpd07yd2qnxsgkcc"))))
+        (base32 "12h4c61g376bhq03y5g2xszkrkrj5hwd928rly3xsp6rvfmnbixs"))))
     (build-system gnu-build-system)
     (arguments
      '(#:make-flags (list "CC=gcc"
@@ -97,15 +98,15 @@ to DOS format and vice versa.")
     (native-inputs `(("python" ,python-2)))
     (arguments
      '(#:phases
-       (alist-cons-before
-        'check 'pre-check
-        (lambda _
-          (substitute* "tests/setup.py"
-            (("([[:space:]]*)include_dirs=.*" all space)
-             (string-append all space "library_dirs=['../src/.libs'],\n")))
-          ;; The test extension 'Recode.so' lacks RUNPATH for 'librecode.so'.
-          (setenv "LD_LIBRARY_PATH" (string-append (getcwd) "/src/.libs")))
-        %standard-phases)))
+       (modify-phases %standard-phases
+         (add-before 'check 'pre-check
+           (lambda _
+             (substitute* "tests/setup.py"
+               (("([[:space:]]*)include_dirs=.*" all space)
+                (string-append all space "library_dirs=['../src/.libs'],\n")))
+             ;; The test extension 'Recode.so' lacks RUNPATH for 'librecode.so'.
+             (setenv "LD_LIBRARY_PATH" (string-append (getcwd) "/src/.libs"))
+             #t)))))
     (home-page "https://github.com/pinard/Recode")
     (synopsis "Text encoding converter")
     (description "The Recode library converts files between character sets and
@@ -208,10 +209,9 @@ encoding, supporting Unicode version 9.0.0.")
     (build-system gnu-build-system)
     (arguments
      '(#:phases
-       (alist-cons-after
-        'unpack 'autoreconf
-        (lambda _ (zero? (system* "autoreconf" "-vif")))
-        %standard-phases)))
+       (modify-phases %standard-phases
+         (add-after 'unpack 'autoreconf
+           (lambda _ (zero? (system* "autoreconf" "-vif")))))))
     (native-inputs
      `(("autoconf" ,autoconf)
        ("automake" ,automake)
@@ -388,7 +388,14 @@ regular expression object can be specified.")
                             (assoc-ref %outputs "out") "/share/antiword"))
        #:phases
        (modify-phases %standard-phases
-         (delete 'configure)
+         (replace 'configure
+           (lambda* (#:key outputs #:allow-other-keys)
+             ;; Ensure that mapping files can be found in the actual package
+             ;; data directory.
+             (substitute* "antiword.h"
+               (("/usr/share/antiword")
+                (string-append (assoc-ref outputs "out") "/share/antiword")))
+             #t))
          (replace 'install
            (lambda* (#:key make-flags #:allow-other-keys)
              (zero? (apply system* "make" `("global_install" ,@make-flags))))))))
@@ -624,3 +631,39 @@ completely with the standard @code{javax.swing.text} package.  It is fast and
 efficient, and can be used in any application that needs to edit or view
 source code.")
     (license license:bsd-3)))
+
+;; We use the sources from git instead of the tarball from pypi, because the
+;; latter does not include the Cython source file from which bycython.cpp is
+;; generated.
+(define-public python-editdistance
+  (let ((commit "3ea84a7dd3258c76aa3be851ef3d50e59c886846")
+        (revision "1"))
+    (package
+      (name "python-editdistance")
+      (version (string-append "0.3.1-" revision "." (string-take commit 7)))
+      (source
+       (origin
+         (method git-fetch)
+         (uri (git-reference
+               (url "https://github.com/aflc/editdistance.git")
+               (commit commit)))
+         (sha256
+          (base32
+           "1l43svsv12crvzphrgi6x435z6xg8m086c64armp8wzb4l8ccm7g"))))
+      (build-system python-build-system)
+      (arguments
+       `(#:phases
+         (modify-phases %standard-phases
+           (add-after 'unpack 'build-cython-code
+             (lambda _
+               (with-directory-excursion "editdistance"
+                 (delete-file "bycython.cpp")
+                 (zero? (system* "cython" "--cplus" "bycython.pyx"))))))))
+      (native-inputs
+       `(("python-cython" ,python-cython)))
+      (home-page "https://www.github.com/aflc/editdistance")
+      (synopsis "Fast implementation of the edit distance (Levenshtein distance)")
+      (description
+       "This library simply implements Levenshtein distance algorithm with C++
+and Cython.")
+      (license license:expat))))

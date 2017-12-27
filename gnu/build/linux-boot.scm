@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2013, 2014, 2015, 2016 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2017 Mathieu Othacehe <m.othacehe@gmail.com>
 ;;;
 ;;; This file is part of GNU Guix.
@@ -21,19 +21,24 @@
   #:use-module (rnrs io ports)
   #:use-module (system repl error-handling)
   #:autoload   (system repl repl) (start-repl)
-  #:autoload   (system base compile) (compile-file)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-26)
   #:use-module (ice-9 match)
+  #:use-module (ice-9 rdelim)
+  #:use-module (ice-9 regex)
   #:use-module (ice-9 ftw)
   #:use-module (guix build utils)
-  #:use-module (guix build syscalls)
+  #:use-module ((guix build syscalls)
+                #:hide (file-system-type))
   #:use-module (gnu build linux-modules)
   #:use-module (gnu build file-systems)
+  #:use-module (gnu system file-systems)
   #:export (mount-essential-file-systems
             linux-command-line
             find-long-option
             make-essential-device-nodes
+            make-static-device-nodes
             configure-qemu-networking
 
             bind-mount
@@ -103,6 +108,109 @@ with the given MAJOR number, starting with MINOR."
       (mknod (string-append base (number->string i))
              'block-special #o644 (device-number major (+ minor i)))
       (loop (+ i 1)))))
+
+;; Representation of a /dev node.
+(define-record-type <device-node>
+  (device-node name type major minor module)
+  device-node?
+  (name device-node-name)
+  (type device-node-type)
+  (major device-node-major)
+  (minor device-node-minor)
+  (module device-node-module))
+
+(define (read-static-device-nodes port)
+  "Read from PORT a list of <device-node> written in the format used by
+/lib/modules/*/*.devname files."
+  (let loop ((line (read-line port)))
+    (if (eof-object? line)
+      '()
+      (match (string-split line #\space)
+       (((? (cut string-prefix? "#" <>)) _ ...)
+        (loop (read-line port)))
+       ((module-name device-name device-spec)
+        (let* ((device-parts
+               (string-match "([bc])([0-9][0-9]*):([0-9][0-9]*)"
+                             device-spec))
+               (type-string (match:substring device-parts 1))
+               (type (match type-string
+                      ("c" 'char-special)
+                      ("b" 'block-special)))
+               (major-string (match:substring device-parts 2))
+               (major (string->number major-string 10))
+               (minor-string (match:substring device-parts 3))
+               (minor (string->number minor-string 10)))
+          (cons (device-node device-name type major minor module-name)
+                (loop (read-line port)))))
+       (_
+        (begin
+          (format (current-error-port)
+                  "read-static-device-nodes: ignored devname line '~a'~%" line)
+          (loop (read-line port))))))))
+
+(define* (mkdir-p* dir #:optional (mode #o755))
+  "This is a variant of 'mkdir-p' that works around
+<http://bugs.gnu.org/24659> by passing MODE explicitly in each 'mkdir' call."
+  (define absolute?
+    (string-prefix? "/" dir))
+
+  (define not-slash
+    (char-set-complement (char-set #\/)))
+
+  (let loop ((components (string-tokenize dir not-slash))
+             (root       (if absolute?
+                             ""
+                             ".")))
+    (match components
+      ((head tail ...)
+       (let ((path (string-append root "/" head)))
+         (catch 'system-error
+           (lambda ()
+             (mkdir path mode)
+             (loop tail path))
+           (lambda args
+             (if (= EEXIST (system-error-errno args))
+                 (loop tail path)
+                 (apply throw args))))))
+      (() #t))))
+
+(define (report-system-error name . args)
+  "Report a system error for the file NAME."
+  (let ((errno (system-error-errno args)))
+    (format (current-error-port) "could not create '~a': ~a~%" name
+            (strerror errno))))
+
+;; Catch a system-error, log it and don't die from it.
+(define-syntax-rule (catch-system-error name exp)
+  (catch 'system-error
+    (lambda ()
+      exp)
+    (lambda args
+      (apply report-system-error name args))))
+
+;; Create a device node like the <device-node> passed here on the filesystem.
+(define create-device-node
+  (match-lambda
+    (($ <device-node> xname type major minor module)
+     (let ((name (string-append "/dev/" xname)))
+       (mkdir-p* (dirname name))
+       (catch-system-error name
+         (mknod name type #o600 (device-number major minor)))))))
+
+(define* (make-static-device-nodes linux-release-module-directory)
+  "Create static device nodes required by the given Linux release.
+This is required in order to solve a chicken-or-egg problem:
+The Linux kernel has a feature to autoload modules when a device is first
+accessed.
+And udev has a feature to set the permissions of static nodes correctly
+when it is starting up and also to automatically create nodes when hardware
+is hotplugged. That leaves universal device files which are not linked to
+one specific hardware device. These we have to create."
+  (let ((devname-name (string-append linux-release-module-directory "/"
+                                     "modules.devname")))
+    (for-each create-device-node
+              (call-with-input-file devname-name
+                                    read-static-device-nodes))))
 
 (define* (make-essential-device-nodes #:key (root "/"))
   "Make essential device nodes under ROOT/dev."
@@ -239,20 +347,10 @@ the last argument of `mknod'."
           (filter-map string->number (scandir "/proc")))))
 
 (define* (mount-root-file-system root type
-                                 #:key volatile-root? (unionfs "unionfs"))
+                                 #:key volatile-root?)
   "Mount the root file system of type TYPE at device ROOT.  If VOLATILE-ROOT?
-is true, mount ROOT read-only and make it a union with a writable tmpfs using
-UNIONFS."
-  (define (mark-as-not-killable pid)
-    ;; Tell the 'user-processes' shepherd service that PID must be kept alive
-    ;; when shutting down.
-    (mkdir-p "/root/etc/shepherd")
-    (let ((port (open-file "/root/etc/shepherd/do-not-kill" "a")))
-      (chmod port #o600)
-      (write pid port)
-      (newline port)
-      (close-port port)))
-
+is true, mount ROOT read-only and make it a overlay with a writable tmpfs
+using the kernel build-in overlayfs."
   (if volatile-root?
       (begin
         (mkdir-p "/real-root")
@@ -260,24 +358,17 @@ UNIONFS."
         (mkdir-p "/rw-root")
         (mount "none" "/rw-root" "tmpfs")
 
+        ;; Create the upperdir and the workdir of the overlayfs
+        (mkdir-p "/rw-root/upper")
+        (mkdir-p "/rw-root/work")
+
         ;; We want read-write /dev nodes.
-        (mkdir-p "/rw-root/dev")
-        (mount "none" "/rw-root/dev" "devtmpfs")
+        (mkdir-p "/rw-root/upper/dev")
+        (mount "none" "/rw-root/upper/dev" "devtmpfs")
 
-        ;; Make /root a union of the tmpfs and the actual root.  Use
-        ;; 'max_files' to set a high RLIMIT_NOFILE for the unionfs process
-        ;; itself.  Failing to do that, we quickly run out of file
-        ;; descriptors; see <http://bugs.gnu.org/17827>.
-        (unless (zero? (system* unionfs "-o"
-                                "cow,allow_other,use_ino,suid,dev,max_files=65536"
-                                "/rw-root=RW:/real-root=RO"
-                                "/root"))
-          (error "unionfs failed"))
-
-        ;; Make sure unionfs remains alive till the end.  Because
-        ;; 'fuse_daemonize' doesn't tell the PID of the forked daemon, we
-        ;; have to resort to 'pidof' here.
-        (mark-as-not-killable (pidof unionfs)))
+        ;; Make /root an overlay of the tmpfs and the actual root.
+        (mount "none" "/root" "overlay" 0
+               "lowerdir=/real-root,upperdir=/rw-root/upper,workdir=/rw-root/work"))
       (begin
         (check-file-system root type)
         (mount root "/root" type)))
@@ -285,6 +376,7 @@ UNIONFS."
   ;; Make sure /root/etc/mtab is a symlink to /proc/self/mounts.
   (false-if-exception
     (delete-file "/root/etc/mtab"))
+  (mkdir-p "/root/etc")
   (symlink "/proc/self/mounts" "/root/etc/mtab"))
 
 (define (switch-root root)
@@ -349,19 +441,17 @@ supports kernel command-line options '--load', '--root', and '--repl'.
 Mount the root file system, specified by the '--root' command-line argument,
 if any.
 
-MOUNTS must be a list suitable for 'mount-file-system'.
+MOUNTS must be a list of <file-system> objects.
 
 When VOLATILE-ROOT? is true, the root file system is writable but any changes
 to it are lost."
-  (define root-mount-point?
-    (match-lambda
-     ((device _ "/" _ ...) #t)
-     (_ #f)))
+  (define (root-mount-point? fs)
+    (string=? (file-system-mount-point fs) "/"))
 
   (define root-fs-type
-    (or (any (match-lambda
-              ((device _ "/" type _ ...) type)
-              (_ #f))
+    (or (any (lambda (fs)
+               (and (root-mount-point? fs)
+                    (file-system-type fs)))
              mounts)
         "ext4"))
 

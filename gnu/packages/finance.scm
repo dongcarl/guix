@@ -5,6 +5,7 @@
 ;;; Copyright © 2016 Hartmut Goebel <h.goebel@crazy-compilers.com>
 ;;; Copyright © 2017 Carlo Zancanaro <carlo@zancanaro.id.au>
 ;;; Copyright © 2017 Theodoros Foradis <theodoros@foradis.org>
+;;; Copyright © 2017 Vasile Dumitrascu <va511e@yahoo.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -22,42 +23,45 @@
 ;;; along with GNU Guix.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (gnu packages finance)
- #:use-module ((guix licenses) #:prefix license:)
- #:use-module (guix packages)
- #:use-module (guix download)
- #:use-module (guix build-system gnu)
- #:use-module (guix build-system cmake)
- #:use-module (guix build-system python)
- #:use-module (gnu packages base)
- #:use-module (gnu packages boost)
- #:use-module (gnu packages check)
- #:use-module (gnu packages databases)
- #:use-module (gnu packages documentation)
- #:use-module (gnu packages dns)
- #:use-module (gnu packages emacs)
- #:use-module (gnu packages graphviz)
- #:use-module (gnu packages groff)
- #:use-module (gnu packages libedit)
- #:use-module (gnu packages libevent)
- #:use-module (gnu packages libunwind)
- #:use-module (gnu packages linux)
- #:use-module (gnu packages multiprecision)
- #:use-module (gnu packages pkg-config)
- #:use-module (gnu packages protobuf)
- #:use-module (gnu packages python)
- #:use-module (gnu packages qt)
- #:use-module (gnu packages texinfo)
- #:use-module (gnu packages textutils)
- #:use-module (gnu packages tls)
- #:use-module (gnu packages upnp)
- #:use-module (gnu packages web)
- #:use-module (gnu packages xml)
- #:use-module (gnu packages gnuzilla))
+  #:use-module ((guix licenses) #:prefix license:)
+  #:use-module (guix packages)
+  #:use-module (guix download)
+  #:use-module (guix build-system gnu)
+  #:use-module (guix build-system cmake)
+  #:use-module (guix build-system python)
+  #:use-module (gnu packages base)
+  #:use-module (gnu packages boost)
+  #:use-module (gnu packages check)
+  #:use-module (gnu packages databases)
+  #:use-module (gnu packages documentation)
+  #:use-module (gnu packages dns)
+  #:use-module (gnu packages emacs)
+  #:use-module (gnu packages graphviz)
+  #:use-module (gnu packages groff)
+  #:use-module (gnu packages libedit)
+  #:use-module (gnu packages libevent)
+  #:use-module (gnu packages libunwind)
+  #:use-module (gnu packages linux)
+  #:use-module (gnu packages multiprecision)
+  #:use-module (gnu packages pkg-config)
+  #:use-module (gnu packages protobuf)
+  #:use-module (gnu packages python)
+  #:use-module (gnu packages python-crypto)
+  #:use-module (gnu packages python-web)
+  #:use-module (gnu packages qt)
+  #:use-module (gnu packages readline)
+  #:use-module (gnu packages texinfo)
+  #:use-module (gnu packages textutils)
+  #:use-module (gnu packages tls)
+  #:use-module (gnu packages upnp)
+  #:use-module (gnu packages web)
+  #:use-module (gnu packages xml)
+  #:use-module (gnu packages gnuzilla))
 
 (define-public bitcoin-core
   (package
     (name "bitcoin-core")
-    (version "0.14.2")
+    (version "0.15.1")
     (source (origin
              (method url-fetch)
              (uri
@@ -65,12 +69,13 @@
                              version "/bitcoin-" version ".tar.gz"))
              (sha256
               (base32
-               "1jp8vdc25gs46gj1d9mraqa1xnampffpa7mdy0fw80xca77fbi0s"))))
+               "1d22fgwdcn343kd95lh389hj417zwbmnhi29cij8n7wc0nz2vpil"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("pkg-config" ,pkg-config)
        ("python" ,python) ; for the tests
-       ("util-linux" ,util-linux))) ; provides the hexdump command for tests
+       ("util-linux" ,util-linux)   ; provides the hexdump command for tests
+       ("qttools" ,qttools)))
     (inputs
      `(("bdb" ,bdb-5.3) ; with 6.2.23, there is an error: ambiguous overload
        ("boost" ,boost)
@@ -78,8 +83,7 @@
        ("miniupnpc" ,miniupnpc)
        ("openssl" ,openssl)
        ("protobuf" ,protobuf)
-       ;; TODO Build with the modular Qt.
-       ("qt" ,qt)))
+       ("qtbase" ,qtbase)))
     (arguments
      `(#:configure-flags
         (list
@@ -87,7 +91,16 @@
           "--with-incompatible-bdb"
           ;; Boost is not found unless specified manually.
           (string-append "--with-boost="
-                         (assoc-ref %build-inputs "boost")))
+                         (assoc-ref %build-inputs "boost"))
+          ;; XXX: The configure script looks up Qt paths by
+          ;; `pkg-config --variable=host_bins Qt5Core`, which fails to pick
+          ;; up executables residing in 'qttools', so we specify them here.
+          (string-append "ac_cv_path_LRELEASE="
+                         (assoc-ref %build-inputs "qttools")
+                         "/bin/lrelease")
+          (string-append "ac_cv_path_LUPDATE="
+                         (assoc-ref %build-inputs "qttools")
+                         "/bin/lupdate"))
        #:phases
         (modify-phases %standard-phases
           (add-before 'check 'set-home
@@ -254,7 +267,7 @@ do so.")
 (define-public electrum
   (package
     (name "electrum")
-    (version "2.9.3")
+    (version "3.0")
     (source
      (origin
        (method url-fetch)
@@ -263,7 +276,7 @@ do so.")
                            version ".tar.gz"))
        (sha256
         (base32
-         "0d0fzb653g7b8ka3x90nl21md4g3n1fv11czdxpdq3s9yr6js6f2"))
+         "184cmpfqcznnm0wfjiarb6dps2vs0s2aykmy2ji7p77x20fbisfi"))
        (modules '((guix build utils)))
        (snippet
         '(begin
@@ -272,19 +285,19 @@ do so.")
            #t))))
     (build-system python-build-system)
     (inputs
-     `(("python-pyaes" ,python2-pyaes)
-       ("python-pysocks" ,python2-pysocks)
-       ("python-sip" ,python2-sip)
-       ("python-pyqt" ,python2-pyqt-4)
-       ("python-ecdsa" ,python2-ecdsa)
-       ("python-pbkdf2" ,python2-pbkdf2)
-       ("python-requests" ,python2-requests)
-       ("python-qrcode" ,python2-qrcode)
-       ("python-protobuf" ,python2-protobuf)
-       ("python-dnspython" ,python2-dnspython)
-       ("python-jsonrpclib" ,python2-jsonrpclib)))
+     `(("python-pyaes" ,python-pyaes)
+       ("python-pysocks" ,python-pysocks)
+       ("python-sip" ,python-sip)
+       ("python-pyqt" ,python-pyqt)
+       ("python-ecdsa" ,python-ecdsa)
+       ("python-pbkdf2" ,python-pbkdf2)
+       ("python-requests" ,python-requests)
+       ("python-qrcode" ,python-qrcode)
+       ("python-protobuf" ,python-protobuf)
+       ("python-dnspython" ,python-dnspython)
+       ("python-jsonrpclib-pelix" ,python-jsonrpclib-pelix)))
     (arguments
-     `(#:python ,python-2
+     `(#:tests? #f ;; package doesn't have any tests
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'patch-home
@@ -308,7 +321,7 @@ other machines/servers.  Electrum does not download the Bitcoin blockchain.")
   ;; the system's dynamically linked library.
   (package
     (name "monero")
-    (version "0.11.0.0")
+    (version "0.11.1.0")
     (source
      (origin
        (method url-fetch)
@@ -326,7 +339,7 @@ other machines/servers.  Electrum does not download the Bitcoin blockchain.")
            #t))
        (sha256
         (base32
-         "083w40a553c0r3i18020jcrv5s0b64vx3d8xrn9nwkb2237ighlk"))))
+         "16shd834025jyzy68h3gag1sz8vbk875hy4j97hrki8pacz8vd5m"))))
     (build-system cmake-build-system)
     (native-inputs
      `(("doxygen" ,doxygen)
@@ -407,7 +420,7 @@ Monero command line client and daemon.")
 (define-public monero-core
   (package
     (name "monero-core")
-    (version "0.11.0.0")
+    (version "0.11.1.0")
     (source
      (origin
        (method url-fetch)
@@ -416,7 +429,7 @@ Monero command line client and daemon.")
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
         (base32
-         "0hnrkgwb1sva67pcjym2gvb4zifp2s849dfbnjzbxk3yczpcyqzg"))))
+         "1q7a9kpcjgp74fbplzs2iszdld6gwbfrydyd9in9izhwp100p1rr"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("doxygen" ,doxygen)
@@ -427,6 +440,7 @@ Monero command line client and daemon.")
        ("libunwind" ,libunwind)
        ("openssl" ,openssl)
        ("qt" ,qt)
+       ("readline" ,readline)
        ("unbound" ,unbound)))
     (propagated-inputs
      `(("monero" ,monero)))
@@ -478,3 +492,67 @@ Monero command line client and daemon.")
      "Monero is a secure, private, untraceable currency.  This package provides the
 Monero GUI client.")
     (license license:bsd-3)))
+
+(define-public python-trezor-agent
+  (package
+    (name "python-trezor-agent")
+    (version "0.9.4")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://github.com/romanz/trezor-agent/archive/v"
+                           version ".tar.gz"))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32
+         "0h8jb147vpjk7mqbl4za0xdh7lblhx07n9dfk80kn2plwnvrry1x"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (delete 'check)
+         (add-after 'install 'check
+           (lambda* (#:key outputs inputs #:allow-other-keys)
+             ;; Make installed package available for running the tests
+             (add-installed-pythonpath inputs outputs)
+             (invoke "py.test"))))))
+    (propagated-inputs
+     `(("python-ecdsa" ,python-ecdsa)
+       ("python-ed25519" ,python-ed25519)
+       ("python-semver" ,python-semver)
+       ("python-unidecode" ,python-unidecode)))
+    (native-inputs
+     `(("python-mock" ,python-mock)
+       ("python-pytest" ,python-pytest)))
+    (home-page "https://github.com/romanz/trezor-agent")
+    (synopsis "TREZOR SSH and GPG host support")
+    (description
+     "@code{libagent} is a library that allows using TREZOR, Keepkey and
+Ledger Nano as a hardware SSH/GPG agent.")
+    (license license:lgpl3)))
+
+(define-public python2-trezor-agent
+  (package-with-python2 python-trezor-agent))
+
+(define-public python-mnemonic
+  (package
+    (name "python-mnemonic")
+    (version "0.18")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "mnemonic" version))
+        (sha256
+          (base32
+            "07bzfa5di6nv5xwwcwbypnflpj50wlfczhh6q6hg8w13g5m319q2"))))
+    (build-system python-build-system)
+    (propagated-inputs
+     `(("python-pbkdf2" ,python-pbkdf2)))
+    (home-page "https://github.com/trezor/python-mnemonic")
+    (synopsis "Implementation of Bitcoin BIP-0039")
+    (description "@code{mnemonic} is a library that provides an implementation
+of Bitcoin BIP-0039.")
+    (license license:expat)))
+
+(define-public python2-mnemonic
+  (package-with-python2 python-mnemonic))

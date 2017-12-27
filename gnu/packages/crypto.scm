@@ -4,8 +4,9 @@
 ;;; Copyright © 2016, 2017 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2016 Lukas Gradl <lgradl@openmailbox>
 ;;; Copyright © 2016 Tobias Geerinckx-Rice <me@tobias.gr>
-;;; Copyright © 2016 ng0 <ng0@we.make.ritual.n0.is>
+;;; Copyright © 2016, 2017 ng0 <ng0@infotropique.org>
 ;;; Copyright © 2016, 2017 Eric Bavier <bavier@member.fsf.org>
+;;; Copyright © 2017 Pierre Langlois <pierre.langlois@gmx.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -29,16 +30,19 @@
   #:use-module (gnu packages attr)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages boost)
+  #:use-module (gnu packages compression)
   #:use-module (gnu packages cryptsetup)
   #:use-module (gnu packages gettext)
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages image)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages libbsd)
+  #:use-module (gnu packages libffi)
   #:use-module (gnu packages linux)
   #:use-module (gnu packages nettle)
   #:use-module (gnu packages password-utils)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages perl-check)
   #:use-module (gnu packages readline)
   #:use-module (gnu packages search)
   #:use-module (gnu packages serialization)
@@ -52,31 +56,30 @@
   #:use-module (guix git-download)
   #:use-module (guix build-system cmake)
   #:use-module (guix build-system gnu)
-  #:use-module (guix build-system perl)
-  #:use-module (guix build-system python))
+  #:use-module (guix build-system perl))
 
 (define-public libsodium
   (package
     (name "libsodium")
-    (version "1.0.13")
+    (version "1.0.16")
     (source (origin
             (method url-fetch)
             (uri (list (string-append
-                        "http://download.libsodium.org/libsodium/"
+                        "https://download.libsodium.org/libsodium/"
                         "releases/libsodium-" version ".tar.gz")
                        (string-append
                         "https://download.libsodium.org/libsodium/"
                         "releases/old/libsodium-" version ".tar.gz")))
             (sha256
              (base32
-              "1z93wfg4k5svg8yck6cgdr6ysj91kbpn03nyzwxanncy3b5sq4ww"))))
+              "0cq5pn7qcib7q70mm1lgjwj75xdxix27v0xl1xl0kvxww7hwgbgf"))))
     (build-system gnu-build-system)
     (synopsis "Portable NaCl-based crypto library")
     (description
      "Sodium is a new easy-to-use high-speed software library for network
 communication, encryption, decryption, signatures, etc.")
     (license license:isc)
-    (home-page "http://libsodium.org")))
+    (home-page "https://libsodium.org")))
 
 (define-public libmd
   (package
@@ -112,7 +115,7 @@ communication, encryption, decryption, signatures, etc.")
 (define-public signify
   (package
     (name "signify")
-    (version "22")
+    (version "23")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/aperezdc/signify/"
@@ -120,7 +123,7 @@ communication, encryption, decryption, signatures, etc.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0iv5bjaas70ymqchxasapin4c32c41kqzkfhc3kcjzd7rxy78msy"))))
+                "0c70mzawgahsvmsv4xdrass4pgyynd67ipd9lij0fgi8wkq0ns8w"))))
     (build-system gnu-build-system)
     ;; TODO Build with libwaive (described in README.md), to implement something
     ;; like OpenBSD's pledge().
@@ -447,29 +450,6 @@ utility as a demonstration of the @code{scrypt} key derivation function.
 attacks than alternative functions such as @code{PBKDF2} or @code{bcrypt}.")
     (license license:bsd-2)))
 
-(define-public python-asn1crypto
-  (package
-    (name "python-asn1crypto")
-    (version "0.22.0")
-    (source
-      (origin
-        (method url-fetch)
-        (uri (string-append "https://github.com/wbond/asn1crypto/archive/"
-                            version ".tar.gz"))
-        (sha256
-         (base32
-          "1kn910896l3knmilla1c9ly20q181s43w1ah08lzkbm1h3j6pcz0"))))
-    (build-system python-build-system)
-    (home-page "https://github.com/wbond/asn1crypto")
-    (synopsis "ASN.1 parser and serializer in Python")
-    (description "asn1crypto is an ASN.1 parser and serializer with definitions
-for private keys, public keys, certificates, CRL, OCSP, CMS, PKCS#3, PKCS#7,
-PKCS#8, PKCS#12, PKCS#5, X.509 and TSP.")
-    (license license:expat)))
-
-(define-public python2-asn1crypto
-  (package-with-python2 python-asn1crypto))
-
 (define-public perl-math-random-isaac-xs
   (package
     (name "perl-math-random-isaac-xs")
@@ -554,7 +534,7 @@ generator.")
     (synopsis "Get weak or strong random data from pluggable sources")
     (description "This module provides implementations for a number of
 byte-oriented sources of random data.")
-    (license (package-license perl))))
+    (license license:perl-license)))
 
 (define-public perl-math-random-secure
   (package
@@ -594,3 +574,34 @@ or millenia for an attacker to try them all.
 data on your platform, so the seed itself will be as random as possible.
 @end enumerate\n")
     (license license:artistic2.0)))
+
+(define-public crypto++
+  (package
+    (name "crypto++")
+    (version "5.6.5")
+    (source (origin
+              (method url-fetch/zipbomb)
+              (uri (string-append "https://cryptopp.com/cryptopp"
+                                  (string-join (string-split version #\.) "")
+                                  ".zip"))
+              (sha256
+               (base32
+                "0d1cqdz369ivi082k59025wvxzywvkizw7i0pf5h0a1izs3g8pm7"))
+              (patches
+               (search-patches "crypto++-fix-dos-in-asn.1-decoders.patch"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:make-flags
+       (list (string-append "PREFIX=" (assoc-ref %outputs "out")))
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure))))
+    (native-inputs
+     `(("unzip" ,unzip)))
+    (home-page "https://cryptopp.com/")
+    (synopsis "C++ class library of cryptographic schemes")
+    (description "Crypto++ is a C++ class library of cryptographic schemes.")
+    ;; The compilation is distributed under the Boost license; the individual
+    ;; files in the compilation are in the public domain.
+    (license (list license:boost1.0 license:public-domain))))
+

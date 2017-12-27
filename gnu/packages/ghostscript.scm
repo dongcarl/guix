@@ -26,6 +26,7 @@
   #:use-module (gnu packages)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages compression)
+  #:use-module (gnu packages cups)
   #:use-module (gnu packages fontutils)
   #:use-module (gnu packages image)
   #:use-module (gnu packages perl)
@@ -131,6 +132,7 @@ printing, and psresize, for adjusting page sizes.")
 (define-public ghostscript
   (package
     (name "ghostscript")
+    (replacement ghostscript-9.22)
     (version "9.21")
     (source
       (origin
@@ -254,11 +256,36 @@ output file formats and printers.")
     (home-page "https://www.ghostscript.com/")
     (license license:agpl3+)))
 
+(define ghostscript-9.22
+  (package
+    (inherit ghostscript)
+    (version "9.22")
+    (source
+      (origin
+        (inherit (package-source ghostscript))
+        (uri (string-append "https://github.com/ArtifexSoftware/"
+                            "ghostpdl-downloads/releases/download/gs"
+                            (string-delete #\. version)
+                            "/ghostscript-" version ".tar.xz"))
+        (sha256
+         (base32
+          "1fyi4yvdj39bjgs10klr31cda1fbx1ar7a7b7yz7v68gykk65y61"))
+        (patches (search-patches "ghostscript-runpath.patch"
+                                 "ghostscript-no-header-creationdate.patch"
+                                 "ghostscript-no-header-id.patch"
+                                 "ghostscript-no-header-uuid.patch"))))))
+
 (define-public ghostscript/x
   (package/inherit ghostscript
     (name (string-append (package-name ghostscript) "-with-x"))
     (inputs `(("libxext" ,libxext)
               ("libxt" ,libxt)
+              ,@(package-inputs ghostscript)))))
+
+(define-public ghostscript/cups
+  (package/inherit ghostscript
+    (name "ghostscript-with-cups")
+    (inputs `(("cups" ,cups-minimal)
               ,@(package-inputs ghostscript)))))
 
 (define-public ijs

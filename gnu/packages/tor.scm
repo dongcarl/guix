@@ -33,9 +33,12 @@
   #:use-module (gnu packages base)
   #:use-module (gnu packages libevent)
   #:use-module (gnu packages linux)
+  #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages pcre)
+  #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-web)
   #:use-module (gnu packages qt)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages tls)
@@ -44,25 +47,28 @@
 (define-public tor
   (package
     (name "tor")
-    (version "0.3.0.10")
+    (version "0.3.1.9")
     (source (origin
              (method url-fetch)
              (uri (string-append "https://dist.torproject.org/tor-"
                                  version ".tar.gz"))
              (sha256
               (base32
-               "1cas30wk4bhcivi6l9dj7wwlz6pc2jj883x1vijax3b8l54nx3ls"))))
+               "09ixizsr635qyshvrn1m5asjkaz4fm8dx80lc3ajyy0fi7vh86vf"))))
     (build-system gnu-build-system)
     (arguments
      `(#:configure-flags (list "--enable-gcc-hardening"
                                "--enable-linker-hardening")))
     (native-inputs
-     `(("python" ,python-2)))  ; for tests
+     `(("pkg-config" ,pkg-config)
+       ("python" ,python-2)))  ; for tests
     (inputs
      `(("zlib" ,zlib)
        ("openssl" ,openssl)
        ("libevent" ,libevent)
-       ("libseccomp", libseccomp)))
+       ("libseccomp" ,libseccomp)
+       ("xz" ,xz)
+       ("zstd" ,zstd)))
     (home-page "https://www.torproject.org/")
     (synopsis "Anonymous network router to improve privacy on the Internet")
     (description
@@ -134,13 +140,13 @@ rejects UDP traffic from the application you're using.")
        #:configure-flags (list (string-append "--sysconfdir="
                                               (assoc-ref %outputs "out")
                                               "/etc/privoxy"))
-       #:phases (alist-cons-after
-                 'unpack 'autoconf
-                 (lambda _
-                   ;; Unfortunately, this is not a tarball produced by
-                   ;; "make dist".
-                   (zero? (system* "autoreconf" "-vfi")))
-                 %standard-phases)
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'autoconf
+           (lambda _
+             ;; Unfortunately, this is not a tarball produced by
+             ;; "make dist".
+             (zero? (system* "autoreconf" "-vfi")))))
        #:tests? #f))
     (inputs
      `(("w3m" ,w3m)

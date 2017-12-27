@@ -8,8 +8,8 @@
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 Al McElrath <hello@yrns.org>
 ;;; Copyright © 2016 Carlo Zancanaro <carlo@zancanaro.id.au>
-;;; Copyright © 2016 Ludovic Courtès <ludo@gnu.org>
-;;; Copyright © 2016, 2017 ng0 <ng0@infotropique.org>
+;;; Copyright © 2016, 2017 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2016, 2017 ng0 <ng0@n0.is>
 ;;; Copyright © 2016 doncatnip <gnopap@gmail.com>
 ;;; Copyright © 2016 Ivan Vilata i Balaguer <ivan@selidor.net>
 ;;; Copyright © 2017 Mekeor Melire <mekeor.melire@gmail.com>
@@ -42,6 +42,10 @@
   #:use-module (guix build-system perl)
   #:use-module (guix build-system python)
   #:use-module (gnu packages haskell)
+  #:use-module (gnu packages haskell-check)
+  #:use-module (gnu packages haskell-web)
+  #:use-module (gnu packages autotools)
+  #:use-module (gnu packages gawk)
   #:use-module (gnu packages base)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages perl)
@@ -66,6 +70,7 @@
   #:use-module (gnu packages gperf)
   #:use-module (gnu packages imagemagick)
   #:use-module (gnu packages lua)
+  #:use-module (gnu packages linux)
   #:use-module (gnu packages suckless)
   #:use-module (guix download)
   #:use-module (guix git-download))
@@ -115,7 +120,7 @@ nested include statements).")
        ("xcb-util-keysyms" ,xcb-util-keysyms)
        ("xcb-util-wm" ,xcb-util-wm)))
     (arguments
-     '(#:phases (alist-delete 'configure %standard-phases)
+     '(#:phases (modify-phases %standard-phases (delete 'configure))
        #:tests? #f  ; no check target
        #:make-flags (list "CC=gcc"
                           (string-append "PREFIX=" %output))))
@@ -168,14 +173,14 @@ commands would.")
 (define-public i3-wm
   (package
     (name "i3-wm")
-    (version "4.14")
+    (version "4.14.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://i3wm.org/downloads/i3-"
                                   version ".tar.bz2"))
               (sha256
                (base32
-                "1mm5jazwv4dz3k8vl1lfrcw86agpws5k9lmav1ly51qvmzivsfmf"))))
+                "1cazmfbbx6n8c81h6x6pdayq3mxs2ml3adz165z8vapkc72kl1nh"))))
     (build-system gnu-build-system)
     (arguments
      `(#:make-flags
@@ -332,6 +337,118 @@ subscribe to events.")
 and locate windows on all your workspaces, using an interactive dmenu
 prompt.")
       (license (license:non-copyleft "http://www.wtfpl.net/txt/copying/")))))
+
+(define-public i3lock-color
+  (package
+    (name "i3lock-color")
+    (version "2.10.1c")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://github.com/PandorasFox/i3lock-color/"
+                           "archive/" version ".tar.gz"))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32
+         "119xvdm4r6irqk0mar80hx6s8ydw26y35h7712rd7nbg7pb7i053"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f ;No tests included.
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'bootstrap
+           (lambda _
+             (zero? (system* "autoreconf" "-vfi")))))))
+    (inputs
+     `(("xcb-util-image" ,xcb-util-image)
+       ("xcb-util" ,xcb-util)
+       ("libxcb" ,libxcb)
+       ("linux-pam" ,linux-pam)
+       ("libxkbcommon" ,libxkbcommon)
+       ("libev" ,libev)
+       ("cairo" ,cairo)))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)
+       ("autoconf" ,autoconf)
+        ("automake" ,automake)))
+    (home-page "https://github.com/PandorasFox/i3lock-color")
+    (synopsis "Screen locker with color configuration support")
+    (description
+     "i3lock-color is a simpler X11 screen locker derived from i3lock.
+Features include:
+
+@enumerate
+@item forking process, the locked screen is preserved when you suspend to RAM;
+@item specify background color or image to be displayed in the lock screen;
+@item many additional color options.
+@end enumerate")
+    (license license:bsd-3)))
+
+(define-public i3lock-fancy
+  (package
+    (name "i3lock-fancy")
+    (version "0.2")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://github.com/meskarune/i3lock-fancy/archive/"
+                           version ".tar.gz"))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32
+         "020m7mnfq5cvir7p9v3hkb7cvb4cai33wppxl2zdwscwwjnchc5y"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f ;No tests included
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'configure
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (icons (string-append out "/share/i3lock-fancy/icons/"))
+                    (wmctrl (string-append (assoc-ref inputs "wmctrl")
+                                           "/bin/wmctrl"))
+                    (mconvert (string-append (assoc-ref inputs "imagemagick")
+                                             "/bin/convert"))
+                    (mimport (string-append (assoc-ref inputs "imagemagick")
+                                            "/bin/import"))
+                    (awk (string-append (assoc-ref inputs "gawk")
+                                        "/bin/gawk")))
+
+               (substitute* "lock"
+                 (("$(which wmctrl)") wmctrl)
+                 (("convert") mconvert)
+                 (("shot=\\(import") (string-append "shot=\(" mimport))
+                 (("awk -F") (string-append awk " -F"))
+                 ((" awk") awk)
+                 (("\\$scriptpath/icons/") icons))
+               #t)))
+         (delete 'build)
+         (replace 'install
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (bin (string-append out "/bin"))
+                    (icons (string-append out "/share/i3lock-fancy/icons/")))
+
+               (install-file "lock" bin)
+               (rename-file (string-append bin "/lock")
+                            (string-append bin "/i3lock-fancy"))
+               (copy-recursively "icons" icons)
+               #t))))))
+    (native-inputs
+     `(("imagemagick" ,imagemagick)
+       ("wmctrl" ,wmctrl)
+       ("gawk" ,gawk)))
+    (home-page "https://github.com/meskarune/i3lock-fancy")
+    (synopsis "Screen locker with screenshot function")
+    (description
+     "@code{i3lock-fancy} is a Bash script that takes a screenshot of
+the desktop, blurs the background and adds a lock icon and text.
+It requires @code{i3lock-color} or @code{i3lock} and can optionally
+be passed any screenshot util like @code{scrot}.
+This screen locker can be used with any window manager or
+desktop environment.")
+    (license license:expat)))
 
 (define-public xmonad
   (package
@@ -541,7 +658,7 @@ experience.")
 (define-public awesome
   (package
     (name "awesome")
-    (version "4.0")
+    (version "4.2")
     (source
      (origin (method url-fetch)
              (uri (string-append
@@ -549,7 +666,7 @@ experience.")
                    "master/awesome-" version ".tar.xz"))
              (sha256
               (base32
-               "0czkcz67sab63gf5m2p2pgg05yinjx60hfb9rfyzdkkg28q9f02w"))
+               "0kwpbls9h1alxcmvxh5g9qb995fds5b2ngcr44w0ibazkyls2pdc"))
              (modules '((guix build utils)
                         (srfi srfi-19)))
              (snippet
@@ -598,6 +715,9 @@ experience.")
      `(;; Let compression happen in our 'compress-documentation' phase so that
        ;; '--no-name' is used, which removes timestamps from gzip output.
        #:configure-flags '("-DCOMPRESS_MANPAGES=off")
+
+       ;; Building awesome in its source dir is no longer supported.
+       #:out-of-source? #t
 
        #:phases
        (modify-phases %standard-phases
@@ -714,7 +834,7 @@ Keybinder works with GTK-based applications using the X Window System.")
 (define-public spectrwm
   (package
     (name "spectrwm")
-    (version "3.0.2")
+    (version "3.1.0")
     (source
      (origin
        (method url-fetch)
@@ -725,7 +845,7 @@ Keybinder works with GTK-based applications using the X Window System.")
        (file-name (string-append name "-" version ".tar.gz"))
        (sha256
         (base32
-         "065b7j8s0lxw3p58fyf3c1mr5203pdm0kww42v245rlx0f005kl2"))))
+         "16lxcharxslf9rc39wxa3mr2nx5d8kzm9ls7p7dal8yrwr7y59dp"))))
     (build-system gnu-build-system)
     (arguments
      `(#:make-flags (let ((pkg-config (lambda (flag)
@@ -780,8 +900,8 @@ It is inspired by Xmonad and dwm.  Its major features include:
 @item Quick launch menu
 @item Many screen layouts possible with a few simple key strokes
 @item Move/resize floating windows
-@item Extended Window Manager Hints (EWMH) support
-@item Configureable tiling
+@item Extended Window Manager Hints (@dfn{EWMH}) support
+@item Configurable tiling
 @item Adjustable tile gap allows for a true one pixel border
 @item Customizable colors and border width
 @end itemize\n")

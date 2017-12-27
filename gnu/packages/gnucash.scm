@@ -2,6 +2,8 @@
 ;;; Copyright © 2015, 2016 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2015 Eric Bavier <bavier@member.fsf.org>
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
+;;; Copyright © 2017 Chris Marusich <cmmarusich@gmail.com>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -23,8 +25,11 @@
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix build-system gnu)
+  #:use-module (guix build-system glib-or-gtk)
   #:use-module (gnu packages)
   #:use-module (gnu packages autotools)
+  #:use-module (gnu packages docbook)
+  #:use-module (gnu packages documentation)
   #:use-module (gnu packages gnome)
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages glib)
@@ -42,17 +47,17 @@
 (define-public gnucash
   (package
     (name "gnucash")
-    (version "2.6.17")
+    (version "2.6.18")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "mirror://sourceforge/gnucash/gnucash%20%28stable%29/"
-                          version "/gnucash-" version ".tar.bz2"))
+                          version "/gnucash-" version "-1.tar.bz2"))
       (sha256
        (base32
-        "0g2risryfgplxh6cxpsl7fn255vipgsx38b4l081h665nqwmz5nv"))
+        "1794qi7lkn1kbnhzk08wawacfcphbln3ngdl3q0qax5drv7hnwv8"))
       (patches (search-patches "gnucash-price-quotes-perl.patch"))))
-    (build-system gnu-build-system)
+    (build-system glib-or-gtk-build-system)
     (inputs
      `(("guile" ,guile-2.0)
        ("icu4c" ,icu4c)
@@ -69,15 +74,25 @@
     (native-inputs
      `(("glib" ,glib "bin") ; glib-compile-schemas, etc.
        ("intltool" ,intltool)
+       ("gnucash-docs" ,gnucash-docs)
        ("pkg-config" ,pkg-config)))
+    (outputs '("out" "doc"))
     (arguments
      `(#:tests? #f ;FIXME: failing at /qof/gnc-date/qof print date dmy buff
        #:configure-flags '("--disable-dbi"
                            "--enable-aqbanking")
        #:phases
        (modify-phases %standard-phases
+         ;; There are about 100 megabytes of documentation.
          (add-after
-          'install 'wrap-programs
+          'install 'install-docs
+          (lambda* (#:key inputs outputs #:allow-other-keys)
+            (let ((docs (assoc-ref inputs "gnucash-docs"))
+                  (doc-output (assoc-ref outputs "doc")))
+              (symlink (string-append docs "/share/gnome")
+                       (string-append doc-output "/share/gnome")))))
+         (add-after
+          'install-docs 'wrap-programs
           (lambda* (#:key inputs outputs #:allow-other-keys)
             (for-each (lambda (prog)
                         (wrap-program (string-append (assoc-ref outputs "out")
@@ -104,7 +119,7 @@
                         "gnc-fq-check"
                         "gnc-fq-helper"
                         "gnc-fq-dump")))))))
-    (home-page "http://www.gnucash.org/")
+    (home-page "https://www.gnucash.org/")
     (synopsis "Personal and small business financial accounting software")
     (description
      "GnuCash is personal and professional financial-accounting software.
@@ -113,6 +128,42 @@ the double-entry accounting practice.  It includes support for QIF/OFX/HBCI
 import and transaction matching.  It also automates several tasks, such as
 financial calculations or scheduled transactions.")
     (license license:gpl3+)))
+
+;; This package is not public, since we use it to build the "doc" output of
+;; the gnucash package (see above).  It would be confusing if it were public.
+(define gnucash-docs
+  (package
+    (name "gnucash-docs")
+    (version (package-version gnucash))
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "mirror://sourceforge/gnucash/gnucash-docs/"
+                           version "/gnucash-docs-" version ".tar.gz"))
+       (sha256
+        (base32
+         "0bzc7mvdba2sc8m61yxa1fp2liqs00b64dvfxhv854vdrl1z5vmb"))))
+    (build-system gnu-build-system)
+    ;; These are native-inputs because they are only required for building the
+    ;; documentation.
+    (native-inputs
+     `(("libxml2" ,libxml2)
+       ;; The "check" target needs the docbook xml packages for validating the
+       ;; DocBook XML during the tests.
+       ("docbook-xml-4.4" ,docbook-xml-4.4)
+       ("docbook-xml-4.2" ,docbook-xml-4.2)
+       ("docbook-xml-4.1.2" ,docbook-xml-4.1.2)
+       ("libxslt" ,libxslt)
+       ("docbook-xsl" ,docbook-xsl)
+       ("scrollkeeper" ,scrollkeeper)))
+    (home-page "https://www.gnucash.org/")
+    (synopsis "Documentation for GnuCash")
+    (description
+     "User guide and other documentation for GnuCash in various languages.
+This package exists because the GnuCash project maintains its documentation in
+an entirely separate package from the actual GnuCash program.  It is intended
+to be read using the GNOME Yelp program.")
+    (license (list license:fdl1.1+ license:gpl3+))))
 
 (define-public gwenhywfar
   (package

@@ -2,10 +2,10 @@
 ;;; Copyright © 2013, 2014, 2015 Andreas Enge <andreas@enge.fr>
 ;;; Copyright © 2014 Sree Harsha Totakura <sreeharsha@totakura.in>
 ;;; Copyright © 2015, 2017 Ludovic Courtès <ludo@gnu.org>
-;;; Copyright © 2015 Efraim Flashner <efraim@flashner.co.il>
+;;; Copyright © 2015, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2016 Mark H Weaver <mhw@netris.org>
-;;; Copyright © 2016, 2017 ng0 <ng0@infotropique.org>
+;;; Copyright © 2016, 2017 ng0 <ng0@n0.is>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -66,14 +66,14 @@
 (define-public libextractor
   (package
    (name "libextractor")
-   (version "1.4")
+   (version "1.6")
    (source (origin
             (method url-fetch)
             (uri (string-append "mirror://gnu/libextractor/libextractor-"
                                 version ".tar.gz"))
             (sha256
              (base32
-              "0v7ns5jhsyp1wzvbaydfgxnva5zd63gkzm9djhckmam9liq824l4"))))
+              "17gnpgspdhfgcr27j8sn9105vb4lw22yqdrhic62l79q5v5avm16"))))
    (build-system gnu-build-system)
    ;; WARNING: Checks require /dev/shm to be in the build chroot, especially
    ;; not to be a symbolic link to /run/shm.
@@ -144,18 +144,18 @@ tool to extract metadata from a file and print the results.")
 (define-public libmicrohttpd
   (package
    (name "libmicrohttpd")
-   (version "0.9.55")
+   (version "0.9.58")
    (source (origin
             (method url-fetch)
             (uri (string-append "mirror://gnu/libmicrohttpd/libmicrohttpd-"
                                 version ".tar.gz"))
             (sha256
              (base32
-              "1y6h1slav5l6k8zyb01dpw65dscdgxxgfa3a0z9qnn7jr66sn70c"))))
+              "1wq17qvizis7bsyvyw1gnfycvivssncngziddnyrbzv2dhvy24bs"))))
    (build-system gnu-build-system)
    (inputs
     `(("curl" ,curl)
-      ("gnutls" ,gnutls)
+      ("gnutls" ,gnutls/dane)
       ("libgcrypt" ,libgcrypt)
       ("openssl" ,openssl)
       ("zlib" ,zlib)))
@@ -177,49 +177,35 @@ tool to extract metadata from a file and print the results.")
 C library.  It makes it easy to run an HTTP server as part of another
 application.  The library is fully HTTP 1.1 compliant.  It can listen on
 multiple ports, supports four different threading models, and supports
-IPv6.  It
-also features security features such as basic and digest authentication
-and support for SSL3 and TLS.")
+IPv6.  It also features security features such as basic and digest
+authentication and support for SSL3 and TLS.")
    (license license:lgpl2.1+)
    (home-page "https://www.gnu.org/software/libmicrohttpd/")))
 
 (define-public gnurl
   (package
    (name "gnurl")
-   (version "7.55.1-3")
+   (version "7.57.0")
    (source (origin
             (method url-fetch)
-            (uri (string-append "https://gnunet.org/sites/default/files/"
-                                name "-" version ".tar.bz2"))
+            (uri (string-append "mirror://gnu/gnunet/" name "-" version ".tar.xz"))
             (sha256
              (base32
-              "1p2qdh44hgsxjlzh4d3n51xr66cg2z517vpr818flvcrmpq2vxpq"))))
+              "0cl2x1jddnhn1z8gd75w6k7lb6pymn5rf2vqgl2vdkbxsz677z07"))))
    (build-system gnu-build-system)
    (outputs '("out"
               "doc"))                             ; 1.5 MiB of man3 pages
-   (inputs `(("gnutls" ,gnutls)
+   (inputs `(("gnutls" ,gnutls/dane)
              ("libidn" ,libidn)
              ("zlib" ,zlib)))
    (native-inputs
-    `(("autoconf" ,autoconf)
-      ("automake" ,automake)
-      ("libtool" ,libtool)
+    `(("libtool" ,libtool)
       ("groff" ,groff)
       ("perl" ,perl)
       ("pkg-config" ,pkg-config)
       ("python" ,python-2)))
    (arguments
-    `(#:configure-flags '("--enable-ipv6" "--with-gnutls" "--without-libssh2"
-                          "--without-libmetalink" "--without-winidn"
-                          "--without-librtmp" "--without-nghttp2"
-                          "--without-nss" "--without-cyassl"
-                          "--without-polarssl" "--without-ssl"
-                          "--without-winssl" "--without-darwinssl"
-                          "--disable-sspi" "--disable-ntlm-wb"
-                          "--disable-ldap" "--disable-rtsp" "--disable-dict"
-                          "--disable-telnet" "--disable-tftp" "--disable-pop3"
-                          "--disable-imap" "--disable-smtp" "--disable-gopher"
-                          "--disable-file" "--disable-ftp" "--disable-smb")
+    `(#:configure-flags (list "--disable-ntlm-wb")
       #:test-target "test"
       #:parallel-tests? #f
       #:phases
@@ -234,16 +220,8 @@ and support for SSL3 and TLS.")
               (rename-file (string-append out "/share/man/man3")
                            (string-append doc "/share/man/man3"))
               #t)))
-        (add-after 'unpack 'autoconf
-          ;; Clear artifacts left (shebangs) from release preparation.
-          (lambda _
-            (zero? (system* "sh" "buildconf"))))
         (replace 'check
           (lambda _
-            ;; It is unclear why test1026 fails, however the content of it
-            ;; suggests that it is not vital for gnurl.
-            (delete-file "tests/data/test1026")
-
             (substitute* "tests/runtests.pl"
               (("/bin/sh") (which "sh")))
 
@@ -277,7 +255,7 @@ supports HTTP, HTTPS and GnuTLS.")
       ("gnurl" ,gnurl)
       ("gstreamer" ,gstreamer)
       ("gst-plugins-base" ,gst-plugins-base)
-      ("gnutls" ,gnutls)
+      ("gnutls" ,gnutls/dane)
       ("libextractor" ,libextractor)
       ("libgcrypt" ,libgcrypt)
       ("libidn" ,libidn)

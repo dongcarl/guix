@@ -1,11 +1,12 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2015, 2016 Efraim Flashner <efraim@flashner.co.il>
+;;; Copyright © 2015, 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 Mckinley Olsen <mck.olsen@gmail.com>
 ;;; Copyright © 2016, 2017 Alex Griffin <a@ajgrf.com>
 ;;; Copyright © 2016 David Craven <david@craven.ch>
 ;;; Copyright © 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2016, 2017 José Miguel Sánchez García <jmi2k@openmailbox.org>
 ;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
+;;; Copyright © 2017 Kei Kebreau <kkebreau@posteo.net>
 ;;; Copyright © 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2017 Petter <petter@mykolab.ch>
 ;;;
@@ -27,7 +28,9 @@
 (define-module (gnu packages terminals)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix build utils)
+  #:use-module (guix build-system cmake)
   #:use-module (guix build-system gnu)
+  #:use-module (guix build-system glib-or-gtk)
   #:use-module (guix build-system python)
   #:use-module (guix download)
   #:use-module (guix git-download)
@@ -44,12 +47,15 @@
   #:use-module (gnu packages linux)
   #:use-module (gnu packages ncurses)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages perl-check)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-web)
   #:use-module (gnu packages qt)
   #:use-module (gnu packages wm)
   #:use-module (gnu packages xdisorg)
   #:use-module (gnu packages xml)
+  #:use-module (gnu packages xorg)
   #:use-module (srfi srfi-26))
 
 (define-public tilda
@@ -63,7 +69,7 @@
               (sha256
                (base32
                 "1cc4qbg1m3i04lj5p6i6xbd0zvy1320pxdgmjhz5p3j95ibsbfki"))))
-    (build-system gnu-build-system)
+    (build-system glib-or-gtk-build-system)
     (arguments
      `(#:phases (modify-phases %standard-phases
                  (add-before 'patch-source-shebangs 'autogen
@@ -77,9 +83,7 @@
        ("gettext" ,gettext-minimal)
        ("pkg-config" ,pkg-config)))
     (inputs
-     `(("glib" ,glib "bin")
-       ("gtk+" ,gtk+)
-       ("libconfuse" ,libconfuse)
+     `(("libconfuse" ,libconfuse)
        ("vte" ,vte)))
     (synopsis "GTK+-based drop-down terminal")
     (description "Tilda is a terminal emulator similar to normal terminals like
@@ -93,7 +97,7 @@ configurable through a graphical wizard.")
 (define-public termite
   (package
     (name "termite")
-    (version "12")
+    (version "13")
     (source
       (origin
         (method git-fetch)
@@ -105,7 +109,7 @@ configurable through a graphical wizard.")
         (file-name (string-append name "-" version "-checkout"))
         (sha256
          (base32
-          "0s6dyg3vcqk5qcx90bs24wdnd3p56rdjdcanx4pcxvp6ksjl61jz"))))
+          "02cn70ygl93ghhkhs3xdxn5b1yadc255v3yp8cmhhyzsv5027hvj"))))
     (build-system gnu-build-system)
     (arguments
       `(#:phases
@@ -489,7 +493,7 @@ embedded kernel situations.")
                       (share (string-append out "/share")))
                  (substitute* '("qmltermwidget/qmltermwidget.pro")
                    (("INSTALL_DIR = \\$\\$\\[QT_INSTALL_QML\\]")
-                    (string-append "INSTALL_DIR = " out "/qml")))
+                    (string-append "INSTALL_DIR = " out "/lib/qt5/qml")))
                  (substitute* '("app/app.pro")
                    (("target.path \\+= /usr")
                     (string-append "target.path += " out))
@@ -510,7 +514,7 @@ embedded kernel situations.")
            (add-after 'install 'wrap-executable
              (lambda* (#:key inputs outputs #:allow-other-keys)
                (let* ((out (assoc-ref outputs "out"))
-                      (qml "/qml"))
+                      (qml "/lib/qt5/qml"))
                  (wrap-program (string-append out "/bin/cool-retro-term")
                    `("QML2_IMPORT_PATH" ":" prefix
                      (,(string-append out qml)
@@ -538,3 +542,33 @@ eye-candy, customizable, and reasonably lightweight.")
                 license:silofl1.1
                 license:x11
                 license:bsd-3)))))
+
+(define-public sakura
+  (package
+    (name "sakura")
+    (version "3.5.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://launchpad.net/" name "/trunk/"
+                                  version "/+download/" name "-" version
+                                  ".tar.bz2"))
+              (sha256
+               (base32
+                "0fhcn3540iw22l5zg3njh5z8cj0g2n9p6fvagjqa5zc323jfsc7b"))))
+    (build-system cmake-build-system)
+    (arguments
+     ;; no check phase
+     '(#:tests? #f))
+    (native-inputs
+     `(("gettext" ,gettext-minimal)
+       ("perl" ,perl)               ; for pod2man
+       ("pkg-config" ,pkg-config)))
+    (inputs
+     `(("libxft" ,libxft)
+       ("vte" ,vte)))
+    (home-page "https://launchpad.net/sakura")
+    (synopsis "A simple but powerful libvte-based terminal emulator")
+    (description "@code{Sakura} is a terminal emulator based on GTK+ and VTE.
+It's a terminal emulator with few dependencies, so you don't need a full GNOME
+desktop installed to have a decent terminal emulator.")
+    (license license:gpl2)))

@@ -55,6 +55,7 @@
 
             %service-type-path
             fold-service-types
+            lookup-service-types
 
             service
             service?
@@ -95,9 +96,7 @@
 
             %boot-service
             %activation-service
-            etc-service
-
-            file-union))                      ;XXX: for lack of a better place
+            etc-service))
 
 ;;; Comment:
 ;;;
@@ -177,17 +176,32 @@
   (make-parameter `((,%distro-root-directory . "gnu/services")
                     (,%distro-root-directory . "gnu/system"))))
 
+(define (all-service-modules)
+  "Return the default set of service modules."
+  (cons (resolve-interface '(gnu services))
+        (all-modules (%service-type-path))))
+
 (define* (fold-service-types proc seed
                              #:optional
-                             (modules (all-modules (%service-type-path))))
+                             (modules (all-service-modules)))
   "For each service type exported by one of MODULES, call (PROC RESULT).  SEED
 is used as the initial value of RESULT."
   (fold-module-public-variables (lambda (object result)
                                   (if (service-type? object)
                                       (proc object result)
                                       result))
-                                '()
+                                seed
                                 modules))
+
+(define lookup-service-types
+  (let ((table
+         (delay (fold-service-types (lambda (type result)
+                                      (vhash-consq (service-type-name type)
+                                                   type result))
+                                    vlist-null))))
+    (lambda (name)
+      "Return the list of services with the given NAME (a symbol)."
+      (vhash-foldq* cons '() name (force table)))))
 
 ;; Services of a given type.
 (define-record-type <service>
@@ -367,12 +381,19 @@ boot."
                                                 #t))))
                     ;; Ignore I/O errors so the system can boot.
                     (fail-safe
+                     ;; Remove stale Shadow lock files as they would lead to
+                     ;; failures of 'useradd' & co.
+                     (delete-file "/etc/group.lock")
+                     (delete-file "/etc/passwd.lock")
+                     (delete-file "/etc/.pwd.lock") ;from 'lckpwdf'
+
                      (delete-file-recursively "/tmp")
                      (delete-file-recursively "/var/run")
                      (mkdir "/tmp")
                      (chmod "/tmp" #o1777)
                      (mkdir "/var/run")
-                     (chmod "/var/run" #o755))))))))
+                     (chmod "/var/run" #o755)
+                     (delete-file-recursively "/run/udev/watch.old"))))))))
 
 (define cleanup-service-type
   ;; Service that cleans things up in /tmp and similar.
@@ -380,38 +401,6 @@ boot."
                 (extensions
                  (list (service-extension boot-service-type
                                           cleanup-gexp)))))
-
-(define* (file-union name files)                  ;FIXME: Factorize.
-  "Return a <computed-file> that builds a directory containing all of FILES.
-Each item in FILES must be a list where the first element is the file name to
-use in the new directory, and the second element is a gexp denoting the target
-file."
-  (computed-file name
-                 #~(begin
-                     (mkdir #$output)
-                     (chdir #$output)
-                     #$@(map (match-lambda
-                               ((target source)
-                                #~(begin
-                                    ;; Stat the source to abort early if it
-                                    ;; does not exist.
-                                    (stat #$source)
-
-                                    (symlink #$source #$target))))
-                             files))))
-
-(define (directory-union name things)
-  "Return a directory that is the union of THINGS."
-  (match things
-    ((one)
-     ;; Only one thing; return it.
-     one)
-    (_
-     (computed-file name
-                    (with-imported-modules '((guix build union))
-                      #~(begin
-                          (use-modules (guix build union))
-                          (union-build #$output '#$things)))))))
 
 (define* (activation-service->script service)
   "Return as a monadic value the activation script for SERVICE, a service of

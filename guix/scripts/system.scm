@@ -36,10 +36,15 @@
   #:use-module (guix graph)
   #:use-module (guix scripts graph)
   #:use-module (guix build utils)
+  #:use-module (guix progress)
+  #:use-module ((guix build syscalls) #:select (terminal-columns))
   #:use-module (gnu build install)
+  #:autoload   (gnu build file-systems)
+                 (find-partition-by-label find-partition-by-uuid)
   #:use-module (gnu system)
   #:use-module (gnu bootloader)
   #:use-module (gnu system file-systems)
+  #:use-module (gnu system mapped-devices)
   #:use-module (gnu system linux-container)
   #:use-module (gnu system uuid)
   #:use-module (gnu system vm)
@@ -111,47 +116,54 @@ BODY..., and restore them."
   (store-lift topologically-sorted))
 
 
-(define* (copy-item item target
+(define* (copy-item item references target
                     #:key (log-port (current-error-port)))
-  "Copy ITEM to the store under root directory TARGET and register it."
-  (mlet* %store-monad ((refs (references* item)))
-    (let ((dest  (string-append target item))
-          (state (string-append target "/var/guix")))
-      (format log-port "copying '~a'...~%" item)
+  "Copy ITEM to the store under root directory TARGET and register it with
+REFERENCES as its set of references."
+  (let ((dest  (string-append target item))
+        (state (string-append target "/var/guix")))
+    (format log-port "copying '~a'...~%" item)
 
-      ;; Remove DEST if it exists to make sure that (1) we do not fail badly
-      ;; while trying to overwrite it (see <http://bugs.gnu.org/20722>), and
-      ;; (2) we end up with the right contents.
-      (when (file-exists? dest)
-        (delete-file-recursively dest))
+    ;; Remove DEST if it exists to make sure that (1) we do not fail badly
+    ;; while trying to overwrite it (see <http://bugs.gnu.org/20722>), and
+    ;; (2) we end up with the right contents.
+    (when (file-exists? dest)
+      (delete-file-recursively dest))
 
-      (copy-recursively item dest
-                        #:log (%make-void-port "w"))
+    (copy-recursively item dest
+                      #:log (%make-void-port "w"))
 
-      ;; Register ITEM; as a side-effect, it resets timestamps, etc.
-      ;; Explicitly use "TARGET/var/guix" as the state directory, to avoid
-      ;; reproducing the user's current settings; see
-      ;; <http://bugs.gnu.org/18049>.
-      (unless (register-path item
-                             #:prefix target
-                             #:state-directory state
-                             #:references refs)
-        (leave (G_ "failed to register '~a' under '~a'~%")
-               item target))
-
-      (return #t))))
+    ;; Register ITEM; as a side-effect, it resets timestamps, etc.
+    ;; Explicitly use "TARGET/var/guix" as the state directory, to avoid
+    ;; reproducing the user's current settings; see
+    ;; <http://bugs.gnu.org/18049>.
+    (unless (register-path item
+                           #:prefix target
+                           #:state-directory state
+                           #:references references)
+      (leave (G_ "failed to register '~a' under '~a'~%")
+             item target))))
 
 (define* (copy-closure item target
                        #:key (log-port (current-error-port)))
   "Copy ITEM and all its dependencies to the store under root directory
 TARGET, and register them."
-  (mlet* %store-monad ((refs    (references* item))
-                       (to-copy (topologically-sorted*
-                                 (delete-duplicates (cons item refs)
-                                                    string=?))))
-    (sequence %store-monad
-              (map (cut copy-item <> target #:log-port log-port)
-                   to-copy))))
+  (mlet* %store-monad ((to-copy (topologically-sorted* (list item)))
+                       (refs    (mapm %store-monad references* to-copy)))
+    (define progress-bar
+      (progress-reporter/bar (length to-copy)
+                             (format #f (G_ "copying to '~a'...")
+                                     target)))
+
+    (call-with-progress-reporter progress-bar
+      (lambda (report)
+        (let ((void (%make-void-port "w")))
+          (for-each (lambda (item refs)
+                      (copy-item item refs target #:log-port void)
+                      (report))
+                    to-copy refs))))
+
+    (return *unspecified*)))
 
 (define* (install-bootloader installer-drv
                              #:key
@@ -410,6 +422,7 @@ NUMBERS, which is a list of generation numbers."
   "Roll back the system profile to its previous generation.  STORE is an open
 connection to the store."
   (switch-to-system-generation store "-1"))
+
 
 ;;;
 ;;; Switch generations.
@@ -562,6 +575,77 @@ PATTERN, a string.  When PATTERN is #f, display all the system generations."
 
 
 ;;;
+;;; File system declaration checks.
+;;;
+
+(define (check-file-system-availability file-systems)
+  "Check whether the UUIDs or partition labels that FILE-SYSTEMS refer to, if
+any, are available.  Raise an error if they're not."
+  (define relevant
+    (filter (lambda (fs)
+              (and (file-system-mount? fs)
+                   (not (string=? "tmpfs" (file-system-type fs)))
+                   (not (memq 'bind-mount (file-system-flags fs)))))
+            file-systems))
+
+  (define labeled
+    (filter (lambda (fs)
+              (eq? (file-system-title fs) 'label))
+            relevant))
+
+  (define uuid
+    (filter (lambda (fs)
+              (eq? (file-system-title fs) 'uuid))
+            relevant))
+
+  (define fail? #f)
+
+  (define (file-system-location* fs)
+    (location->string
+     (source-properties->location
+      (file-system-location fs))))
+
+  (let-syntax ((error (syntax-rules ()
+                        ((_ args ...)
+                         (begin
+                           (set! fail? #t)
+                           (format (current-error-port)
+                                   args ...))))))
+    (for-each (lambda (fs)
+                (unless (find-partition-by-label (file-system-device fs))
+                  (error (G_ "~a: error: file system with label '~a' not found~%")
+                         (file-system-location* fs)
+                         (file-system-device fs))))
+              labeled)
+    (for-each (lambda (fs)
+                (unless (find-partition-by-uuid (file-system-device fs))
+                  (error (G_ "~a: error: file system with UUID '~a' not found~%")
+                         (file-system-location* fs)
+                         (uuid->string (file-system-device fs)))))
+              uuid)
+
+    (when fail?
+      ;; Better be safe than sorry.
+      (exit 1))))
+
+(define (check-mapped-devices mapped-devices)
+  "Check that each of MAPPED-DEVICES is valid according to the 'check'
+procedure of its type."
+  (for-each (lambda (md)
+              (let ((check (mapped-device-kind-check
+                            (mapped-device-type md))))
+                ;; We expect CHECK to raise an exception with a detailed
+                ;; '&message' if something goes wrong, but handle the case
+                ;; where it just returns #f.
+                (unless (check md)
+                  (leave (G_ "~a: invalid '~a' mapped device~%")
+                         (location->string
+                          (source-properties->location
+                           (mapped-device-location md)))))))
+            mapped-devices))
+
+
+;;;
 ;;; Action.
 ;;;
 
@@ -613,9 +697,12 @@ PATTERN, a string.  When PATTERN is #f, display all the system generations."
 and TARGET arguments."
   (with-monad %store-monad
     (gexp->file "bootloader-installer"
-                (with-imported-modules '((guix build utils))
+                (with-imported-modules '((gnu build bootloader)
+                                         (guix build utils))
                   #~(begin
-                      (use-modules (guix build utils))
+                      (use-modules (gnu build bootloader)
+                                   (guix build utils)
+                                   (ice-9 binary-ports))
                       (#$installer #$bootloader #$device #$target))))))
 
 (define* (perform-action action os
@@ -642,6 +729,14 @@ output when building a system derivation, such as a disk image."
 
   (when (eq? action 'reconfigure)
     (maybe-suggest-running-guix-pull))
+
+  ;; Check whether the declared file systems exist.  This is better than
+  ;; instantiating a broken configuration.  Assume that we can only check if
+  ;; running as root.
+  (when (memq action '(init reconfigure))
+    (when (zero? (getuid))
+      (check-file-system-availability (operating-system-file-systems os)))
+    (check-mapped-devices (operating-system-mapped-devices os)))
 
   (mlet* %store-monad
       ((sys       (system-derivation-for-action os action
@@ -789,6 +884,9 @@ Some ACTIONS support additional ARGS.\n"))
   (display (G_ "
   -d, --derivation       return the derivation of the given system"))
   (display (G_ "
+  -e, --expression=EXPR  consider the operating-system EXPR evaluates to
+                         instead of reading FILE, when applicable"))
+  (display (G_ "
       --on-error=STRATEGY
                          apply STRATEGY when an error occurs while reading FILE"))
   (display (G_ "
@@ -826,6 +924,9 @@ Some ACTIONS support additional ARGS.\n"))
          (option '(#\V "version") #f #f
                  (lambda args
                    (show-version-and-exit "guix system")))
+         (option '(#\e "expression") #t #f
+                 (lambda (opt name arg result)
+                   (alist-cons 'expression arg result)))
          (option '(#\d "derivation") #f #f
                  (lambda (opt name arg result)
                    (alist-cons 'derivations-only? #t result)))
@@ -875,8 +976,8 @@ Some ACTIONS support additional ARGS.\n"))
   ;; Alist of default option values.
   `((system . ,(%current-system))
     (substitutes? . #t)
-    (graft? . #t)
     (build-hook? . #t)
+    (graft? . #t)
     (verbosity . 0)
     (file-system-type . "ext4")
     (image-size . guess)
@@ -895,11 +996,19 @@ resulting from command-line parsing."
   (let* ((file        (match args
                         (() #f)
                         ((x . _) x)))
+         (expr        (assoc-ref opts 'expression))
          (system      (assoc-ref opts 'system))
-         (os          (if file
-                          (load* file %user-module
-                                 #:on-error (assoc-ref opts 'on-error))
-                          (leave (G_ "no configuration file specified~%"))))
+         (os          (cond
+                       ((and expr file)
+                        (leave
+                         (G_ "both file and expression cannot be specified~%")))
+                       (expr
+                        (read/eval expr))
+                       (file
+                        (load* file %user-module
+                                    #:on-error (assoc-ref opts 'on-error)))
+                       (else
+                        (leave (G_ "no configuration specified~%")))))
 
          (dry?        (assoc-ref opts 'dry-run?))
          (bootloader? (assoc-ref opts 'install-bootloader?))
@@ -1012,7 +1121,8 @@ argument list and OPTS is the option alist."
     ;; Extract the plain arguments from OPTS.
     (let* ((args   (reverse (filter-map (match-pair 'argument) opts)))
            (count  (length args))
-           (action (assoc-ref opts 'action)))
+           (action (assoc-ref opts 'action))
+           (expr   (assoc-ref opts 'expression)))
       (define (fail)
         (leave (G_ "wrong number of arguments for action '~a'~%")
                action))
@@ -1026,7 +1136,8 @@ argument list and OPTS is the option alist."
 
       (case action
         ((build container vm vm-image disk-image reconfigure)
-         (unless (= count 1)
+         (unless (or (= count 1)
+                     (and expr (= count 0)))
            (fail)))
         ((init)
          (unless (= count 2)
@@ -1040,7 +1151,8 @@ argument list and OPTS is the option alist."
                                          parse-sub-command))
            (args     (option-arguments opts))
            (command  (assoc-ref opts 'action)))
-      (parameterize ((%graft? (assoc-ref opts 'graft?)))
+      (parameterize ((%graft? (assoc-ref opts 'graft?))
+                     (current-terminal-columns (terminal-columns)))
         (process-command command args opts)))))
 
 ;;; Local Variables:

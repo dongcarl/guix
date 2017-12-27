@@ -6,10 +6,12 @@
 ;;; Copyright © 2015 David Thompson <davet@gnu.org>
 ;;; Copyright © 2015, 2016, 2017 Leo Famulari <leo@famulari.name>
 ;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
-;;; Copyright © 2016, 2017 ng0 <contact.ng0@cryptolab.net>
+;;; Copyright © 2016, 2017 ng0 <ng0@infotropique.org>
 ;;; Copyright © 2016 Hartmut Goebel <h.goebel@crazy-compilers.com>
 ;;; Copyright © 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2017 Marius Bakke <mbakke@fastmail.com>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
+;;; Copyright © 2017 Rutger Helling <rhelling@mykolab.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -35,9 +37,15 @@
   #:use-module (guix build-system perl)
   #:use-module (guix build-system python)
   #:use-module (guix build-system cmake)
+  #:use-module (guix build-system haskell)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages)
+  #:use-module (gnu packages check)
+  #:use-module (gnu packages dns)
   #:use-module (gnu packages guile)
+  #:use-module (gnu packages haskell)
+  #:use-module (gnu packages haskell-check)
+  #:use-module (gnu packages haskell-crypto)
   #:use-module (gnu packages libbsd)
   #:use-module (gnu packages libffi)
   #:use-module (gnu packages libidn)
@@ -47,7 +55,10 @@
   #:use-module (gnu packages perl)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-crypto)
+  #:use-module (gnu packages python-web)
   #:use-module (gnu packages texinfo)
+  #:use-module (gnu packages time)
   #:use-module (gnu packages base)
   #:use-module (srfi srfi-1))
 
@@ -112,7 +123,7 @@ in intelligent transportation networks.")
 (define-public p11-kit
   (package
     (name "p11-kit")
-    (version "0.23.8")
+    (version "0.23.9")
     (source
      (origin
       (method url-fetch)
@@ -120,7 +131,7 @@ in intelligent transportation networks.")
                           "download/" version "/p11-kit-" version ".tar.gz"))
       (sha256
        (base32
-        "0gqk1d09yyin75lvlywpbf3kxlnrcwbq8ridgapvqqjbzvjk98ab"))))
+        "0qyvnkb5hfi94wv3bn67y20hcbbvynvjwxpk7k9sh1si6ff69hg1"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("pkg-config" ,pkg-config)))
@@ -229,10 +240,22 @@ required structures.")
     (inputs `(("guile" ,guile-2.0)
               ,@(alist-delete "guile" (package-inputs gnutls))))))
 
+(define-public gnutls/dane
+  ;; GnuTLS with build libgnutls-dane, implementing DNS-based
+  ;; Authentication of Named Entities.  This is required for GNS functionality
+  ;; by GNUnet and gnURL.  This is done in an extra package definition
+  ;; to have the choice between GnuTLS with Dane and without Dane.
+  (package
+    (inherit gnutls)
+    (name "gnutls-dane")
+    (inputs `(("unbound" ,unbound)
+              ,@(package-inputs gnutls)))))
+
 (define-public openssl
   (package
    (name "openssl")
    (version "1.0.2l")
+   (replacement openssl-1.0.2n)
    (source (origin
              (method url-fetch)
              (uri (list (string-append "ftp://ftp.openssl.org/source/"
@@ -375,14 +398,35 @@ required structures.")
    (license license:openssl)
    (home-page "http://www.openssl.org/")))
 
+;; Fixes CVE-2017-3735, CVE-2017-3736, CVE-2017-3737, and CVE-2017-3738.
+;; See <https://www.openssl.org/news/cl102.txt>.
+(define-public openssl-1.0.2n
+  (package
+    (inherit openssl)
+    (version "1.0.2n")
+    (source (origin
+              (inherit (package-source openssl))
+              (uri (list (string-append "https://www.openssl.org/source/openssl-"
+                                        version ".tar.gz")
+                         (string-append "ftp://ftp.openssl.org/source/openssl-"
+                                        version ".tar.gz")
+                         (string-append "ftp://ftp.openssl.org/source/old/"
+                                        (string-trim-right version char-set:letter)
+                                        "/openssl-" version ".tar.gz")))
+              (sha256
+               (base32
+                "1zm82pyq5a9jm10q6iv7d3dih3xwjds4x30fqph3k317byvsn2rp"))))))
+
 (define-public openssl-next
   (package
     (inherit openssl)
     (name "openssl")
-    (version "1.1.0f")
+    (version "1.1.0g")
     (source (origin
              (method url-fetch)
-             (uri (list (string-append "ftp://ftp.openssl.org/source/"
+             (uri (list (string-append "https://www.openssl.org/source/openssl-"
+                                       version ".tar.gz")
+                        (string-append "ftp://ftp.openssl.org/source/"
                                        name "-" version ".tar.gz")
                         (string-append "ftp://ftp.openssl.org/source/old/"
                                        (string-trim-right version char-set:letter)
@@ -390,7 +434,7 @@ required structures.")
               (patches (search-patches "openssl-1.1.0-c-rehash-in.patch"))
               (sha256
                (base32
-                "0r97n4n552ns571diz54qsgarihrxvbn7kvyv8wjyfs9ybrldxqj"))))
+                "1bvka2wf33w2vxv7yw578nnjqyhz2b3chvfb0l4k2ffscw950kfy"))))
     (outputs '("out"
                "doc"        ;1.3MiB of man3 pages
                "static"))   ; 5.5MiB of .a files
@@ -442,14 +486,14 @@ required structures.")
 (define-public libressl
   (package
     (name "libressl")
-    (version "2.5.5")
+    (version "2.6.4")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://openbsd/LibreSSL/"
                                   name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1i77viqy1afvbr392npk9v54k9zhr9zq2vhv6pliza22b0ymwzz5"))))
+                "07yi37a2ghsgj2b4w30q1s4d2inqnix7ika1m21y57p9z71212k3"))))
     (build-system gnu-build-system)
     (arguments
      ;; Do as if 'getentropy' was missing since older Linux kernels lack it
@@ -486,14 +530,13 @@ netcat implementation that supports TLS.")
   (package
     (name "python-acme")
     ;; Remember to update the hash of certbot when updating python-acme.
-    (version "0.18.1")
+    (version "0.20.0")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "acme" version))
-              (patches (search-patches "python-acme-dont-use-openssl-rand.patch"))
               (sha256
                (base32
-                "0ry6vhfkhds28sg232hngwfnkqihsxv9r8w92c6nz45r7w56qk0y"))))
+                "1md3llp6640dviv9bzyy7qzn3szxil38645cjqcg7hlcdknil4j5"))))
     (build-system python-build-system)
     (arguments
      `(#:phases
@@ -541,7 +584,7 @@ netcat implementation that supports TLS.")
               (uri (pypi-uri name version))
               (sha256
                (base32
-                "0k3bqfkjxyg0qivs4a6iz6gyqx8li4hgn8m268r72lxgq46ay2mf"))))
+                "126y6jg1nyd8js2jchl4dbmpg507hawaxnyw7510qh7vcidm1gya"))))
     (build-system python-build-system)
     (arguments
      `(,@(substitute-keyword-arguments (package-arguments python-acme)
@@ -665,7 +708,7 @@ OpenSSL libraries).")
 (define-public perl-crypt-openssl-bignum
  (package
   (name "perl-crypt-openssl-bignum")
-  (version "0.08")
+  (version "0.09")
   (source
     (origin
       (method url-fetch)
@@ -675,7 +718,7 @@ OpenSSL libraries).")
              ".tar.gz"))
       (sha256
         (base32
-          "0gamn4dff1bz77nswacy1dlpn9fkwahzw7yvvik4nbwwy2s63hc8"))))
+          "1p22znbajq91lbk2k3yg12ig7hy5b4vy8igxwqkmbm4nhgxp4ki3"))))
   (build-system perl-build-system)
   (inputs `(("openssl" ,openssl)))
   (arguments perl-crypt-arguments)
@@ -773,6 +816,9 @@ then ported to the GNU / Linux environment.")
         (base32
          "11wnj34rfqxjggmdgf042i49lr6civgbqwv2p7p8bn6k2919vg4r"))))
     (build-system cmake-build-system)
+    (arguments
+     `(#:configure-flags
+       (list "-DUSE_SHARED_MBEDTLS_LIBRARY=ON")))
     (native-inputs
      `(("perl" ,perl)))
     (synopsis "Small TLS library")
@@ -783,3 +829,46 @@ for developers to include cryptographic and SSL/TLS capabilities in their
 coding footprint.")
     (home-page "https://tls.mbed.org")
     (license license:asl2.0)))
+
+(define-public ghc-tls
+  (package
+    (name "ghc-tls")
+    (version "1.3.8")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://hackage.haskell.org/package/"
+                                  "tls/tls-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1rdidf18i781c0vdvy9yn79yh08hmcacf6fp3sgghyiy3h0wyh5l"))))
+    (build-system haskell-build-system)
+    (inputs
+     `(("ghc-mtl" ,ghc-mtl)
+       ("ghc-cereal" ,ghc-cereal)
+       ("ghc-data-default-class" ,ghc-data-default-class)
+       ("ghc-memory" ,ghc-memory)
+       ("ghc-cryptonite" ,ghc-cryptonite)
+       ("ghc-asn1-types" ,ghc-asn1-types)
+       ("ghc-asn1-encoding" ,ghc-asn1-encoding)
+       ("ghc-x509" ,ghc-x509)
+       ("ghc-x509-store" ,ghc-x509-store)
+       ("ghc-x509-validation" ,ghc-x509-validation)
+       ("ghc-async" ,ghc-async)
+       ("ghc-network" ,ghc-network)
+       ("ghc-hourglass" ,ghc-hourglass)))
+    (native-inputs
+     `(("ghc-tasty" ,ghc-tasty)
+       ("ghc-tasty-quickcheck" ,ghc-tasty-quickcheck)
+       ("ghc-quickcheck" ,ghc-quickcheck)))
+    (home-page "https://github.com/vincenthz/hs-tls")
+    (synopsis
+     "TLS/SSL protocol native implementation (Server and Client)")
+    (description
+     "Native Haskell TLS and SSL protocol implementation for server and client.
+This provides a high-level implementation of a sensitive security protocol,
+eliminating a common set of security issues through the use of the advanced
+type system, high level constructions and common Haskell features.  Currently
+implement the SSL3.0, TLS1.0, TLS1.1 and TLS1.2 protocol, and support RSA and
+Ephemeral (Elliptic curve and regular) Diffie Hellman key exchanges, and many
+extensions.")
+    (license license:bsd-3)))

@@ -7,6 +7,8 @@
 # Copyright © 2017 Mathieu Othacehe <m.othacehe@gmail.com>
 # Copyright © 2017 Leo Famulari <leo@famulari.name>
 # Copyright © 2017 Ricardo Wurmus <rekado@elephly.net>
+# Copyright © 2017 Jan Nieuwenhuizen <janneke@gnu.org>
+# Copyright © 2017 Arun Isaac <arunisaac@systemreboot.net>
 #
 # This file is part of GNU Guix.
 #
@@ -32,7 +34,8 @@ nodist_noinst_SCRIPTS =				\
 
 # Modules that are not compiled but are installed nonetheless, such as
 # build-side modules with unusual dependencies.
-MODULES_NOT_COMPILED =
+MODULES_NOT_COMPILED =				\
+  guix/man-db.scm
 
 include gnu/local.mk
 
@@ -46,6 +49,7 @@ MODULES =					\
   guix/hash.scm					\
   guix/pk-crypto.scm				\
   guix/pki.scm					\
+  guix/progress.scm				\
   guix/combinators.scm				\
   guix/memoization.scm				\
   guix/utils.scm				\
@@ -79,6 +83,7 @@ MODULES =					\
   guix/build-system/dub.scm			\
   guix/build-system/emacs.scm			\
   guix/build-system/font.scm			\
+  guix/build-system/go.scm			\
   guix/build-system/meson.scm			\
   guix/build-system/minify.scm			\
   guix/build-system/asdf.scm			\
@@ -91,18 +96,22 @@ MODULES =					\
   guix/build-system/waf.scm			\
   guix/build-system/r.scm			\
   guix/build-system/ruby.scm			\
+  guix/build-system/scons.scm			\
   guix/build-system/texlive.scm			\
   guix/build-system/trivial.scm			\
   guix/ftp-client.scm				\
   guix/http-client.scm				\
   guix/gnupg.scm				\
   guix/elf.scm					\
+  guix/profiling.scm				\
   guix/store.scm				\
   guix/cvs-download.scm				\
   guix/svn-download.scm				\
+  guix/i18n.scm					\
   guix/ui.scm					\
   guix/build/ant-build-system.scm		\
   guix/build/download.scm			\
+  guix/build/download-nar.scm			\
   guix/build/cargo-build-system.scm		\
   guix/build/cmake-build-system.scm		\
   guix/build/dub-build-system.scm		\
@@ -110,6 +119,7 @@ MODULES =					\
   guix/build/meson-build-system.scm		\
   guix/build/minify-build-system.scm		\
   guix/build/font-build-system.scm		\
+  guix/build/go-build-system.scm		\
   guix/build/asdf-build-system.scm		\
   guix/build/git.scm				\
   guix/build/hg.scm				\
@@ -121,6 +131,7 @@ MODULES =					\
   guix/build/ocaml-build-system.scm		\
   guix/build/r-build-system.scm			\
   guix/build/ruby-build-system.scm		\
+  guix/build/scons-build-system.scm		\
   guix/build/texlive-build-system.scm		\
   guix/build/waf-build-system.scm		\
   guix/build/haskell-build-system.scm		\
@@ -128,6 +139,7 @@ MODULES =					\
   guix/build/utils.scm				\
   guix/build/union.scm				\
   guix/build/profiles.scm			\
+  guix/build/compile.scm			\
   guix/build/pull.scm				\
   guix/build/rpath.scm				\
   guix/build/cvs.scm				\
@@ -143,6 +155,7 @@ MODULES =					\
   guix/build/make-bootstrap.scm			\
   guix/search-paths.scm				\
   guix/packages.scm				\
+  guix/import/print.scm				\
   guix/import/utils.scm				\
   guix/import/gnu.scm				\
   guix/import/snix.scm				\
@@ -205,11 +218,13 @@ MODULES +=					\
   guix/import/crate.scm				\
   guix/import/gem.scm				\
   guix/import/github.scm   			\
+  guix/import/gnome.scm				\
   guix/import/json.scm				\
   guix/import/pypi.scm				\
   guix/import/stackage.scm			\
   guix/scripts/import/crate.scm			\
   guix/scripts/import/gem.scm			\
+  guix/scripts/import/json.scm  		\
   guix/scripts/import/pypi.scm			\
   guix/scripts/import/stackage.scm
 
@@ -237,8 +252,9 @@ dist_noinst_DATA = guix/tests.scm guix/tests/http.scm
 # Auxiliary files for packages.
 AUX_FILES =						\
   gnu/packages/aux-files/emacs/guix-emacs.el		\
-  gnu/packages/aux-files/linux-libre/4.13-i686.conf	\
-  gnu/packages/aux-files/linux-libre/4.13-x86_64.conf	\
+  gnu/packages/aux-files/linux-libre/4.14-arm.conf	\
+  gnu/packages/aux-files/linux-libre/4.14-i686.conf	\
+  gnu/packages/aux-files/linux-libre/4.14-x86_64.conf	\
   gnu/packages/aux-files/linux-libre/4.9-i686.conf	\
   gnu/packages/aux-files/linux-libre/4.9-x86_64.conf	\
   gnu/packages/aux-files/linux-libre/4.4-i686.conf	\
@@ -249,6 +265,7 @@ AUX_FILES =						\
 # Templates, examples.
 EXAMPLES =					\
   gnu/system/examples/bare-bones.tmpl		\
+  gnu/system/examples/beaglebone-black.tmpl	\
   gnu/system/examples/desktop.tmpl		\
   gnu/system/examples/lightweight-desktop.tmpl	\
   gnu/system/examples/vm-image.tmpl
@@ -285,6 +302,7 @@ SCM_TESTS =					\
   tests/hash.scm				\
   tests/pk-crypto.scm				\
   tests/pki.scm					\
+  tests/print.scm				\
   tests/sets.scm				\
   tests/modules.scm				\
   tests/gnu-maintenance.scm			\
@@ -412,7 +430,7 @@ check-system: $(GOBJECTS) $(BOOTSTRAP_GUILE_TARBALLS)
 # Public key used to sign substitutes from hydra.gnu.org & co.
 dist_pkgdata_DATA =				\
   hydra.gnu.org.pub				\
-  bayfront.guixsd.org.pub
+  berlin.guixsd.org.pub
 
 # Bash completion file.
 dist_bashcompletion_DATA = etc/completion/bash/guix
@@ -431,6 +449,7 @@ EXTRA_DIST =						\
   build-aux/hydra/evaluate.scm				\
   build-aux/hydra/gnu-system.scm			\
   build-aux/hydra/guix.scm				\
+  build-aux/hydra/guix-modular.scm			\
   build-aux/check-available-binaries.scm		\
   build-aux/check-final-inputs-self-contained.scm	\
   build-aux/download.scm				\
@@ -579,7 +598,7 @@ SOURCE_TARBALLS =					\
   $(foreach ext,tar.gz,$(PACKAGE_FULL_TARNAME).$(ext))
 
 # Systems supported by Guix.
-SUPPORTED_SYSTEMS ?= x86_64-linux i686-linux armhf-linux
+SUPPORTED_SYSTEMS ?= x86_64-linux i686-linux armhf-linux aarch64-linux
 
 # Guix binary tarballs.
 BINARY_TARBALLS =							\
@@ -596,9 +615,6 @@ GUIXSD_IMAGE_BASE = guixsd-install-$(PACKAGE_VERSION)
 
 # Prefix of the GuixSD VM image file name.
 GUIXSD_VM_IMAGE_BASE = guixsd-vm-image-$(PACKAGE_VERSION)
-
-# Size of the VM image (for x86_64 typically).
-GUIXSD_VM_IMAGE_SIZE ?= 2GiB
 
 # The release process works in several phases:
 #
@@ -650,15 +666,14 @@ release: dist
 	    echo "failed to produced GuixSD installation image for $$system" >&2 ;	\
 	    exit 1 ;									\
 	  fi ;										\
-	  xz < "$$image" > "$(releasedir)/$(GUIXSD_IMAGE_BASE).$$system.xz.tmp" ;	\
-	  mv "$(releasedir)/$(GUIXSD_IMAGE_BASE).$$system.xz.tmp"			\
-	     "$(releasedir)/$(GUIXSD_IMAGE_BASE).$$system.xz" ;				\
+	  xz < "$$image" > "$(releasedir)/$(GUIXSD_IMAGE_BASE).$$system.iso.xz.tmp" ;	\
+	  mv "$(releasedir)/$(GUIXSD_IMAGE_BASE).$$system.iso.xz.tmp"			\
+	     "$(releasedir)/$(GUIXSD_IMAGE_BASE).$$system.iso.xz" ;			\
 	done
 	for system in $(GUIXSD_VM_SYSTEMS) ; do						\
 	  image=`$(top_builddir)/pre-inst-env						\
 	    guix system vm-image							\
 	    --system=$$system								\
-	    --image-size=$(GUIXSD_VM_IMAGE_SIZE)					\
 	    gnu/system/examples/vm-image.tmpl` ;					\
 	  if [ ! -f "$$image" ] ; then							\
 	    echo "failed to produced GuixSD VM image for $$system" >&2 ;		\
@@ -716,6 +731,15 @@ hydra-jobs.scm: $(GOBJECTS)
 	$(AM_V_GEN)$(top_builddir)/pre-inst-env "$(GUILE)"		\
 	  "$(top_srcdir)/build-aux/hydra/evaluate.scm"			\
 	  "$(top_srcdir)/build-aux/hydra/gnu-system.scm" > "$@.tmp"
+	$(AM_V_at)mv "$@.tmp" "$@"
+
+# Compute the Cuirass jobs and write them in the target file.
+cuirass-jobs.scm: $(GOBJECTS)
+	$(AM_V_at)$(MKDIR_P) "`dirname "$@"`"
+	$(AM_V_GEN)$(top_builddir)/pre-inst-env "$(GUILE)"		\
+	  "$(top_srcdir)/build-aux/hydra/evaluate.scm"			\
+	  "$(top_srcdir)/build-aux/cuirass/gnu-system.scm" 		\
+	  cuirass > "$@.tmp"
 	$(AM_V_at)mv "$@.tmp" "$@"
 
 .PHONY: gen-ChangeLog gen-AUTHORS gen-tarball-version

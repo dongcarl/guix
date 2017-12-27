@@ -7,6 +7,7 @@
 ;;; Copyright © 2016 Andreas Enge <andreas@enge.fr>
 ;;; Copyright © 2017 Manolis Fragkiskos Ragkousis <manolis837@gmail.com>
 ;;; Copyright © 2017 Ben Woodcroft <donttrustben@gmail.com>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -244,7 +245,7 @@ exception-handling library.")
                            "/archive/v" version ".tar.gz"))
        (sha256
         (base32
-         "1ab354bmwwryxr4zgxchfkm6h4z38mjgif8yn89x640rsrgw5ipj"))
+         "1p0c91cc7zg3c00wjaibnxb0a0xm14mkg0h65pzpw93m0d6nc8wd"))
        (file-name (string-append name "-" version ".tar.gz"))))
     (build-system cmake-build-system)
     (arguments
@@ -500,7 +501,7 @@ virtual reality, scientific visualization and modeling.")
        ("intltool" ,intltool)
        ("pkg-config" ,pkg-config)
        ("xvfb" ,xorg-server)))
-    (home-page "http://rapicorn.org")
+    (home-page "https://rapicorn.testbit.org/")
     (synopsis "Toolkit for rapid development of user interfaces")
     (description
      "Rapicorn is a toolkit for rapid development of user interfaces in C++
@@ -630,13 +631,12 @@ and understanding different BRDFs (and other component functions).")
              (string-append "--x-libraries=" (assoc-ref %build-inputs "libx11")
                             "/lib"))
        #:phases
-       (alist-cons-after
-        'unpack 'autoreconf
-        (lambda _
-          ;; let's call configure from configure phase and not now
-          (substitute* "autogen.sh" (("./configure") "# ./configure"))
-          (zero? (system* "sh" "autogen.sh")))
-        %standard-phases)))
+       (modify-phases %standard-phases
+         (add-after 'unpack 'autoreconf
+           (lambda _
+             ;; let's call configure from configure phase and not now
+             (substitute* "autogen.sh" (("./configure") "# ./configure"))
+             (zero? (system* "sh" "autogen.sh")))))))
     (native-inputs
      `(("pkg-config" ,pkg-config)
        ("libtool" ,libtool)

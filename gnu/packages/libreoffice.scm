@@ -7,6 +7,8 @@
 ;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2017 Andy Wingo <wingo@igalia.com>
 ;;; Copyright © 2017 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2017 Marius Bakke <mbakke@fastmail.com>
+;;; Copyright © 2017 Rutger Helling <rhelling@mykolab.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -129,14 +131,14 @@ CSV, CSS and XML.")
 (define-public librevenge
   (package
     (name "librevenge")
-    (version "0.0.2")
+    (version "0.0.4")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "mirror://sourceforge/libwpd/" name "/" name "-"
                           version "/" name "-" version ".tar.xz"))
       (sha256 (base32
-               "03ygxyb0vfjv8raif5q62sl33b54wkr5rzgadb8slijm6k281wpn"))))
+               "1cj76cz4mqcy2mgv9l5xlc95bypyk8zbq0ls9cswqrs2y0lhfgwk"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("cppunit" ,cppunit)
@@ -161,14 +163,14 @@ spreadsheets and presentations.")
 (define-public libwpd
   (package
     (name "libwpd")
-    (version "0.10.0")
+    (version "0.10.2")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "mirror://sourceforge/" name "/" name "/"
                           name "-" version "/" name "-" version ".tar.xz"))
       (sha256 (base32
-               "0b6krzr6kxzm89g6bapn805kdayq70hn16n5b5wfs2lwrf0ag2wx"))))
+               "0436gnidx45a9vx114hhh216jrh57mqb9zyssyjfadagmyz6hgrj"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("doxygen" ,doxygen)
@@ -223,14 +225,14 @@ ZVR (simple compressed text format).")
 (define-public libwpg
   (package
     (name "libwpg")
-    (version "0.3.0")
+    (version "0.3.2")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "mirror://sourceforge/" name "/" name "/"
                           name "-" version "/" name "-" version ".tar.xz"))
       (sha256 (base32
-               "097jx8a638fwwfrzf6v29r1yhc34rq9526py7wf0ck2z4fcr2w3g"))))
+               "0cwc5zkp210c661l0bvk6q21jg9ak5g8gmy578w5fgfnjymz3yjp"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("doxygen" ,doxygen)
@@ -323,17 +325,18 @@ AbiWord documents.")
 (define-public libcdr
   (package
     (name "libcdr")
-    (version "0.1.1")
+    (version "0.1.4")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "http://dev-www.libreoffice.org/src/" name "/"
                           name "-" version ".tar.xz"))
       (sha256 (base32
-               "07yzb1yr5kzv0binzj5swz3zzay2gw3xb0fbkc2zwdssgrkf19nh"))))
+               "0vd6likgk51j46llybkx4wq3674xzrhp0k82220pkx9x1aqfi9z7"))))
     (build-system gnu-build-system)
     (native-inputs
-     `(("doxygen" ,doxygen)
+     `(("cppunit" ,cppunit)
+       ("doxygen" ,doxygen)
        ("pkg-config" ,pkg-config)))
     (propagated-inputs ; in Requires or Requires.private field of .pkg
      `(("icu4c" ,icu4c)
@@ -354,21 +357,17 @@ CorelDRAW documents of all versions.")
 (define-public libetonyek
   (package
     (name "libetonyek")
-    (version "0.1.6")
+    (version "0.1.7")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "http://dev-www.libreoffice.org/src/" name "/"
                           name "-" version ".tar.xz"))
       (sha256 (base32
-               "0y60vi1plyq69fqbcjnc0v8mvcjqjsl1ry6rmb3bq3q7j8a2fm6z"))
-      (patches (search-patches "libetonyek-build-with-mdds-1.2.patch"))))
+               "1b1lqy6g7flximlv0bp8jbsivyhdp679yj0d0q4jzm968h6y3nv9"))))
     (build-system gnu-build-system)
     (arguments
-     `(#:configure-flags '("--with-mdds=1.2")
-       #:phases (modify-phases %standard-phases
-                  (add-after 'unpack 'autoreconf
-                    (lambda _ (system* "autoreconf"))))))
+     `(#:configure-flags '("--with-mdds=1.2")))
     (native-inputs
      `(("cppunit" ,cppunit)
        ("doxygen" ,doxygen)
@@ -376,9 +375,7 @@ CorelDRAW documents of all versions.")
        ("gperf" ,gperf)
        ("liblangtag" ,liblangtag)
        ("mdds" ,mdds)
-       ("pkg-config" ,pkg-config)
-       ("autoconf" ,autoconf) ; due to patch
-       ("automake" ,automake)))
+       ("pkg-config" ,pkg-config)))
     (propagated-inputs ; in Requires or Requires.private field of .pkg
      `(("librevenge" ,librevenge)
        ("libxml2" ,libxml2)))
@@ -393,7 +390,7 @@ Apple Keynote documents.  It currently supports Keynote versions 2 to 5.")
 (define-public liblangtag
   (package
     (name "liblangtag")
-    (version "0.5.8")
+    (version "0.6.2")
     (source
       (origin
         (method url-fetch)
@@ -401,14 +398,15 @@ Apple Keynote documents.  It currently supports Keynote versions 2 to 5.")
                             name "-" version ".tar.bz2"))
         (sha256
          (base32
-          "1akf0d7yp29pv3j2pw2riii4n5kyjr9szc0y77khnx9zzr5zdqh8"))))
+          "0bnm4hllr8cfrybm8rw7b8n0nlhzhnv73bkg1bxk452g6a82f96n"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("libtool" ,libtool)
        ("pkg-config" ,pkg-config)))
     (inputs
      `(("libxml2" ,libxml2)))
-    (home-page "http://tagoh.bitbucket.org/liblangtag/")
+    ;; As of December 2017, tagoh.bitbucket.org redirects to a hosting advert.
+    (home-page "https://bitbucket.org/tagoh/liblangtag")
     (synopsis "Library to access tags for identifying languages")
     (description "Liblangtag implements an interface to work with tags
 for identifying languages as described in RFC 5646.  It supports the
@@ -420,14 +418,14 @@ standard 21.0.2.")
 (define-public libexttextcat
   (package
     (name "libexttextcat")
-    (version "3.4.4")
+    (version "3.4.5")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "http://dev-www.libreoffice.org/src/" name "/"
                           name "-" version ".tar.xz"))
       (sha256 (base32
-               "14v2hkygnmf1zgahfm1fha47cr67iikrz2ymiqi28d2jydn0hk7j"))))
+               "1j6sjwkyhqvsgyw938bxxfwkzzi1mahk66g5342lv6j89jfvrz8k"))))
     (build-system gnu-build-system)
     (home-page "http://www.freedesktop.org/wiki/Software/libexttextcat/")
     (synopsis "Text Categorization library")
@@ -439,20 +437,24 @@ library primarily intended for language guessing.")
 (define-public libfreehand
   (package
     (name "libfreehand")
-    (version "0.1.0")
+    (version "0.1.2")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "http://dev-www.libreoffice.org/src/" name "/"
                           name "-" version ".tar.xz"))
       (sha256 (base32
-               "01j7mxi4lmf72w1mv2r098p8l0csdd94w2gq0ncp93djn34al6ai"))))
+               "1b1lvqh68rwij1yvmxy02hsmh7i74ma5767mk8mg5nx6chajshhf"))))
     (build-system gnu-build-system)
     (native-inputs
-     `(("doxygen" ,doxygen)
+     `(("cppunit" ,cppunit)
+       ("doxygen" ,doxygen)
        ("gperf" ,gperf)
        ("perl" ,perl)
        ("pkg-config" ,pkg-config)))
+    (inputs
+     `(("icu4c" ,icu4c)
+       ("lcms" ,lcms)))
     (propagated-inputs ; in Requires or Requires.private field of .pkg
      `(("librevenge" ,librevenge)
        ("zlib" ,zlib)))
@@ -492,14 +494,14 @@ Microsoft Publisher documents of all versions.")
 (define-public libpagemaker
   (package
     (name "libpagemaker")
-    (version "0.0.2")
+    (version "0.0.3")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "http://dev-www.libreoffice.org/src/" name "/"
                           name "-" version ".tar.xz"))
       (sha256 (base32
-               "05zgj5ngg9z4b7dnrfs59nm0macm99lzyxv4mg53jcvp0mkgigfd"))))
+               "1minj0q14d44qfas81a8lkpgj288h5xlkjp084sfx17xv9axr5nq"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("doxygen" ,doxygen)
@@ -509,9 +511,6 @@ Microsoft Publisher documents of all versions.")
     (inputs
      `(("boost" ,boost)
        ("zlib" ,zlib)))
-    (arguments
-     ;; avoid triggering a build failure due to warnings
-     `(#:configure-flags '("--disable-werror")))
     (home-page "https://wiki.documentfoundation.org/DLP/Libraries/libpagemaker")
     (synopsis "Library for parsing the PageMaker format")
     (description "Libpagemaker is a library that parses the file format of
@@ -522,15 +521,14 @@ created by PageMaker version 6.x and 7.")
 (define-public libvisio
   (package
     (name "libvisio")
-    ;; FIXME: The newer version 0.1.1 fails its tests.
-    (version "0.1.0")
+    (version "0.1.6")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "http://dev-www.libreoffice.org/src/" name "/"
                           name "-" version ".tar.xz"))
       (sha256 (base32
-               "0vvd2wyp4rw6s9xnj1dc9vgdpfvm45gnb5b9hhzif0fdnx4iskqf"))))
+               "1yahpfl13qk6178irv8jn5ppxdn7isafqisyqsdw0lqxcz9h447y"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("cppunit" ,cppunit)
@@ -544,10 +542,6 @@ created by PageMaker version 6.x and 7.")
        ("libxml2" ,libxml2)))
     (inputs
      `(("boost" ,boost)))
-    ;; FIXME: Not needed any more for newer version 0.1.1.
-    (arguments
-     ;; avoid triggering a build failure due to warnings
-     `(#:configure-flags '("--disable-werror")))
     (home-page "https://wiki.documentfoundation.org/DLP/Libraries/libvisio")
     (synopsis "Library for parsing the Microsoft Visio format")
     (description "Libvisio is a library that parses the file format of
@@ -557,14 +551,14 @@ Microsoft Visio documents of all versions.")
 (define-public libodfgen
   (package
     (name "libodfgen")
-    (version "0.1.3")
+    (version "0.1.6")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "http://dev-www.libreoffice.org/src/"
                           name "-" version ".tar.bz2"))
       (sha256 (base32
-               "074qsav86ixwi9zm1f77g9vxdf1ihm6n930vxjg8q3lwzd8g7lb6"))))
+               "1hn91bm6dni7n3frh7lpbj3mjqmdrpn12ipq8rswd9445y4j2yrc"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("doxygen" ,doxygen)
@@ -588,15 +582,14 @@ text documents, vector drawings, presentations and spreadsheets.")
 (define-public libmwaw
   (package
     (name "libmwaw")
-    (version "0.3.11")
+    (version "0.3.12")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "mirror://sourceforge/" name "/" name "/" name "-"
                           version "/" name "-" version ".tar.xz"))
-      (patches (search-patches "libmwaw-CVE-2017-9433.patch"))
       (sha256 (base32
-               "16i9s9p4sjpdpbm3gq6jkc9r3nyfy47ggkdlgh7vr0mydccklj2b"))))
+               "1ryi1v38lgy5kv84fzjqkawidrg30y4hlqrz1v262792wzkad4bn"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("doxygen" ,doxygen)
@@ -606,9 +599,6 @@ text documents, vector drawings, presentations and spreadsheets.")
     (inputs
      `(("boost" ,boost)
        ("zlib" ,zlib)))
-    (arguments
-     ;; avoid triggering configure errors by simple inclusion of boost headers
-     `(#:configure-flags '("--disable-werror")))
     (home-page "https://sourceforge.net/p/libmwaw/wiki/Home/")
     (synopsis "Import library for some old Macintosh text documents")
     (description "Libmwaw contains some import filters for old Macintosh
@@ -619,14 +609,14 @@ spreadsheet documents.")
 (define-public libstaroffice
   (package
     (name "libstaroffice")
-    (version "0.0.4")
+    (version "0.0.5")
     (source
      (origin
        (method url-fetch)
        (uri (string-append "https://github.com/fosnola/libstaroffice/releases/download/"
                            version "/libstaroffice-" version ".tar.xz"))
        (sha256 (base32
-                "0flh0hs31fsq1dmkhf2502lxskiy7fbj5q8gn4b4f502s228fwkf"))))
+                "10m9imcgqf7kdhn1a5ara62fdayidwm7qzj3binsls40snnhfm9i"))))
     (build-system gnu-build-system)
     (inputs
      `(("librevenge" ,librevenge)
@@ -642,14 +632,14 @@ from the old StarOffice (.sdc, .sdw, ...).")
 (define-public libwps
   (package
     (name "libwps")
-    (version "0.4.0")
+    (version "0.4.7")
     (source
      (origin
       (method url-fetch)
       (uri (string-append "mirror://sourceforge/" name "/" name "/"
                           name "-" version "/" name "-" version ".tar.xz"))
       (sha256 (base32
-               "0nlrdk7di015l0sk0ivjdqs86zdcvf73p9z9s9ry5glyhrknzxjk"))))
+               "05xjb35y5ha9grgjqs3viaglq7ydsry1hzdvkm7y5b6f1disnb1g"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("doxygen" ,doxygen)
@@ -659,9 +649,6 @@ from the old StarOffice (.sdc, .sdw, ...).")
     (inputs
      `(("boost" ,boost)
        ("zlib" ,zlib)))
-    (arguments
-     ;; avoid triggering configure errors by simple inclusion of boost headers
-     `(#:configure-flags '("--disable-werror")))
     (home-page "http://libwps.sourceforge.net/")
     (synopsis "Import library for Microsoft Works text documents")
     (description "Libwps is a library for importing files in the Microsoft
@@ -671,14 +658,14 @@ Works word processor file format.")
 (define-public libzmf
   (package
    (name "libzmf")
-   (version "0.0.1")
+   (version "0.0.2")
    (source
     (origin
       (method url-fetch)
       (uri (string-append "http://dev-www.libreoffice.org/src/libzmf/libzmf-"
                           version ".tar.xz"))
       (sha256 (base32
-               "0yp5l1b90xim506zmr3ljkn3qkvbc7qk3dnwq1snxdpr57m37xga"))))
+               "08mg5kmkjrmqrd8j5rkzw9vdqlvibhb1ynp6bmfxnzq5rcq1l197"))))
    (build-system gnu-build-system)
    (inputs
     `(("boost" ,boost)
@@ -867,16 +854,16 @@ and to return information on pronunciations, meanings and synonyms.")
 (define-public libreoffice
   (package
     (name "libreoffice")
-    (version "5.3.5.2")
+    (version "5.3.7.2")
     (source
      (origin
       (method url-fetch)
       (uri
         (string-append
-          "http://download.documentfoundation.org/libreoffice/src/"
+          "https://download.documentfoundation.org/libreoffice/src/"
           (version-prefix version 3) "/libreoffice-" version ".tar.xz"))
       (sha256 (base32
-               "1sknmb9bhm8mxyfycqbwng1jqs4avyp1ffcla7dhlpwqs1aqxvx5"))))
+               "0z7fssp0jcj09wxad1wmhy69n71a2mwl933lxp9dz5sdvzncxmy3"))))
     (build-system gnu-build-system)
     (native-inputs
      `(;; autoreconf is run by the LibreOffice build system, since after
@@ -903,7 +890,7 @@ and to return information on pronunciations, meanings and synonyms.")
        ("gperf" ,gperf)
        ("graphite2" ,graphite2)
        ("gst-plugins-base" ,gst-plugins-base)
-       ("gtk+" ,gtk+-2)
+       ("gtk+" ,gtk+)
        ("harfbuzz" ,harfbuzz)
        ("hunspell" ,hunspell)
        ("hyphen" ,hyphen)
@@ -962,7 +949,7 @@ and to return information on pronunciations, meanings and synonyms.")
                    (list "sysui/CustomTarget_share.mk"
                          "solenv/gbuild/gbuild.mk"
                          "solenv/gbuild/platform/unxgcc.mk")
-                   (("/bin/sh") (which "bash")))
+                   (("/bin/sh") (which "sh")))
                  (mkdir "external/tarballs")
                  (symlink
                    xmlsec
@@ -1050,8 +1037,8 @@ and to return information on pronunciations, meanings and synonyms.")
           "--disable-coinmp"
           "--disable-firebird-sdbc" ; embedded firebird
           "--disable-gltf"
-          "--without-doxygen"
-          "--disable-gtk3")))
+          "--disable-gtk" ; disable use of GTK+ 2
+          "--without-doxygen")))
     (home-page "https://www.libreoffice.org/")
     (synopsis "Office suite")
     (description "LibreOffice is a comprehensive office suite.  It contains

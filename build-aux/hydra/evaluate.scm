@@ -1,5 +1,6 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2016, 2017 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2017 Jan Nieuwenhuizen <janneke@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -25,6 +26,12 @@
              (ice-9 match)
              (ice-9 pretty-print)
              (ice-9 format))
+
+(define %top-srcdir
+  (and=> (assq-ref (current-source-location) 'filename)
+         (lambda (file)
+           (canonicalize-path
+            (string-append (dirname file) "/../..")))))
 
 (define %user-module
   ;; Hydra user module.
@@ -70,7 +77,7 @@ Otherwise return THING."
 
 ;; Without further ado...
 (match (command-line)
-  ((command file)
+  ((command file cuirass? ...)
    ;; Load FILE, a Scheme file that defines Hydra jobs.
    (let ((port (current-output-port)))
      (save-module-excursion
@@ -96,7 +103,12 @@ Otherwise return THING."
 
        ;; Call the entry point of FILE and print the resulting job sexp.
        (pretty-print
-        (match ((module-ref %user-module 'hydra-jobs) store '())
+        (match ((module-ref %user-module
+                            (if (equal? cuirass? "cuirass")
+                                'cuirass-jobs
+                                'hydra-jobs))
+                store `((guix
+                         . ((file-name . ,%top-srcdir)))))
           (((names . thunks) ...)
            (map (lambda (job thunk)
                   (format (current-error-port) "evaluating '~a'... " job)
@@ -107,8 +119,8 @@ Otherwise return THING."
                 names thunks)))
         port))))
   ((command _ ...)
-   (format (current-error-port) "Usage: ~a FILE
-Evaluate the Hydra jobs defined in FILE.~%"
+   (format (current-error-port) "Usage: ~a FILE [cuirass]
+Evaluate the Hydra or Cuirass jobs defined in FILE.~%"
            command)
    (exit 1)))
 

@@ -35,6 +35,7 @@
   #:use-module (gnu packages perl)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-web)
   #:use-module (gnu packages qt)
   #:use-module (gnu packages image)
   #:use-module (gnu packages tls)
@@ -82,6 +83,7 @@ older or slower computers and embedded systems.")
               (method url-fetch)
               (uri (string-append "http://links.twibright.com/download/"
                                   name "-" version ".tar.bz2"))
+              (patches (search-patches "links-CVE-2017-11114.patch"))
               (sha256
                (base32
                 "1f24y83wa1vzzjq5kp857gjqdpnmf8pb29yw7fam0m8wxxw0c3gp"))))
@@ -165,11 +167,11 @@ features including, tables, builtin image display, bookmarks, SSL and more.")
            "--enable-nls"
            "--enable-ipv6"))
        #:tests? #f  ; no check target
-       #:phases (alist-replace
-                 'install
-                 (lambda* (#:key (make-flags '()) #:allow-other-keys)
-                   (zero? (apply system* "make" "install-full" make-flags)))
-                 %standard-phases)))
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (lambda* (#:key (make-flags '()) #:allow-other-keys)
+             (zero? (apply system* "make" "install-full" make-flags)))))))
     (synopsis "Text Web Browser")
     (description
      "Lynx is a fully-featured World Wide Web (WWW) client for users running
@@ -179,13 +181,13 @@ system, as well as files on remote systems running http, gopher, ftp, wais,
 nntp, finger, or cso/ph/qi servers.  Lynx can be used to access information on
 the WWW, or to build information systems intended primarily for local
 access.")
-    (home-page "http://lynx.isc.org/")
+    (home-page "https://lynx.invisible-island.net/")
     (license license:gpl2)))
 
 (define-public qutebrowser
   (package
     (name "qutebrowser")
-    (version "0.10.1")
+    (version "0.11.0")
     (source
      (origin
        (method url-fetch)
@@ -194,7 +196,7 @@ access.")
                            "qutebrowser-" version ".tar.gz"))
        (sha256
         (base32
-         "05qryn56w2pbqhir4pl99idx7apx2xqw9f8wmbrhj59b1xgr3x2p"))))
+         "13ihx66jm1dd6vx8px7pm0kbzf2sf9x43hhivc1rp17kahnxxdyv"))))
     (build-system python-build-system)
     (native-inputs
      `(("asciidoc" ,asciidoc)))

@@ -20,6 +20,7 @@
 (define-module (gnu bootloader extlinux)
   #:use-module (gnu bootloader)
   #:use-module (gnu system)
+  #:use-module (gnu build bootloader)
   #:use-module (gnu packages bootloaders)
   #:use-module (guix gexp)
   #:use-module (guix monads)
@@ -53,7 +54,7 @@ corresponding to old generations of the system."
   APPEND ~a
 ~%"
                 #$label #$label
-                #$kernel #$kernel #$initrd
+                #$kernel (dirname #$kernel) #$initrd
                 (string-join (list #$@kernel-arguments)))))
 
   (define builder
@@ -85,14 +86,6 @@ TIMEOUT ~a~%"
 ;;; Install procedures.
 ;;;
 
-(define dd
-  #~(lambda (bs count if of)
-      (zero? (system* "dd"
-                      (string-append "bs=" (number->string bs))
-                      (string-append "count=" (number->string count))
-                      (string-append "if=" if)
-                      (string-append "of=" of)))))
-
 (define (install-extlinux mbr)
   #~(lambda (bootloader device mount-point)
       (let ((extlinux (string-append bootloader "/sbin/extlinux"))
@@ -101,9 +94,10 @@ TIMEOUT ~a~%"
         (for-each (lambda (file)
                     (install-file file install-dir))
                   (find-files syslinux-dir "\\.c32$"))
-
-        (unless (and (zero? (system* extlinux "--install" install-dir))
-                     (#$dd 440 1 (string-append syslinux-dir "/" #$mbr) device))
+        (unless
+            (and (zero? (system* extlinux "--install" install-dir))
+                 (write-file-on-device
+                  (string-append syslinux-dir "/" #$mbr) 440 device 0))
           (error "failed to install SYSLINUX")))))
 
 (define install-extlinux-mbr

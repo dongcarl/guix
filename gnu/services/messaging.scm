@@ -160,7 +160,7 @@
 (define (module-list? val)
   (string-list? val))
 (define (serialize-module-list field-name val)
-  (serialize-string-list field-name (cons "posix" val)))
+  (serialize-string-list field-name val))
 (define-maybe module-list)
 
 (define (file-name? val)
@@ -175,6 +175,12 @@
 (define (serialize-file-name-list field-name val)
   (serialize-string-list field-name val))
 (define-maybe file-name)
+
+(define (raw-content? val)
+  (not (eq? val 'disabled)))
+(define (serialize-raw-content field-name val)
+  (format #t "~a" val))
+(define-maybe raw-content)
 
 (define-configuration mod-muc-configuration
   (name
@@ -203,12 +209,12 @@ just joined the room."))
    "This determines what handshake to use.")
 
   (key
-   (file-name "/etc/prosody/certs/key.pem")
-   "Path to your private key file, relative to @code{/etc/prosody}.")
+   (maybe-file-name 'disabled)
+   "Path to your private key file.")
 
   (certificate
-   (file-name "/etc/prosody/certs/cert.pem")
-   "Path to your certificate file, relative to @code{/etc/prosody}.")
+   (maybe-file-name 'disabled)
+   "Path to your certificate file.")
 
   (capath
    (file-name "/etc/ssl/certs")
@@ -271,7 +277,9 @@ can create such a file with:
     "tls"
     "dialback"
     "disco"
+    "carbons"
     "private"
+    "blocklist"
     "vcard"
     "version"
     "uptime"
@@ -312,35 +320,42 @@ can create such a file with:
     (data-path
      (file-name "/var/lib/prosody")
      "Location of the Prosody data storage directory.  See
-@url{http://prosody.im/doc/configure}."
+@url{https://prosody.im/doc/configure}."
      global)
 
     (plugin-paths
      (file-name-list '())
      "Additional plugin directories.  They are searched in all the specified
-paths in order.  See @url{http://prosody.im/doc/plugins_directory}."
+paths in order.  See @url{https://prosody.im/doc/plugins_directory}."
+     global)
+
+    (certificates
+     (file-name "/etc/prosody/certs")
+     "Every virtual host and component needs a certificate so that clients and
+servers can securely verify its identity.  Prosody will automatically load
+certificates/keys from the directory specified here."
      global)
 
     (admins
      (string-list '())
      "This is a list of accounts that are admins for the server.  Note that you
-must create the accounts separately.  See @url{http://prosody.im/doc/admins} and
-@url{http://prosody.im/doc/creating_accounts}.
+must create the accounts separately.  See @url{https://prosody.im/doc/admins} and
+@url{https://prosody.im/doc/creating_accounts}.
 Example: @code{(admins '(\"user1@@example.com\" \"user2@@example.net\"))}"
      common)
 
     (use-libevent?
      (boolean #f)
      "Enable use of libevent for better performance under high load.  See
-@url{http://prosody.im/doc/libevent}."
+@url{https://prosody.im/doc/libevent}."
      common)
 
     (modules-enabled
      (module-list %default-modules-enabled)
      "This is the list of modules Prosody will load on startup.  It looks for
 @code{mod_modulename.lua} in the plugins folder, so make sure that exists too.
-Documentation on modules can be found at: @url{http://prosody.im/doc/modules}.
-Defaults to @samp{%default-modules-enabled}."
+Documentation on modules can be found at:
+@url{https://prosody.im/doc/modules}."
      common)
 
     (modules-disabled
@@ -353,13 +368,13 @@ should you want to disable them then add them to this list."
      (file-name "/var/lib/prosody/sharedgroups.txt")
      "Path to a text file where the shared groups are defined.  If this path is
 empty then @samp{mod_groups} does nothing.  See
-@url{http://prosody.im/doc/modules/mod_groups}."
+@url{https://prosody.im/doc/modules/mod_groups}."
      common)
 
     (allow-registration?
      (boolean #f)
      "Disable account creation by default, for security.  See
-@url{http://prosody.im/doc/creating_accounts}."
+@url{https://prosody.im/doc/creating_accounts}."
      common)
 
     (ssl
@@ -367,19 +382,25 @@ empty then @samp{mod_groups} does nothing.  See
      "These are the SSL/TLS-related settings.  Most of them are disabled so to
 use Prosody's defaults.  If you do not completely understand these options, do
 not add them to your config, it is easy to lower the security of your server
-using them.  See @url{http://prosody.im/doc/advanced_ssl_config}."
+using them.  See @url{https://prosody.im/doc/advanced_ssl_config}."
      common)
 
     (c2s-require-encryption?
      (boolean #f)
      "Whether to force all client-to-server connections to be encrypted or not.
-See @url{http://prosody.im/doc/modules/mod_tls}."
+See @url{https://prosody.im/doc/modules/mod_tls}."
+     common)
+
+    (disable-sasl-mechanisms
+     (string-list '("DIGEST-MD5"))
+     "Set of mechanisms that will never be offered.  See
+@url{https://prosody.im/doc/modules/mod_saslauth}."
      common)
 
     (s2s-require-encryption?
      (boolean #f)
      "Whether to force all server-to-server connections to be encrypted or not.
-See @url{http://prosody.im/doc/modules/mod_tls}."
+See @url{https://prosody.im/doc/modules/mod_tls}."
      common)
 
     (s2s-secure-auth?
@@ -387,7 +408,7 @@ See @url{http://prosody.im/doc/modules/mod_tls}."
      "Whether to require encryption and certificate authentication.  This
 provides ideal security, but requires servers you communicate with to support
 encryption AND present valid, trusted certificates.  See
-@url{http://prosody.im/doc/s2s#security}."
+@url{https://prosody.im/doc/s2s#security}."
      common)
 
     (s2s-insecure-domains
@@ -395,14 +416,14 @@ encryption AND present valid, trusted certificates.  See
      "Many servers don't support encryption or have invalid or self-signed
 certificates.  You can list domains here that will not be required to
 authenticate using certificates.  They will be authenticated using DNS.  See
-@url{http://prosody.im/doc/s2s#security}."
+@url{https://prosody.im/doc/s2s#security}."
      common)
 
     (s2s-secure-domains
      (string-list '())
      "Even if you leave @code{s2s-secure-auth?} disabled, you can still require
 valid certificates for some domains by specifying a list here.  See
-@url{http://prosody.im/doc/s2s#security}."
+@url{https://prosody.im/doc/s2s#security}."
      common)
 
     (authentication
@@ -410,22 +431,35 @@ valid certificates for some domains by specifying a list here.  See
      "Select the authentication backend to use.  The default provider stores
 passwords in plaintext and uses Prosody's configured data storage to store the
 authentication data.  If you do not trust your server please see
-@url{http://prosody.im/doc/modules/mod_auth_internal_hashed} for information
+@url{https://prosody.im/doc/modules/mod_auth_internal_hashed} for information
 about using the hashed backend.  See also
-@url{http://prosody.im/doc/authentication}"
+@url{https://prosody.im/doc/authentication}"
      common)
 
     ;; TODO: Handle more complicated log structures.
     (log
      (maybe-string "*syslog")
      "Set logging options.  Advanced logging configuration is not yet supported
-by the GuixSD Prosody Service.  See @url{http://prosody.im/doc/logging}."
+by the GuixSD Prosody Service.  See @url{https://prosody.im/doc/logging}."
      common)
 
     (pidfile
      (file-name "/var/run/prosody/prosody.pid")
-     "File to write pid in.  See @url{http://prosody.im/doc/modules/mod_posix}."
+     "File to write pid in.  See @url{https://prosody.im/doc/modules/mod_posix}."
      global)
+
+    (http-max-content-size
+     (maybe-non-negative-integer 'disabled)
+     "Maximum allowed size of the HTTP body (in bytes)."
+     common)
+
+    (http-external-url
+     (maybe-string 'disabled)
+     "Some modules expose their own URL in various ways.  This URL is built
+from the protocol, host and port used.  If Prosody sits behind a proxy, the
+public URL will be @code{http-external-url} instead.  See
+@url{https://prosody.im/doc/http#external_url}."
+     common)
 
     (virtualhosts
      (virtualhost-configuration-list
@@ -442,7 +476,7 @@ instance can serve many domains, each one defined as a VirtualHost entry in
 Prosody's configuration.  Conversely a server that hosts a single domain would
 have just one VirtualHost entry.
 
-See @url{http://prosody.im/doc/configure#virtual_host_settings}."
+See @url{https://prosody.im/doc/configure#virtual_host_settings}."
      global)
 
     (int-components
@@ -456,14 +490,14 @@ Internal components are implemented with Prosody-specific plugins.  To add an
 internal component, you simply fill the hostname field, and the plugin you wish
 to use for the component.
 
-See @url{http://prosody.im/doc/components}."
+See @url{https://prosody.im/doc/components}."
      global)
 
     (ext-components
      (ext-component-configuration-list '())
      "External components use XEP-0114, which most standalone components
 support.  To add an external component, you simply fill the hostname field.  See
-@url{http://prosody.im/doc/components}."
+@url{https://prosody.im/doc/components}."
      global)
 
     (component-secret
@@ -502,16 +536,21 @@ support.  To add an external component, you simply fill the hostname field.  See
 hosted chatrooms/conferences for XMPP users.
 
 General information on setting up and using multi-user chatrooms can be found
-in the \"Chatrooms\" documentation (@url{http://prosody.im/doc/chatrooms}),
+in the \"Chatrooms\" documentation (@url{https://prosody.im/doc/chatrooms}),
 which you should read if you are new to XMPP chatrooms.
 
-See also @url{http://prosody.im/doc/modules/mod_muc}."
+See also @url{https://prosody.im/doc/modules/mod_muc}."
      int-component)
 
     (hostname
      (string (configuration-missing-field 'ext-component 'hostname))
      "Hostname of the component."
-     ext-component)))
+     ext-component)
+
+    (raw-content
+     (maybe-raw-content 'disabled)
+     "Raw content that will be added to the configuration file."
+     common)))
 
 ;; Serialize Virtualhost line first.
 (define (serialize-virtualhost-configuration config)
@@ -683,7 +722,7 @@ See also @url{http://prosody.im/doc/modules/mod_muc}."
                                      (display c))
                                    str))))
             (define (show-default? val)
-              (or (string? default) (number? default) (boolean? default)
+              (or (string? val) (number? val) (boolean? val)
                   (and (list? val) (and-map show-default? val))))
             (format #t "@deftypevr {@code{~a} parameter} ~a ~a\n~a\n"
                     configuration-name field-type field-name field-docs)

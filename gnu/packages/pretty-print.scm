@@ -4,6 +4,7 @@
 ;;; Copyright © 2016 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2017 Marius Bakke <mbakke@fastmail.com>
 ;;; Copyright © 2017 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -159,7 +160,7 @@ different programming languages.")
 (define-public fmt
   (package
     (name "fmt")
-    (version "3.0.1")
+    (version "4.1.0")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -167,11 +168,15 @@ different programming languages.")
                     version "/fmt-" version ".zip"))
               (sha256
                (base32
-                "0l4514mk83cjimynci3ghrfdchjy8cya1qa45c1fg2lsj7fg16jc"))))
+                "1swyqw3dn2vx5sw2yh5vk0vrvrkp7fv07cj4272yxl5rrq1byjcx"))))
     (build-system cmake-build-system)
     (native-inputs
      `(("unzip" ,unzip)))
-    (home-page "http://fmtlib.net/latest/")
+    (arguments
+     `(#:configure-flags
+       (list (string-append "-DCMAKE_INSTALL_LIBDIR="
+                            (assoc-ref %outputs "out") "/lib"))))
+    (home-page "http://fmtlib.net/")
     (synopsis "Small and fast C++ formatting library")
     (description
      "@code{fmt} (formerly @code{cppformat}) is a formatting library for C++.
@@ -205,22 +210,23 @@ to @code{IOStreams}.")
        (list (string-append "--with-boost="
                             (assoc-ref %build-inputs "boost")))
        #:parallel-tests? #f             ;There appear to be race conditions
-       #:phases (alist-cons-before
-                 'check 'patch-test-files
-                 (lambda _
-                   ;; Unpatch shebangs in test input so that source-highlight
-                   ;; is still able to infer input language
-                   (substitute* '("tests/test.sh"
-                                  "tests/test2.sh"
-                                  "tests/test.tcl")
-                     (((string-append "#! *" (which "sh"))) "#!/bin/sh"))
-                   ;; Initial patching unrecoverably removes whitespace, so
-                   ;; remove it also in the comparison output.
-                   (substitute* '("tests/test.sh.html"
-                                  "tests/test2.sh.html"
-                                  "tests/test.tcl.html")
-                     (("#! */bin/sh") "#!/bin/sh")))
-                 %standard-phases)))
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'patch-test-files
+           (lambda _
+             ;; Unpatch shebangs in test input so that source-highlight
+             ;; is still able to infer input language
+             (substitute* '("tests/test.sh"
+                            "tests/test2.sh"
+                            "tests/test.tcl")
+               (((string-append "#! *" (which "sh"))) "#!/bin/sh"))
+             ;; Initial patching unrecoverably removes whitespace, so
+             ;; remove it also in the comparison output.
+             (substitute* '("tests/test.sh.html"
+                            "tests/test2.sh.html"
+                            "tests/test.tcl.html")
+               (("#! */bin/sh") "#!/bin/sh"))
+             #t)))))
     (home-page "https://www.gnu.org/software/src-highlite/")
     (synopsis "Produce a document with syntax highlighting from a source file")
     (description
@@ -292,22 +298,22 @@ highlighting.  Language definitions and color themes are customizable.")
        #:make-flags (list (string-append "prefix=" %output)
                           "INSTALL=install"
                           "all")
-       #:phases (alist-replace
-                 'configure
-                 (lambda _ (chdir "build/gcc"))
-                 (alist-cons-after
-                  'install 'install-libs
-                  (lambda* (#:key outputs #:allow-other-keys)
-                    ;; Libraries are not installed by default
-                    (let* ((output (assoc-ref outputs "out"))
-                           (libdir (string-append output "/lib")))
-                      (begin
-                        (mkdir-p libdir)
-                        (for-each (lambda (l)
-                                    (copy-file
-                                     l (string-append libdir "/" (basename l))))
-                                  (find-files "bin" "lib*")))))
-                  %standard-phases))))
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'configure
+           (lambda _ (chdir "build/gcc") #t))
+         (add-after 'install 'install-libs
+           (lambda* (#:key outputs #:allow-other-keys)
+             ;; Libraries are not installed by default
+             (let* ((output (assoc-ref outputs "out"))
+                    (libdir (string-append output "/lib")))
+               (begin
+                 (mkdir-p libdir)
+                 (for-each (lambda (l)
+                             (copy-file
+                              l (string-append libdir "/" (basename l))))
+                           (find-files "bin" "lib*"))))
+             #t)))))
     (home-page "http://astyle.sourceforge.net/")
     (synopsis "Source code indenter, formatter, and beautifier")
     (description

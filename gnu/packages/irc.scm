@@ -1,9 +1,9 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2013 Cyril Roelandt <tipecaml@gmail.com>
 ;;; Copyright © 2014 Kevin Lemonnier <lemonnierk@ulrar.net>
-;;; Copyright © 2015 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2015, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2015, 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
-;;; Copyright © 2016 ng0 <ng0@libertad.pw>
+;;; Copyright © 2016 ng0 <ng0@infotropique.org>
 ;;; Copyright © 2017 Marius Bakke <mbakke@fastmail.com>
 ;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
@@ -35,6 +35,7 @@
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages base)
   #:use-module (gnu packages backup)
+  #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages curl)
   #:use-module (gnu packages cyrus-sasl)
@@ -51,11 +52,15 @@
   #:use-module (gnu packages perl)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-crypto)
   #:use-module (gnu packages ruby)
   #:use-module (gnu packages qt)
   #:use-module (gnu packages tcl)
+  #:use-module (gnu packages time)
   #:use-module (gnu packages tls)
-  #:use-module (gnu packages web))
+  #:use-module (gnu packages web)
+  #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-26))
 
 (define-public quassel
   (package
@@ -110,7 +115,7 @@ irssi, but graphical.")
 (define-public irssi
   (package
     (name "irssi")
-    (version "1.0.4")
+    (version "1.0.5")
     (source (origin
              (method url-fetch)
              (uri (string-append "https://github.com/irssi/irssi/"
@@ -118,7 +123,7 @@ irssi, but graphical.")
                                  version ".tar.xz"))
              (sha256
               (base32
-               "1jl6p431rv4iixk48wn607m4s0mcy3wgasfwrhz22y71mzdhfp5q"))))
+               "055r9fhbfcfkzinsnprnlqd8psspdyn3j26lzsmnrc1fw4kn8mf2"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
@@ -150,18 +155,21 @@ SILC and ICB protocols via plugins.")
 (define-public weechat
   (package
     (name "weechat")
-    (version "1.9")
+    (version "2.0.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://weechat.org/files/src/weechat-"
                                   version ".tar.xz"))
               (sha256
                (base32
-                "1zvxz98krq98y7jh3yrjbardg3yxp6y2031rvb7rp5ssk8lyp1fc"))
+                "1l854dramvn9vfba7jpazkjwm4k4i5pshq58vjv6z2mxmcp5hhv9"))
               (patches (search-patches "weechat-python.patch"))))
     (build-system cmake-build-system)
-    (native-inputs `(("gettext" ,gettext-minimal)
-                     ("pkg-config" ,pkg-config)))
+    (native-inputs
+     `(("gettext" ,gettext-minimal)
+       ("pkg-config" ,pkg-config)
+       ;; For tests.
+       ("cpputest" ,cpputest)))
     (inputs `(("ncurses" ,ncurses)
               ("libgcrypt" ,libgcrypt "out")
               ("zlib" ,zlib)
@@ -174,15 +182,35 @@ SILC and ICB protocols via plugins.")
               ("perl" ,perl)
               ("tcl" ,tcl)))
     (arguments
-     `(#:tests? #f ; tests require cpputime
-       #:phases (modify-phases %standard-phases
-                  (add-after 'install 'wrap
-                    (lambda* (#:key inputs outputs #:allow-other-keys)
-                      (let ((out (assoc-ref outputs "out"))
-                            (py2 (assoc-ref inputs "python")))
-                        (wrap-program (string-append out "/bin/weechat")
-                          `("PATH" ":" prefix (,(string-append py2 "/bin"))))
-                        #t))))))
+     `(#:configure-flags
+       (list "-DENABLE_TESTS=ON")       ; ‘make test’ fails otherwise
+       ;; Tests hang indefinately on non-Intel platforms.
+       #:tests? ,(if (any (cute string-prefix? <> (or (%current-target-system)
+                                                      (%current-system)))
+                          '("i686" "x86_64"))
+                   '#t '#f)
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'disable-failing-tests
+           ;; For reasons best left to the imagination, CppUTest cannot skip
+           ;; more than one single test...  Resort to manual patching instead.
+           ;; See <https://cpputest.github.io/manual.html#command_line>.
+           (λ _
+             ;; Don't test plugin support for languages we don't enable.
+             (substitute* "tests/unit/test-plugins.cpp"
+               ((".*\\$\\{plugin.name\\} == (javascript|php|ruby)" all)
+                (string-append "// SKIP" all)))
+             (substitute* "tests/scripts/test-scripts.cpp"
+               ((".*\\{ \"(jvascript|php|ruby)\", " all) ; sic
+                (string-append "// SKIP" all)))
+             #t))
+         (add-after 'install 'wrap
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out"))
+                   (py2 (assoc-ref inputs "python")))
+               (wrap-program (string-append out "/bin/weechat")
+                 `("PATH" ":" prefix (,(string-append py2 "/bin"))))
+               #t))))))
     (synopsis "Extensible chat client")
     (description "WeeChat (Wee Enhanced Environment for Chat) is an
 @dfn{Internet Relay Chat} (IRC) client, which is designed to be light and fast.
@@ -294,14 +322,14 @@ using a mouse.  It is customizable and extensible with plugins and scripts.")
 (define-public limnoria
   (package
     (name "limnoria")
-    (version "2017.08.18")
+    (version "2017.10.01")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri "limnoria" version))
        (sha256
         (base32
-         "1hij444l45mjli8i67iyd3syf263ijj1l0cm3irqjjxv5r3f9zjj"))))
+         "1hd8h257x7a0s4rvb4aqvfi77qfcyv6jaz70nndg7y6p4yhvjmy6"))))
     (build-system python-build-system)
     (inputs
      `(("python-pytz" ,python-pytz)

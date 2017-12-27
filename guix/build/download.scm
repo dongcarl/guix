@@ -1,7 +1,6 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2012, 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2015 Mark H Weaver <mhw@netris.org>
-;;; Copyright © 2015 Steve Sprang <scs@stevesprang.com>
 ;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;;
 ;;; This file is part of GNU Guix.
@@ -27,6 +26,7 @@
   #:use-module (guix base64)
   #:use-module (guix ftp-client)
   #:use-module (guix build utils)
+  #:use-module (guix progress)
   #:use-module (rnrs io ports)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
@@ -38,14 +38,13 @@
   #:use-module (ice-9 format)
   #:export (open-socket-for-uri
             open-connection-for-uri
+            http-fetch
             %x509-certificate-directory
             close-connection
             resolve-uri-reference
             maybe-expand-mirrors
             url-fetch
             byte-count->string
-            current-terminal-columns
-            progress-proc
             uri-abbreviation
             nar-uri-abbreviation
             store-path-abbreviation))
@@ -59,69 +58,6 @@
 (define %http-receive-buffer-size
   ;; Size of the HTTP receive buffer.
   65536)
-
-(define current-terminal-columns
-  ;; Number of columns of the terminal.
-  (make-parameter 80))
-
-(define (nearest-exact-integer x)
-  "Given a real number X, return the nearest exact integer, with ties going to
-the nearest exact even integer."
-  (inexact->exact (round x)))
-
-(define (duration->seconds duration)
-  "Return the number of seconds represented by DURATION, a 'time-duration'
-object, as an inexact number."
-  (+ (time-second duration)
-     (/ (time-nanosecond duration) 1e9)))
-
-(define (seconds->string duration)
-  "Given DURATION in seconds, return a string representing it in 'mm:ss' or
-'hh:mm:ss' format, as needed."
-  (if (not (number? duration))
-      "00:00"
-      (let* ((total-seconds (nearest-exact-integer duration))
-             (extra-seconds (modulo total-seconds 3600))
-             (num-hours     (quotient total-seconds 3600))
-             (hours         (and (positive? num-hours) num-hours))
-             (mins          (quotient extra-seconds 60))
-             (secs          (modulo extra-seconds 60)))
-        (format #f "~@[~2,'0d:~]~2,'0d:~2,'0d" hours mins secs))))
-
-(define (byte-count->string size)
-  "Given SIZE in bytes, return a string representing it in a human-readable
-way."
-  (let ((KiB 1024.)
-        (MiB (expt 1024. 2))
-        (GiB (expt 1024. 3))
-        (TiB (expt 1024. 4)))
-    (cond
-     ((< size KiB) (format #f "~dB"     (nearest-exact-integer size)))
-     ((< size MiB) (format #f "~dKiB"   (nearest-exact-integer (/ size KiB))))
-     ((< size GiB) (format #f "~,1fMiB" (/ size MiB)))
-     ((< size TiB) (format #f "~,2fGiB" (/ size GiB)))
-     (else         (format #f "~,3fTiB" (/ size TiB))))))
-
-(define* (progress-bar % #:optional (bar-width 20))
-  "Return % as a string representing an ASCII-art progress bar.  The total
-width of the bar is BAR-WIDTH."
-  (let* ((fraction (/ % 100))
-         (filled   (inexact->exact (floor (* fraction bar-width))))
-         (empty    (- bar-width filled)))
-    (format #f "[~a~a]"
-            (make-string filled #\#)
-            (make-string empty #\space))))
-
-(define (string-pad-middle left right len)
-  "Combine LEFT and RIGHT with enough padding in the middle so that the
-resulting string has length at least LEN (it may overflow).  If the string
-does not overflow, the last char in RIGHT will be flush with the LEN
-column."
-  (let* ((total-used (+ (string-length left)
-                        (string-length right)))
-         (num-spaces (max 1 (- len total-used)))
-         (padding    (make-string num-spaces #\space)))
-    (string-append left padding right)))
 
 (define* (ellipsis #:optional (port (current-output-port)))
   "Make a rough guess at whether Unicode's HORIZONTAL ELLIPSIS can be written
@@ -140,73 +76,6 @@ Otherwise return STORE-PATH."
                        (ellipsis)
                        (string-drop base 32)))
       store-path))
-
-(cond-expand
-  (guile-2.2
-   ;; Guile 2.2.2 has a bug whereby 'time-monotonic' objects have seconds and
-   ;; nanoseconds swapped (fixed in Guile commit 886ac3e).  Work around it.
-   (define time-monotonic time-tai))
-  (else #t))
-
-(define* (progress-proc file size
-                        #:optional (log-port (current-output-port))
-                        #:key (abbreviation basename))
-  "Return a procedure to show the progress of FILE's download, which is SIZE
-bytes long.  The returned procedure is suitable for use as an argument to
-`dump-port'.  The progress report is written to LOG-PORT, with ABBREVIATION
-used to shorten FILE for display."
-  ;; XXX: Because of <http://bugs.gnu.org/19939> this procedure is often not
-  ;; called as frequently as we'd like too; this is especially bad with Nginx
-  ;; on hydra.gnu.org, which returns whole nars as a single chunk.
-  (let ((start-time #f))
-    (let-syntax ((with-elapsed-time
-                     (syntax-rules ()
-                       ((_ elapsed body ...)
-                        (let* ((now     (current-time time-monotonic))
-                               (elapsed (and start-time
-                                             (duration->seconds
-                                              (time-difference now
-                                                               start-time)))))
-                          (unless start-time
-                            (set! start-time now))
-                          body ...)))))
-      (if (number? size)
-          (lambda (transferred cont)
-            (with-elapsed-time elapsed
-              (let* ((%          (* 100.0 (/ transferred size)))
-                     (throughput (if elapsed
-                                     (/ transferred elapsed)
-                                     0))
-                     (left       (format #f " ~a  ~a"
-                                         (abbreviation file)
-                                         (byte-count->string size)))
-                     (right      (format #f "~a/s ~a ~a~6,1f%"
-                                         (byte-count->string throughput)
-                                         (seconds->string elapsed)
-                                         (progress-bar %) %)))
-                (display "\r\x1b[K" log-port)
-                (display (string-pad-middle left right
-                                            (current-terminal-columns))
-                         log-port)
-                (flush-output-port log-port)
-                (cont))))
-          (lambda (transferred cont)
-            (with-elapsed-time elapsed
-              (let* ((throughput (if elapsed
-                                     (/ transferred elapsed)
-                                     0))
-                     (left       (format #f " ~a"
-                                         (abbreviation file)))
-                     (right      (format #f "~a/s ~a | ~a transferred"
-                                         (byte-count->string throughput)
-                                         (seconds->string elapsed)
-                                         (byte-count->string transferred))))
-                (display "\r\x1b[K" log-port)
-                (display (string-pad-middle left right
-                                            (current-terminal-columns))
-                         log-port)
-                (flush-output-port log-port)
-                (cont))))))))
 
 (define* (uri-abbreviation uri #:optional (max-length 42))
   "If URI's string representation is larger than MAX-LENGTH, return an
@@ -261,12 +130,14 @@ out if the connection could not be established in less than TIMEOUT seconds."
                  (_ (ftp-open (uri-host uri) #:timeout timeout))))
          (size (false-if-exception (ftp-size conn (uri-path uri))))
          (in   (ftp-retr conn (basename (uri-path uri))
-                         (dirname (uri-path uri)))))
+                         (dirname (uri-path uri))
+                         #:timeout timeout)))
     (call-with-output-file file
       (lambda (out)
-        (dump-port in out
-                   #:buffer-size %http-receive-buffer-size
-                   #:progress (progress-proc (uri-abbreviation uri) size))))
+        (dump-port* in out
+                    #:buffer-size %http-receive-buffer-size
+                    #:reporter (progress-reporter/file
+                                (uri-abbreviation uri) size))))
 
     (ftp-close conn))
     (newline)
@@ -435,6 +306,13 @@ host name without trailing dot."
       ;; never be closed.  So we use `fileno', but keep a weak reference to
       ;; PORT, so the file descriptor gets closed when RECORD is GC'd.
       (register-tls-record-port record port)
+
+      ;; Write HTTP requests line by line rather than byte by byte:
+      ;; <https://bugs.gnu.org/22966>.  This is possible with Guile >= 2.2.
+      (cond-expand
+        (guile-2.2 (setvbuf record 'line))
+        (else #f))
+
       record)))
 
 (define (ensure-uri uri-or-string)                ;XXX: copied from (web http)
@@ -643,6 +521,57 @@ port if PORT is a TLS session record port."
       (let ((declare-relative-uri-header! (variable-ref var)))
         (declare-relative-uri-header! "Location")))))
 
+;; XXX: Work around broken proxy handling on Guile 2.2 <= 2.2.2, fixed in
+;; Guile commits 7d0d9e2c25c1e872cfc7d14ab5139915f1813d56 and
+;; 6ad28ae3bc6a6d9e95ab7d70510d12c97673a143.  See bug report at
+;; <https://lists.gnu.org/archive/html/guix-devel/2017-11/msg00070.html>.
+(cond-expand
+  (guile-2.2
+   (when (<= (string->number (micro-version)) 2)
+     (let ()
+       (define put-symbol (@@ (web http) put-symbol))
+       (define put-non-negative-integer
+         (@@ (web http) put-non-negative-integer))
+       (define write-http-version
+         (@@ (web http) write-http-version))
+
+       (define (write-request-line method uri version port)
+         "Write the first line of an HTTP request to PORT."
+         (put-symbol port method)
+         (put-char port #\space)
+         (when (http-proxy-port? port)
+           (let ((scheme (uri-scheme uri))
+                 (host (uri-host uri))
+                 (host-port (uri-port uri)))
+             (when (and scheme host)
+               (put-symbol port scheme)
+               (put-string port "://")
+               (cond
+                ((string-index host #\:)          ;<---- The fix is here!
+                 (put-char port #\[)              ;<---- And here!
+                 (put-string port host)
+                 (put-char port #\]))
+                (else
+                 (put-string port host)))
+               (unless ((@@ (web uri) default-port?) scheme host-port)
+                 (put-char port #\:)
+                 (put-non-negative-integer port host-port)))))
+         (let ((path (uri-path uri))
+               (query (uri-query uri)))
+           (if (string-null? path)
+               (put-string port "/")
+               (put-string port path))
+           (when query
+             (put-string port "?")
+             (put-string port query)))
+         (put-char port #\space)
+         (write-http-version version port)
+         (put-string port "\r\n"))
+
+       (module-set! (resolve-module '(web http)) 'write-request-line
+                    write-request-line))))
+  (else #t))
+
 (define (resolve-uri-reference ref base)
   "Resolve the URI reference REF, interpreted relative to the BASE URI, into a
 target URI, according to the algorithm specified in RFC 3986 section 5.2.2.
@@ -711,11 +640,11 @@ Return the resulting target URI."
                     #:query    (uri-query    ref)
                     #:fragment (uri-fragment ref)))))
 
-(define* (http-fetch uri file #:key timeout (verify-certificate? #t))
-  "Fetch data from URI and write it to FILE; when TIMEOUT is true, bail out if
-the connection could not be established in less than TIMEOUT seconds.  Return
-FILE on success.  When VERIFY-CERTIFICATE? is true, verify HTTPS
-certificates; otherwise simply ignore them."
+(define* (http-fetch uri #:key timeout (verify-certificate? #t))
+  "Return an input port containing the data at URI, and the expected number of
+bytes available or #f.  When TIMEOUT is true, bail out if the connection could
+not be established in less than TIMEOUT seconds.  When VERIFY-CERTIFICATE? is
+true, verify HTTPS certificates; otherwise simply ignore them."
 
   (define headers
     `(;; Some web sites, such as http://dist.schmorp.de, would block you if
@@ -740,28 +669,15 @@ certificates; otherwise simply ignore them."
                                           #:timeout timeout
                                           #:verify-certificate?
                                           verify-certificate?))
-                ((resp bv-or-port)
+                ((resp port)
                  (http-get uri #:port connection #:decode-body? #f
                            #:streaming? #t
                            #:headers headers))
                 ((code)
-                 (response-code resp))
-                ((size)
-                 (response-content-length resp)))
+                 (response-code resp)))
     (case code
       ((200)                                      ; OK
-       (begin
-         (call-with-output-file file
-           (lambda (p)
-             (if (port? bv-or-port)
-                 (begin
-                   (dump-port bv-or-port p
-                              #:buffer-size %http-receive-buffer-size
-                              #:progress (progress-proc (uri-abbreviation uri)
-                                                        size))
-                   (newline))
-                 (put-bytevector p bv-or-port))))
-         file))
+       (values port (response-content-length resp)))
       ((301                                       ; moved permanently
         302                                       ; found (redirection)
         303                                       ; see other
@@ -771,7 +687,7 @@ certificates; otherwise simply ignore them."
          (format #t "following redirection to `~a'...~%"
                  (uri->string uri))
          (close connection)
-         (http-fetch uri file
+         (http-fetch uri
                      #:timeout timeout
                      #:verify-certificate? verify-certificate?)))
       (else
@@ -842,10 +758,19 @@ otherwise simply ignore them."
             file (uri->string uri))
     (case (uri-scheme uri)
       ((http https)
-       (false-if-exception* (http-fetch uri file
-                                        #:verify-certificate?
-                                        verify-certificate?
-                                        #:timeout timeout)))
+       (false-if-exception*
+        (let-values (((port size)
+                      (http-fetch uri
+                                  #:verify-certificate? verify-certificate?
+                                  #:timeout timeout)))
+          (call-with-output-file file
+            (lambda (output)
+              (dump-port* port output
+                          #:buffer-size %http-receive-buffer-size
+                          #:reporter (progress-reporter/file
+                                      (uri-abbreviation uri) size))
+              (newline)))
+          #t)))
       ((ftp)
        (false-if-exception* (ftp-fetch uri file
                                        #:timeout timeout)))
@@ -863,8 +788,8 @@ otherwise simply ignore them."
                               hashes))
                 content-addressed-mirrors))
 
-  ;; Make this unbuffered so 'progress-proc' works as expected.  _IOLBF means
-  ;; '\n', not '\r', so it's not appropriate here.
+  ;; Make this unbuffered so 'progress-report/file' works as expected.  _IOLBF
+  ;; means '\n', not '\r', so it's not appropriate here.
   (setvbuf (current-output-port) _IONBF)
 
   (setvbuf (current-error-port) _IOLBF)
@@ -878,9 +803,5 @@ otherwise simply ignore them."
        (format (current-error-port) "failed to download ~s from ~s~%"
                file url)
        #f))))
-
-;;; Local Variables:
-;;; eval: (put 'with-elapsed-time 'scheme-indent-function 1)
-;;; End:
 
 ;;; download.scm ends here

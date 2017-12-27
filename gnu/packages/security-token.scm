@@ -3,6 +3,9 @@
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 Mike Gerwitz <mtg@gnu.org>
 ;;; Copyright © 2016 Marius Bakke <mbakke@fastmail.com>
+;;; Copyright © 2017 Thomas Danckaert <post@thomasdanckaert.be>
+;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
+;;; Copyright © 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -25,25 +28,33 @@
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix build-system gnu)
+  #:use-module (guix build-system glib-or-gtk)
+  #:use-module (gnu packages autotools)
   #:use-module (gnu packages curl)
+  #:use-module (gnu packages gettext)
+  #:use-module (gnu packages gtk)
   #:use-module (gnu packages libusb)
   #:use-module (gnu packages linux)
   #:use-module (gnu packages man)
+  #:use-module (gnu packages networking)
+  #:use-module (gnu packages cyrus-sasl)
+  #:use-module (gnu packages tls)
   #:use-module (gnu packages perl)
-  #:use-module (gnu packages pkg-config))
+  #:use-module (gnu packages pkg-config)
+  #:use-module (gnu packages xml))
 
 (define-public ccid
   (package
     (name "ccid")
-    (version "1.4.27")
+    (version "1.4.28")
     (source (origin
               (method url-fetch)
               (uri (string-append
-                    "https://alioth.debian.org/frs/download.php/file/4218/"
+                    "https://alioth.debian.org/frs/download.php/file/4230/"
                     "ccid-" version ".tar.bz2"))
               (sha256
                (base32
-                "0dyikpmhsph36ndgd61bs4yx437v5y0bmm8ahjacp1k9c1ly4q56"))))
+                "1q5dz1l049m3hmr370adhrqicdkldrr3l98svi02p5cxbnn3cn47"))))
     (build-system gnu-build-system)
     (arguments
      `(#:configure-flags (list (string-append "--enable-usbdropdir=" %output
@@ -70,6 +81,48 @@ readers and is needed to communicate with such devices through the
 @command{pcscd} resource manager.")
     (license license:lgpl2.1+)))
 
+(define-public eid-mw
+  (package
+    (name "eid-mw")
+    (version "4.3.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "https://github.com/Fedict/eid-mw/archive/v"
+                    version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1ay9znry9dkhhn783paqy8czvv3w5gdpmq8ag8znx9akza8c929z"))))
+    (build-system glib-or-gtk-build-system)
+    (native-inputs
+     `(("autoconf" ,autoconf)
+       ("automake" ,automake)
+       ("gettext" ,gnu-gettext)
+       ("libtool" ,libtool)
+       ("pkg-config" ,pkg-config)
+       ("perl" ,perl)))
+    (inputs
+     `(("curl" ,curl)
+       ("openssl" ,openssl)
+       ("gtk+" ,gtk+)
+       ("pcsc-lite" ,pcsc-lite)
+       ("p11-kit" ,p11-kit)
+       ("libproxy" ,libproxy)
+       ("libxml2" ,libxml2)
+       ("cyrus-sasl" ,cyrus-sasl)))
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         ;; The github tarball doesn't contain a configure script.
+         (add-before 'configure 'autoreconf
+           (lambda _ (zero? (system* "autoreconf" "-i")))))))
+    (synopsis "Belgian eID Middleware")
+    (description "The Belgian eID Middleware is required to authenticate with
+online services using the Belgian electronic identity card.")
+    (home-page "https://github.com/Fedict/eid-mw")
+    (license license:lgpl3)))
+
 (define-public libyubikey
   (package
     (name "libyubikey")
@@ -93,18 +146,19 @@ the low-level development kit for the Yubico YubiKey authentication device.")
 (define-public pcsc-lite
   (package
     (name "pcsc-lite")
-    (version "1.8.22")
+    (version "1.8.23")
     (source (origin
               (method url-fetch)
               (uri (string-append
-                    "https://alioth.debian.org/frs/download.php/file/4225/"
+                    "https://alioth.debian.org/frs/download.php/file/4235/"
                     "pcsc-lite-" version ".tar.bz2"))
               (sha256
                (base32
-                "01flkdyqs7kr6c63dv2qg8dwir3v9jlr9rzlw7vafrivxmhqydba"))))
+                "1jc9ws5ra6v3plwraqixin0w0wfxj64drahrbkyrrwzghqjjc9ss"))))
     (build-system gnu-build-system)
     (arguments
-     `(#:configure-flags '("--enable-usbdropdir=/var/lib/pcsc/drivers")))
+     `(#:configure-flags '("--enable-usbdropdir=/var/lib/pcsc/drivers"
+                           "--disable-libsystemd")))
     (native-inputs
      `(("perl" ,perl)                   ; for pod2man
        ("pkg-config" ,pkg-config)))
@@ -117,7 +171,6 @@ the low-level development kit for the Yubico YubiKey authentication device.")
 readers using the SCard API.  pcsc-lite is used to connect to the PC/SC daemon
 from a client application and provide access to the desired reader.")
     (license (list license:bsd-3                ; pcsc-lite
-                   license:expat                ; src/sd-daemon.[ch]
                    license:isc                  ; src/strlcat.c src/strlcpy.c
                    license:gpl3+))))            ; src/spy/*
 

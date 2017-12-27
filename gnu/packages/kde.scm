@@ -1,6 +1,7 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016, 2017 Thomas Danckaert <post@thomasdanckaert.be>
+;;; Copyright © 2017 Mark Meyer <mark@ofosos.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -23,18 +24,29 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
   #:use-module (guix utils)
+  #:use-module (gnu packages algebra)
   #:use-module (gnu packages apr)
   #:use-module (gnu packages boost)
   #:use-module (gnu packages compression)
+  #:use-module (gnu packages curl)
   #:use-module (gnu packages documentation)
+  #:use-module (gnu packages gettext)
+  #:use-module (gnu packages ghostscript)
   #:use-module (gnu packages gl)
   #:use-module (gnu packages gnome)
+  #:use-module (gnu packages graphics)
+  #:use-module (gnu packages image)
   #:use-module (gnu packages kde-frameworks)
   #:use-module (gnu packages llvm)
+  #:use-module (gnu packages maths)
+  #:use-module (gnu packages pdf)
+  #:use-module (gnu packages perl)
+  #:use-module (gnu packages photo)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages tls)
   #:use-module (gnu packages qt)
-  #:use-module (gnu packages version-control))
+  #:use-module (gnu packages version-control)
+  #:use-module (gnu packages xorg))
 
 (define-public kdevelop
   (package
@@ -102,17 +114,16 @@
                     (qtquickcontrols (assoc-ref inputs "qtquickcontrols"))
                     (qtbase (assoc-ref inputs "qtbase"))
                     (qtdeclarative (assoc-ref inputs "qtdeclarative"))
-                    (profile "$HOME/.guix-profile")
                     (qml "/qml"))
                (wrap-program (string-append out "/bin/kdevelop")
                  `("XDG_DATA_DIRS" ":" prefix
                    ,(map (lambda (s) (string-append s "/share"))
-                         (list profile out kdevplatform kcmutils)))
+                         (list out kdevplatform kcmutils)))
                  `("QT_QPA_PLATFORM_PLUGIN_PATH" ":" =
                    (,(string-append qtbase "/plugins/platforms")))
                  `("QT_PLUGIN_PATH" ":" prefix
                    ,(map (lambda (s) (string-append s "/lib/plugins"))
-                         (list profile out kdevplatform kio)))
+                         (list out kdevplatform kio)))
                  `("QML2_IMPORT_PATH" ":" prefix
                    (,(string-append qtquickcontrols qml)
                     ,(string-append qtdeclarative qml))))))))))
@@ -221,6 +232,86 @@ for some KDevelop language plugins (Ruby, PHP, CSS...).")
 plugins, as well as code to create plugins, or complete applications.")
     (license license:gpl3+)))
 
+(define-public krita
+  (package
+    (name "krita")
+    (version "3.3.2.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "mirror://kde/stable/krita/"
+                    "3.3.2/" name "-" version ".tar.xz"))
+              (sha256
+               (base32
+                "0i3l27cfi1h486m74xf4ynk0pwx32xaqraa91a0g1bpj1jxf2mg5"))))
+    (build-system cmake-build-system)
+    (arguments
+     `(#:tests? #f
+       #:configure-flags
+       (list "-DBUILD_TESTING=OFF" "-DKDE4_BUILD_TESTS=OFF"
+             (string-append "-DWITH_FFTW3="
+                            (assoc-ref %build-inputs "fftw"))
+             (string-append "-DWITH_GSL="
+                            (assoc-ref %build-inputs "gsl"))
+             (string-append "-DWITH_LibRaw="
+                            (assoc-ref %build-inputs "libraw"))
+             (string-append "-DWITH_TIFF="
+                            (assoc-ref %build-inputs "libtiff"))
+             (string-append "-DCMAKE_CXX_FLAGS=-I"
+                            (assoc-ref %build-inputs "ilmbase")
+                            "/include/OpenEXR"))))
+    (native-inputs
+     `(("curl" ,curl)
+       ("eigen" ,eigen)
+       ("extra-cmake-modules" ,extra-cmake-modules)
+       ("gettext-minimal" ,gettext-minimal)
+       ("kitemmodels" ,kitemmodels)
+       ("qwt" ,qwt)
+       ("vc" ,vc)))
+    (inputs
+     `(("qtbase" ,qtbase)
+       ("qtdeclarative" ,qtdeclarative)
+       ("qtmultimedia" ,qtmultimedia)
+       ("qtx11extras" ,qtx11extras)
+       ("qtsvg" ,qtsvg)
+       ("karchive" ,karchive)
+       ("kcompletion" ,kcompletion)
+       ("kconfig" ,kconfig)
+       ("kcoreaddons" ,kcoreaddons)
+       ("kcrash" ,kcrash)
+       ("kguiaddons" ,kguiaddons)
+       ("ki18n" ,ki18n)
+       ("kiconthemes" ,kiconthemes)
+       ("kio" ,kio)
+       ("kitemviews" ,kitemviews)
+       ("kwidgetsaddons" ,kwidgetsaddons)
+       ("kwindowsystem" ,kwindowsystem)
+       ("kxmlgui" ,kxmlgui)
+       ("boost" ,boost)
+       ("exiv2" ,exiv2)
+       ("lcms" ,lcms)
+       ("libpng" ,libpng)
+       ("libjpeg-turbo" ,libjpeg-turbo)
+       ("zlib" ,zlib)
+       ("libx11" ,libx11)
+       ("libxcb" ,libxcb)
+       ("libxi" ,libxi)
+       ("fftw" ,fftw)
+       ("gsl" ,gsl)
+       ("poppler-qt5" ,poppler-qt5)
+       ("libraw" ,libraw)
+       ("libtiff" ,libtiff)
+       ("perl" ,perl)
+       ("ilmbase" ,ilmbase)
+       ("openexr" ,openexr)))
+    (home-page "https://krita.org")
+    (synopsis "Digital painting application")
+    (description
+     "Krita is a professional painting tool designed for concept artists,
+illustrators, matte and texture artists, and the VFX industry.  Notable
+features include brush stabilizers, brush engines and wrap-around mode.")
+    (license license:gpl2+)))
+
 (define-public libkomparediff2
   (package
     (name "libkomparediff2")
@@ -258,7 +349,7 @@ used in KDE development tools Kompare and KDevelop.")
 (define-public libksysguard
   (package
     (name "libksysguard")
-    (version "5.10.4")
+    (version "5.11.2")
     (source
      (origin
        (method url-fetch)
@@ -266,7 +357,7 @@ used in KDE development tools Kompare and KDevelop.")
                            "/libksysguard-" version ".tar.xz"))
        (sha256
         (base32
-         "01w0laywva0p0ar2lvr1k5000bhjikjfxsb4f6p30qswrchrmrh3"))))
+         "12d0r4rilydbqdgkm256khvkb9m0hya3p27xqvv3hg77wgxzdl3f"))))
     (native-inputs
      `(("extra-cmake-modules" ,extra-cmake-modules)
        ("pkg-config" ,pkg-config)))
@@ -308,7 +399,7 @@ used in KDE development tools Kompare and KDevelop.")
            (lambda _
              ;; TODO: Fix this failing test-case
              (zero? (system* "ctest" "-E" "processtest")))))))
-    (home-page "https://www.kde.org/info/plasma-5.10.4.php")
+    (home-page "https://www.kde.org/info/plasma-5.11.2.php")
     (synopsis "Network enabled task and system monitoring")
     (description "KSysGuard can obtain information on system load and
 manage running processes.  It obtains this information by interacting

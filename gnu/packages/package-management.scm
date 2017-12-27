@@ -3,6 +3,7 @@
 ;;; Copyright © 2015, 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2017 Muriithi Frederick Muriuki <fredmanglis@gmail.com>
 ;;; Copyright © 2017 Oleg Pykhalov <go.wigust@gmail.com>
+;;; Copyright © 2017 Roel Janssen <roel@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -28,11 +29,13 @@
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system python)
   #:use-module (guix build-system emacs)
-  #:use-module ((guix licenses) #:select (gpl2+ gpl3+ lgpl2.1+ asl2.0 bsd-3))
+  #:use-module ((guix licenses) #:select (gpl2+ gpl3+ agpl3+ lgpl2.1+ asl2.0
+                                          bsd-3 silofl1.1))
   #:use-module (gnu packages)
   #:use-module (gnu packages guile)
   #:use-module (gnu packages file)
   #:use-module (gnu packages backup)
+  #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages gnupg)
   #:use-module (gnu packages databases)
@@ -40,22 +43,27 @@
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages gettext)
+  #:use-module (gnu packages lisp)
   #:use-module (gnu packages texinfo)
   #:use-module (gnu packages nettle)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages perl-check)
   #:use-module (gnu packages curl)
   #:use-module (gnu packages web)
   #:use-module (gnu packages man)
   #:use-module (gnu packages bdw-gc)
   #:use-module (gnu packages patchutils)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-web)
   #:use-module (gnu packages popt)
   #:use-module (gnu packages gnuzilla)
   #:use-module (gnu packages cpio)
+  #:use-module (gnu packages time)
   #:use-module (gnu packages tls)
   #:use-module (gnu packages ssh)
   #:use-module (gnu packages vim)
   #:use-module (gnu packages serialization)
+  #:use-module (gnu packages acl)
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 match))
 
@@ -77,9 +85,9 @@
   ;; Latest version of Guix, which may or may not correspond to a release.
   ;; Note: the 'update-guix-package.scm' script expects this definition to
   ;; start precisely like this.
-  (let ((version "0.13.0")
-        (commit "a9468b422b6df2349a3f4d1451c9302c3d77011b")
-        (revision 6))
+  (let ((version "0.14.0")
+        (commit "02345c963e1e8a45afcdf5acb80fca4538244b36")
+        (revision 2))
     (package
       (name "guix")
 
@@ -95,7 +103,7 @@
                       (commit commit)))
                 (sha256
                  (base32
-                  "0bv323yp657x0a2aa2z5pp5541hjqmn908kh9jqlbdw5gpx9vg3d"))
+                  "0f33makasj14zf0zfv1w7k04bkcpdy5grx5b904vv5ygi5bak7nx"))
                 (file-name (string-append "guix-" version "-checkout"))))
       (build-system gnu-build-system)
       (arguments
@@ -135,6 +143,12 @@
                                     (chmod po #o666))
                                   (find-files "." "\\.po$"))
 
+                        (patch-shebang "build-aux/git-version-gen")
+
+                        (call-with-output-file ".tarball-version"
+                          (lambda (port)
+                            (display ,version port)))
+
                         (zero? (system* "sh" "bootstrap"))))
                     (add-before
                         'configure 'copy-bootstrap-guile
@@ -162,8 +176,7 @@
                         (copy "armhf")
                         (copy "aarch64")
                         #t))
-                    (add-after
-                        'unpack 'disable-container-tests
+                    (add-after 'unpack 'disable-failing-tests
                       ;; XXX FIXME: These tests fail within the build container.
                       (lambda _
                         (substitute* "tests/syscalls.scm"
@@ -185,15 +198,17 @@
                         #t))
                     (add-after 'install 'wrap-program
                       (lambda* (#:key inputs outputs #:allow-other-keys)
-                        ;; Make sure the 'guix' command finds GnuTLS and
-                        ;; Guile-JSON automatically.
+                        ;; Make sure the 'guix' command finds GnuTLS,
+                        ;; Guile-JSON, and Guile-Git automatically.
                         (let* ((out    (assoc-ref outputs "out"))
                                (guile  (assoc-ref inputs "guile"))
                                (json   (assoc-ref inputs "guile-json"))
                                (git    (assoc-ref inputs "guile-git"))
+                               (bs     (assoc-ref inputs
+                                                  "guile-bytestructures"))
                                (ssh    (assoc-ref inputs "guile-ssh"))
                                (gnutls (assoc-ref inputs "gnutls"))
-                               (deps   (list json gnutls git ssh))
+                               (deps   (list json gnutls git bs ssh))
                                (effective
                                 (read-line
                                  (open-pipe* OPEN_READ
@@ -432,7 +447,7 @@ symlinks to the files in a common directory such as /usr/local.")
 (define-public rpm
   (package
     (name "rpm")
-    (version "4.13.0.1")
+    (version "4.13.0.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "http://ftp.rpm.org/releases/rpm-"
@@ -440,7 +455,7 @@ symlinks to the files in a common directory such as /usr/local.")
                                   version ".tar.bz2"))
               (sha256
                (base32
-                "03cvbwbfrhm0fa02j7828k1qp05hf2m0fradwcf2nqhrsjkppz17"))))
+                "1521y4ghjns449kzpwkjn9cksh686383xnfx0linzlalqc3jqgig"))))
     (build-system gnu-build-system)
     (arguments
      '(#:configure-flags '("--with-external-db"   ;use the system's bdb
@@ -505,17 +520,16 @@ transactions from C or Python.")
 (define-public diffoscope
   (package
     (name "diffoscope")
-    (version "81")
+    (version "88")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri name version))
               (sha256
                (base32
-                "093lxy6zj69i19fxdkj3jnai3b1ajqbksyqcvy8wqj3plaaxjna5"))))
+                "1zp6nb37igssxg4bqsi3cw5klx4prhcx50mzg4463l50mssn8mp2"))))
     (build-system python-build-system)
     (arguments
      `(#:phases (modify-phases %standard-phases
-                  (add-before 'unpack 'n (lambda _ #t))
                   ;; setup.py mistakenly requires python-magic from PyPi, even
                   ;; though the Python bindings of `file` are sufficient.
                   ;; https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=815844
@@ -530,16 +544,28 @@ transactions from C or Python.")
                          (string-append "['" (which "xxd") "',")))
                       (substitute* "diffoscope/comparators/elf.py"
                         (("@tool_required\\('readelf'\\)") "")
-                        (("\\['readelf',")
-                         (string-append "['" (which "readelf") "',")))
+                        (("get_tool_name\\('readelf'\\)")
+                         (string-append "'" (which "readelf") "'")))
+                      (substitute* "diffoscope/comparators/directory.py"
+                        (("@tool_required\\('stat'\\)") "")
+                        (("@tool_required\\('getfacl'\\)") "")
+                        (("\\['stat',")
+                         (string-append "['" (which "stat") "',"))
+                        (("\\['getfacl',")
+                         (string-append "['" (which "getfacl") "',")))
+                      #t))
+                  (add-before 'check 'delete-failing-test
+                    (lambda _
+                      (delete-file "tests/test_tools.py") ;this requires /sbin to be on the path
                       #t)))))
     (inputs `(("rpm" ,rpm)                        ;for rpm-python
               ("python-file" ,python-file)
               ("python-debian" ,python-debian)
               ("python-libarchive-c" ,python-libarchive-c)
               ("python-tlsh" ,python-tlsh)
+              ("acl" ,acl)                        ;for getfacl
               ("colordiff" ,colordiff)
-              ("xxd" ,vim)
+              ("xxd" ,xxd)
 
               ;; Below are modules used for tests.
               ("python-pytest" ,python-pytest)
@@ -730,10 +756,51 @@ This package provides Conda as a library.")
                  ;; And it aborts if the directory doesn't exist.
                  (mkdir-p target)
                  (zero? (system* "python" "utils/setup-testing.py" "install"
-                                 (string-append "--prefix=" out))))))))))
+                                 (string-append "--prefix=" out))))))
+           ;; The "activate" and "deactivate" scripts don't need wrapping.
+           ;; They also break when they are renamed.
+           (add-after 'wrap 'undo-wrap
+             (lambda* (#:key outputs #:allow-other-keys)
+               (with-directory-excursion (string-append (assoc-ref outputs "out") "/bin/")
+                 (delete-file "deactivate")
+                 (rename-file ".deactivate-real" "deactivate")
+                 (delete-file "activate")
+                 (rename-file ".activate-real" "activate")
+                 #t)))))))
     (description
      "Conda is a cross-platform, Python-agnostic binary package manager.  It
 is the package manager used by Anaconda installations, but it may be used for
 other systems as well.  Conda makes environments first-class citizens, making
 it easy to create independent environments even for C libraries.  Conda is
 written entirely in Python.")))
+
+(define-public gwl
+  (package
+    (name "gwl")
+    (version "0.1.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://www.guixwl.org/releases/gwl-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "06pm967mq1wyggx7l0nfapw5s0k5qc5r9lawk2v3db868br779a7"))))
+    (build-system gnu-build-system)
+    (native-inputs
+     `(("autoconf" ,autoconf)
+       ("automake" ,automake)
+       ("pkg-config" ,pkg-config)))
+    (inputs
+     `(("guile" ,guile-2.2)))
+    (propagated-inputs
+     `(("guix" ,guix)
+       ("guile-commonmark" ,guile-commonmark)))
+    (home-page "https://www.guixwl.org")
+    (synopsis "Workflow management extension for GNU Guix")
+    (description "This project provides two subcommands to GNU Guix and
+introduces two record types that provide a workflow management extension built
+on top of GNU Guix.")
+    ;; The Scheme modules in guix/ and gnu/ are licensed GPL3+,
+    ;; the web interface modules in gwl/ are licensed AGPL3+,
+    ;; and the fonts included in this package are licensed OFL1.1.
+    (license (list gpl3+ agpl3+ silofl1.1))))

@@ -1,5 +1,6 @@
 # GNU Guix --- Functional package management for GNU
 # Copyright © 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
+# Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
 #
 # This file is part of GNU Guix.
 #
@@ -53,6 +54,49 @@ else
 fi
 
 
+cat > "$tmpfile"<<EOF
+;; This is line 1, and the next one is line 2.
+   (operating-system
+;; This is line 3, and there is no closing paren!
+EOF
+
+if guix system vm "$tmpfile" 2> "$errorfile"
+then
+    # This must not succeed.
+    exit 1
+else
+    grep "$tmpfile:4:1: missing closing paren" "$errorfile"
+fi
+
+
+# Reporting of module not found errors.
+
+cat > "$tmpfile" <<EOF
+;; Line 1.
+(use-modules (gnu))
+  (use-service-modules openssh)
+EOF
+
+if guix system build "$tmpfile" -n 2> "$errorfile"
+then false
+else
+    grep "$tmpfile:3:2: .*module .*openssh.*not found" "$errorfile"
+    grep "Try.*use-service-modules ssh" "$errorfile"
+fi
+
+cat > "$tmpfile" <<EOF
+;; Line 1.
+(use-modules (gnu))
+  (use-package-modules qemu)
+EOF
+
+if guix system build "$tmpfile" -n 2> "$errorfile"
+then false
+else
+    grep "$tmpfile:3:2: .*module .*qemu.*not found" "$errorfile"
+    grep "Try.*use-package-modules virtualization" "$errorfile"
+fi
+
 # Reporting of unbound variables.
 
 cat > "$tmpfile" <<EOF
@@ -80,9 +124,9 @@ else
     then
 	# FIXME: With Guile 2.2.0 the error is reported on line 4.
 	# See <http://bugs.gnu.org/26107>.
-	grep "$tmpfile:[49]:.*[Uu]nbound variable.*GRUB-config" "$errorfile"
+	grep "$tmpfile:[49]:[0-9]\+: GRUB-config.*[Uu]nbound variable" "$errorfile"
     else
-	grep "$tmpfile:9:.*[Uu]nbound variable.*GRUB-config" "$errorfile"
+	grep "$tmpfile:9:[0-9]\+: GRUB-config.*[Uu]nbound variable" "$errorfile"
     fi
 fi
 
@@ -91,7 +135,9 @@ OS_BASE='
   (timezone "Europe/Paris")
   (locale "en_US.UTF-8")
 
-  (bootloader (grub-configuration (device "/dev/sdX")))
+  (bootloader (bootloader-configuration
+               (bootloader grub-bootloader)
+               (device "/dev/sdX")))
   (file-systems (cons (file-system
                         (device "root")
                         (title (string->symbol "label"))
@@ -162,7 +208,9 @@ make_user_config ()
   (timezone "Europe/Paris")
   (locale "en_US.UTF-8")
 
-  (bootloader (grub-configuration (device "/dev/sdX")))
+  (bootloader (bootloader-configuration
+                (bootloader grub-bootloader)
+                (device "/dev/sdX")))
   (file-systems (cons (file-system
                         (device "root")
                         (title 'label)

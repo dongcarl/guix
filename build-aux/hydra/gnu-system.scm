@@ -1,5 +1,6 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2012, 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2017 Jan Nieuwenhuizen <janneke@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -21,12 +22,14 @@
 ;;; tool.
 ;;;
 
-;; Attempt to use our very own Guix modules.
+(use-modules (system base compile))
+
 (eval-when (compile load eval)
 
-  ;; Ignore any available .go, and force recompilation.  This is because our
-  ;; checkout in the store has mtime set to the epoch, and thus .go files look
-  ;; newer, even though they may not correspond.
+  ;; Pre-load the compiler so we don't end up auto-compiling it.
+  (compile #t)
+
+  ;; Use our very own Guix modules.
   (set! %fresh-auto-compile #t)
 
   (and=> (assoc-ref (current-source-location) 'filename)
@@ -250,7 +253,8 @@ all its dependencies, and ready to be installed on non-GuixSD distributions.")
       "Return a job for PACKAGE on SYSTEM, or #f if this combination is not
 valid."
       (cond ((member package base-packages)
-             #f)
+             (package-job store (symbol-append 'base. (job-name package))
+                          package system))
             ((supported-package? package system)
              (let ((drv (package-derivation store package system
                                             #:graft? #f)))
@@ -259,6 +263,25 @@ valid."
                                  package system))))
             (else
              #f)))))
+
+(define (all-packages)
+  "Return the list of packages to build."
+  (define (adjust package result)
+    (cond ((package-replacement package)
+           (cons* package                         ;build both
+                  (package-replacement package)
+                  result))
+          ((package-superseded package)
+           result)                                ;don't build it
+          (else
+           (cons package result))))
+
+  (fold-packages adjust
+                 (fold adjust '()                 ;include base packages
+                       (match (%final-inputs)
+                         (((labels packages _ ...) ...)
+                          packages)))
+                 #:select? (const #t)))           ;include hidden packages
 
 
 ;;;
@@ -270,6 +293,8 @@ valid."
   (define subset
     (match (assoc-ref arguments 'subset)
       ("core" 'core)                              ; only build core packages
+      ("hello" 'hello)                            ; only build hello
+      (((? string?) (? string?) ...) 'list)       ; only build selected list of packages
       (_ 'all)))                                  ; build everything
 
   (define (cross-jobs system)
@@ -311,20 +336,17 @@ valid."
   (parameterize ((%graft? #f))
     ;; Return one job for each package, except bootstrap packages.
     (append-map (lambda (system)
+                  (format (current-error-port)
+                          "evaluating for '~a' (heap size: ~a MiB)...~%"
+                          system
+                          (round
+                           (/ (assoc-ref (gc-stats) 'heap-size)
+                              (expt 2. 20))))
+                  (invalidate-derivation-caches!)
                   (case subset
                     ((all)
                      ;; Build everything, including replacements.
-                     (let ((all (fold-packages
-                                 (lambda (package result)
-                                   (cond ((package-replacement package)
-                                          (cons* package
-                                                 (package-replacement package)
-                                                 result))
-                                         ((package-superseded package)
-                                          result) ;don't build it
-                                         (else
-                                          (cons package result))))
-                                 '()))
+                     (let ((all (all-packages))
                            (job (lambda (package)
                                   (package->job store package
                                                 system))))
@@ -340,6 +362,22 @@ valid."
                                                  package system))
                                   %core-packages)
                              (cross-jobs system)))
+                    ((hello)
+                     ;; Build hello package only.
+                     (if (string=? system (%current-system))
+                         (let ((hello (specification->package "hello")))
+                           (list (package-job store (job-name hello) hello system)))
+                         '()))
+                    ((list)
+                     ;; Build selected list of packages only.
+                     (if (string=? system (%current-system))
+                         (let* ((names (assoc-ref arguments 'subset))
+                                (packages (map specification->package names)))
+                           (map (lambda (package)
+                                    (package-job store (job-name package)
+                                                 package system))
+                                  packages))
+                         '()))
                     (else
                      (error "unknown subset" subset))))
                 %hydra-supported-systems)))

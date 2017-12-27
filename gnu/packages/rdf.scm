@@ -30,6 +30,7 @@
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages databases)
   #:use-module (gnu packages boost)
+  #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages curl)
   #:use-module (gnu packages cyrus-sasl)
@@ -41,7 +42,9 @@
   #:use-module (gnu packages perl)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-web)
   #:use-module (gnu packages qt)
+  #:use-module (gnu packages time)
   #:use-module (gnu packages tls)
   #:use-module (gnu packages xml))
 
@@ -127,26 +130,26 @@ Java Lucene text search engine API to C++.")
                 "18p2flb2sv2hq6w2qkd29z9c7knnwqr3f12i2srshlzx6vwkm05s"))))
     (build-system gnu-build-system)
     (arguments
-     '(#:phases (alist-cons-after
-                 'remove-out-of-tree-references 'autoreconf
-                 (lambda _
-                   (zero? (system* "autoreconf" "-vfi")))
-                 (alist-cons-after
-                  'unpack 'remove-out-of-tree-references
-                  (lambda _
-                    ;; remove symlinks to files in /usr/
-                    (delete-file-recursively "m4")
-                    (for-each delete-file '("config.guess"
-                                            "config.sub"
-                                            "depcomp"
-                                            "install-sh"
-                                            "ltmain.sh"
-                                            "missing"))
-                    ;; remove_test depends on an out-of-tree RDF file
-                    (substitute* "examples/Makefile.am"
-                      (("instances_test remove_test") "instances_test")
-                      (("\\$\\(TESTS\\) remove_test") "$(TESTS)")))
-                  %standard-phases))))
+     '(#:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'remove-out-of-tree-references
+           (lambda _
+             ;; remove symlinks to files in /usr/
+             (delete-file-recursively "m4")
+             (for-each delete-file '("config.guess"
+                                     "config.sub"
+                                     "depcomp"
+                                     "install-sh"
+                                     "ltmain.sh"
+                                     "missing"))
+             ;; remove_test depends on an out-of-tree RDF file
+             (substitute* "examples/Makefile.am"
+               (("instances_test remove_test") "instances_test")
+               (("\\$\\(TESTS\\) remove_test") "$(TESTS)"))
+             #t))
+         (add-after 'remove-out-of-tree-references 'autoreconf
+           (lambda _
+             (zero? (system* "autoreconf" "-vfi")))))))
     (inputs
      `(("raptor" ,raptor2)
        ("cyrus-sasl" ,cyrus-sasl)

@@ -49,7 +49,7 @@
   #:use-module (srfi srfi-37)
   #:use-module (gnu packages)
   #:autoload   (gnu packages base) (canonical-package)
-  #:autoload   (gnu packages guile) (guile-2.0)
+  #:autoload   (gnu packages guile) (guile-2.2)
   #:autoload   (gnu packages bootstrap) (%bootstrap-guile)
   #:export (build-and-use-profile
             delete-generations
@@ -360,7 +360,8 @@ ENTRIES, a list of manifest entries, in the context of PROFILE."
   ;; Alist of default option values.
   `((verbosity . 0)
     (graft? . #t)
-    (substitutes? . #t)))
+    (substitutes? . #t)
+    (build-hook? . #t)))
 
 (define (show-help)
   (display (G_ "Usage: guix package [OPTION]...
@@ -604,12 +605,12 @@ and upgrades."
     (options->upgrade-predicate opts))
 
   (define upgraded
-    (fold (lambda (entry transaction)
-            (if (upgrade? (manifest-entry-name entry))
-                (transaction-upgrade-entry entry transaction)
-                transaction))
-          transaction
-          (manifest-entries manifest)))
+    (fold-right (lambda (entry transaction)
+                  (if (upgrade? (manifest-entry-name entry))
+                      (transaction-upgrade-entry entry transaction)
+                      transaction))
+                transaction
+                (manifest-entries manifest)))
 
   (define to-install
     (filter-map (match-lambda
@@ -738,7 +739,8 @@ processed, #f otherwise."
               (available (fold-packages
                           (lambda (p r)
                             (let ((n (package-name p)))
-                              (if (supported-package? p)
+                              (if (and (supported-package? p)
+                                       (not (package-superseded p)))
                                   (if regexp
                                       (if (regexp-exec regexp n)
                                           (cons p r)
@@ -917,5 +919,5 @@ processed, #f otherwise."
                              (%store)
                              (if (assoc-ref opts 'bootstrap?)
                                  %bootstrap-guile
-                                 (canonical-package guile-2.0)))))
+                                 (canonical-package guile-2.2)))))
               (process-actions (%store) opts)))))))

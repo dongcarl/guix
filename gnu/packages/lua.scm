@@ -6,7 +6,7 @@
 ;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2016 doncatnip <gnopap@gmail.com>
-;;; Copyright © 2016 Clément Lassieur <clement@lassieur.org>
+;;; Copyright © 2016, 2017 Clément Lassieur <clement@lassieur.org>
 ;;; Copyright © 2016 José Miguel Sánchez García <jmi2k@openmailbox.org>
 ;;;
 ;;; This file is part of GNU Guix.
@@ -124,7 +124,7 @@ for configuration, scripting, and rapid prototyping.")
     (build-system gnu-build-system)
     (arguments
      '(#:tests? #f                      ;luajit is distributed without tests
-       #:phases (alist-delete 'configure %standard-phases)
+       #:phases (modify-phases %standard-phases (delete 'configure))
        #:make-flags (list (string-append "PREFIX=" (assoc-ref %outputs "out")))))
     (home-page "http://www.luajit.org/")
     (synopsis "Just in time compiler for Lua programming language version 5.1")
@@ -173,21 +173,21 @@ language.")
 (define-public lua5.1-socket
   (package
     (name "lua5.1-socket")
-    (version "2.0.2")
+    (version "3.0-rc1")
     (source (origin
               (method url-fetch)
-              (uri (string-append "http://files.luaforge.net/releases/"
-                                  "luasocket/luasocket/luasocket-"
-                                  version "/luasocket-" version ".tar.gz"))
+              (uri (string-append
+                    "https://github.com/diegonehab/luasocket/archive/v"
+                    version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "19ichkbc4rxv00ggz8gyf29jibvc2wq9pqjik0ll326rrxswgnag"))))
+                "0j8jx8bjicvp9khs26xjya8c495wrpb7parxfnabdqa5nnsxjrwb"))))
     (build-system gnu-build-system)
     (arguments
      `(#:make-flags
        (let ((out (assoc-ref %outputs "out")))
-         (list (string-append "INSTALL_TOP_SHARE=" out "/share/lua/5.1")
-               (string-append "INSTALL_TOP_LIB=" out "/lib/lua/5.1")))
+         (list (string-append "INSTALL_TOP=" out)))
        #:phases
        (modify-phases %standard-phases
          (delete 'configure)
@@ -356,9 +356,9 @@ based libraries.  It allows using GObject-based libraries directly from Lua.
 Notable examples are GTK+, GStreamer and Webkit.")
     (license license:expat)))
 
-(define-public lua-lpeg
+(define (make-lua-lpeg name lua)
   (package
-    (name "lua-lpeg")
+    (name name)
     (version "1.0.1")
     (source (origin
               (method url-fetch)
@@ -390,34 +390,16 @@ Grammars (PEGs).")
     (home-page "http://www.inf.puc-rio.br/~roberto/lpeg")
     (license license:expat)))
 
+(define-public lua-lpeg
+  (make-lua-lpeg "lua-lpeg" lua))
+
 (define-public lua5.2-lpeg
-  (package (inherit lua-lpeg)
-    (name "lua5.2-lpeg")
-    ;; XXX: The arguments field is almost an exact copy of the field in
-    ;; "lua-lpeg", except for the version string, which was derived from "lua"
-    ;; and now is taken from "lua-5.2".  See this discussion for context:
-    ;; http://lists.gnu.org/archive/html/guix-devel/2017-01/msg02048.html
-    (arguments
-     `(#:phases
-       (modify-phases %standard-phases
-         (delete 'configure)
-         ;; `make install` isn't available, so we have to do it manually
-         (replace 'install
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let ((out (assoc-ref outputs "out"))
-                   (lua-version ,(version-major+minor (package-version lua-5.2))))
-               (install-file "lpeg.so"
-                             (string-append out "/lib/lua/" lua-version))
-               (install-file "re.lua"
-                             (string-append out "/share/lua/" lua-version))
-               #t))))
-       #:test-target "test"))
-    (inputs `(("lua", lua-5.2)))))
+  (make-lua-lpeg "lua5.2-lpeg" lua-5.2))
 
 ;; Lua 5.3 is not supported.
-(define-public lua5.2-bitop
+(define (make-lua-bitop name lua)
   (package
-    (name "lua5.2-bitop")
+    (name name)
     (version "1.0.2")
     (source (origin
               (method url-fetch)
@@ -434,15 +416,21 @@ Grammars (PEGs).")
              (string-append "INSTALLPATH=printf "
                             (assoc-ref %outputs "out")
                             "/lib/lua/"
-                            ,(version-major+minor (package-version lua-5.2))
+                            ,(version-major+minor (package-version lua))
                             "/bit/bit.so"))
        #:phases
        (modify-phases %standard-phases
          (delete 'configure))))
-    (inputs `(("lua", lua-5.2)))
+    (inputs `(("lua", lua)))
     (home-page "http://bitop.luajit.org/index.html")
     (synopsis "Bitwise operations on numbers for Lua")
     (description
      "Lua BitOp is a C extension module for Lua which adds bitwise operations
 on numbers.")
     (license license:expat)))
+
+(define-public lua5.2-bitop
+  (make-lua-bitop "lua5.2-bitop" lua-5.2))
+
+(define-public lua5.1-bitop
+  (make-lua-bitop "lua5.1-bitop" lua-5.1))

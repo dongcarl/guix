@@ -46,14 +46,14 @@
     ;; The 7 release series has an incompatible API, while the 6 series is still
     ;; maintained. Don't update to 7 until we've made sure that the ImageMagick
     ;; users are ready for the 7-series API.
-    (version "6.9.9-12")
+    (version "6.9.9-27")
     (source (origin
              (method url-fetch)
              (uri (string-append "mirror://imagemagick/ImageMagick-"
                                  version ".tar.xz"))
              (sha256
               (base32
-               "10k63nb1wi5fq1xg1wkjfw7ph46ysy8rndgp18knj2zr06zjjrc5"))))
+               "0z71az1bfar1r6mm3ijxbci0vb1ri66ypaals8wb17h1d85hkl17"))))
     (build-system gnu-build-system)
     (arguments
      `(#:configure-flags '("--with-frozenpaths" "--without-gcc-arch")
@@ -105,7 +105,7 @@
     (native-inputs `(("pkg-config" ,pkg-config)))
     (outputs '("out"
                "doc"))                          ; 26 MiB of HTML documentation
-    (home-page "http://www.imagemagick.org/")
+    (home-page "https://www.imagemagick.org/")
     (synopsis "Create, edit, compose, or convert bitmap images")
     (description
      "ImageMagick is a software suite to create, edit, compose, or convert
@@ -164,7 +164,7 @@ script.")
 (define-public graphicsmagick
   (package
     (name "graphicsmagick")
-    (version "1.3.26")
+    (version "1.3.27")
     (source (origin
               (method url-fetch)
               (uri
@@ -176,16 +176,7 @@ script.")
                                  "/GraphicsMagick-" version ".tar.xz")))
               (sha256
                (base32
-                "122zgs96dqrys62mnh8x5yvfff6km4d3yrnvaxzg3mg5sprib87v"))
-              (patches
-               (search-patches "graphicsmagick-CVE-2017-11403+CVE-2017-14103.patch"
-                               "graphicsmagick-CVE-2017-12935.patch"
-                               "graphicsmagick-CVE-2017-12936.patch"
-                               "graphicsmagick-CVE-2017-12937.patch"
-                               "graphicsmagick-CVE-2017-13775.patch"
-                               "graphicsmagick-CVE-2017-13776+CVE-2017-13777.patch"
-                               "graphicsmagick-CVE-2017-14042.patch"
-                               "graphicsmagick-CVE-2017-14165.patch"))))
+                "0rq35p3rml10cxz2z4s7xcfsilhhk19mmy094g3ivz0fg797hcnh"))))
     (build-system gnu-build-system)
     (arguments
      `(#:configure-flags

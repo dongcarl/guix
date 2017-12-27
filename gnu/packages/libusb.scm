@@ -4,7 +4,7 @@
 ;;; Copyright © 2015 Andy Wingo <wingo@igalia.com>
 ;;; Copyright © 2015, 2016, 2017 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
-;;; Copyright © 2016 Theodoros Foradis <theodoros.for@openmailbox.org>
+;;; Copyright © 2016 Theodoros Foradis <theodoros@foradis.org>
 ;;; Copyright © 2017 Jonathan Brielmaier <jonathan.brielmaier@web.de>
 ;;;
 ;;; This file is part of GNU Guix.
@@ -89,7 +89,7 @@ devices on various operating systems.")
      `(("pkg-config" ,pkg-config)))
     (inputs
      `(("libusb" ,libusb)))
-    (home-page "http://www.libusb.org")
+    (home-page "http://libusb.info")
     (synopsis "Compatibility shim for libusb")
     (description
      "Libusb-compat provides a shim allowing applications based on older

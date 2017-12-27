@@ -8,6 +8,7 @@
 ;;; Copyright © 2016 David Thompson <davet@gnu.org>
 ;;; Copyright © 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2017 Arun Isaac <arunisaac@systemreboot.net>
+;;; Copyright © 2017 Rutger Helling <rhelling@mykolab.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -41,6 +42,7 @@
   #:use-module (gnu packages llvm)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages tls)
   #:use-module (gnu packages video)
   #:use-module (gnu packages xdisorg)
   #:use-module (gnu packages xml)
@@ -217,17 +219,19 @@ also known as DXTn or DXTC) for Mesa.")
 (define-public mesa
   (package
     (name "mesa")
-    (version "17.1.4")
+    (version "17.2.1")
     (source
       (origin
         (method url-fetch)
-        (uri (list (string-append "ftp://ftp.freedesktop.org/pub/mesa/"
+        (uri (list (string-append "https://mesa.freedesktop.org/archive/"
+                                  "mesa-" version ".tar.xz")
+                   (string-append "ftp://ftp.freedesktop.org/pub/mesa/"
                                   "mesa-" version ".tar.xz")
                    (string-append "ftp://ftp.freedesktop.org/pub/mesa/"
                                   version "/mesa-" version ".tar.xz")))
         (sha256
          (base32
-          "1bcwxin7nmbnv92xav381b6qxscsx1zzc71ryfvj03cglbkb1wq6"))
+          "07msr6xismw2jq87irwhz7vygvzj6hi38d71paij9zvwh8bmsf3p"))
         (patches
          (search-patches "mesa-wayland-egl-symbols-check-mips.patch"
                          "mesa-skip-disk-cache-test.patch"))))
@@ -253,13 +257,14 @@ also known as DXTn or DXTC) for Mesa.")
         ("libxvmc" ,libxvmc)
         ,@(match (%current-system)
             ((or "x86_64-linux" "i686-linux")
-             `(("llvm" ,llvm)))
+             `(("llvm" ,llvm-3.9.1))) ; exactly 3.9.0 or 3.9.1 for swrast
             (_
              `()))
         ("makedepend" ,makedepend)
         ("presentproto" ,presentproto)
         ("s2tc" ,s2tc)
-        ("wayland" ,wayland)))
+        ("wayland" ,wayland)
+        ("wayland-protocols" ,wayland-protocols)))
     (native-inputs
       `(("pkg-config" ,pkg-config)
         ("python" ,python-2)
@@ -267,13 +272,17 @@ also known as DXTn or DXTC) for Mesa.")
     (arguments
      `(#:configure-flags
        '(,@(match (%current-system)
-             ((or "armhf-linux" "aarch64-linux")
-              '("--with-gallium-drivers=freedreno,nouveau,r300,r600,svga,swrast,vc4,virgl"))
+             ("armhf-linux"
+              ;; TODO: Add etnaviv,imx when libdrm supports etnaviv.
+              '("--with-gallium-drivers=freedreno,nouveau,r300,r600,swrast,vc4,virgl"))
+             ("aarch64-linux"
+              ;; TODO: Fix svga driver for aarch64 and armhf.
+              '("--with-gallium-drivers=freedreno,nouveau,r300,r600,swrast,vc4,virgl"))
              (_
               '("--with-gallium-drivers=i915,nouveau,r300,r600,svga,swrast,virgl")))
          ;; Enable various optional features.  TODO: opencl requires libclc,
          ;; omx requires libomxil-bellagio
-         "--with-egl-platforms=x11,drm,wayland"
+         "--with-platforms=x11,drm,wayland,surfaceless"
          "--enable-glx-tls"        ;Thread Local Storage, improves performance
          ;; "--enable-opencl"
          ;; "--enable-omx"
@@ -422,7 +431,7 @@ glxgears, glxheads, and glxinfo.")
                   (("/lib64") "/lib")))))
     (build-system gnu-build-system)
     (arguments
-     '(#:phases (alist-delete 'configure %standard-phases)
+     '(#:phases (modify-phases %standard-phases (delete 'configure))
        #:make-flags (list (string-append "GLEW_PREFIX="
                                          (assoc-ref %outputs "out"))
                           (string-append "GLEW_DEST="
@@ -669,3 +678,36 @@ mixed vector/bitmap output.")
     (license (list license:lgpl2.0+
                    (license:fsf-free "http://www.geuz.org/gl2ps/COPYING.GL2PS"
                                      "GPL-incompatible copyleft license")))))
+
+(define-public virtualgl
+  (package
+    (name "virtualgl")
+    (version "2.5.2")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://github.com/VirtualGL/virtualgl/archive/"
+                           version ".tar.gz"))
+       (file-name (string-append name "-" version ".tar.gz"))
+       (sha256
+        (base32
+         "0rnid3hwrry9d5d4m7sygq00xxx976rgk00a3557m9r5kxbmy476"))))
+    (arguments
+     `(#:tests? #f ;; no tests are available
+       #:configure-flags (list "-DVGL_USESSL=1" ;; use OpenSSL
+                          (string-append "-DCMAKE_INSTALL_LIBDIR="
+                                         (assoc-ref %outputs "out") "/lib"))))
+    (build-system cmake-build-system)
+    (inputs `(("glu" ,glu)
+              ("libjpeg-turbo" ,libjpeg-turbo)
+              ("mesa" ,mesa)
+              ("openssl" ,openssl)))
+    (native-inputs `(("pkg-config", pkg-config)))
+    (home-page "https://www.virtualgl.org")
+    (synopsis "Redirects 3D commands from an OpenGL application onto a 3D
+graphics card")
+    (description "VirtualGL redirects the 3D rendering commands from OpenGL
+applications to 3D accelerator hardware in a dedicated server and displays the
+rendered output interactively to a thin client located elsewhere on the
+network.")
+    (license license:wxwindows3.1+)))

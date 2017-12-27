@@ -2,7 +2,7 @@
 ;;; Copyright © 2015 Taylan Ulrich Bayırlı/Kammer <taylanbayirli@gmail.com>
 ;;; Copyright © 2016 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2016 Ricardo Wurmus <rekado@elephly.net>
-;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
+;;; Copyright © 2016, 2017 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 John Darrington <jmd@gnu.org>
 ;;; Copyright © 2016 ng0 <ng0@we.make.ritual.n0.is>
 ;;; Copyright © 2016, 2017 Tobias Geerinckx-Rice <me@tobias.gr>
@@ -59,7 +59,7 @@
 (define-public dnsmasq
   (package
     (name "dnsmasq")
-    (version "2.76")
+    (version "2.78")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -67,7 +67,7 @@
                     version ".tar.xz"))
               (sha256
                (base32
-                "15lzih6671gh9knzpl8mxchiml7z5lfqzr7jm2r0rjhrxs6nk4jb"))))
+                "0ar5h5v3kas2qx2wgy5iqin15gc4jhqrqs067xacgc3lii1rz549"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("pkg-config" ,pkg-config)))
@@ -75,7 +75,7 @@
      `(("dbus" ,dbus)))
     (arguments
      `(#:phases
-       (alist-delete 'configure %standard-phases)
+       (modify-phases %standard-phases (delete 'configure))
        #:make-flags (list (string-append "PREFIX=" (assoc-ref %outputs "out"))
                           "CC=gcc"
                           "COPTS=\"-DHAVE_DBUS\"")
@@ -284,7 +284,7 @@ asynchronous fashion.")
 (define-public unbound
   (package
     (name "unbound")
-    (version "1.6.3")
+    (version "1.6.7")
     (source
      (origin
        (method url-fetch)
@@ -292,7 +292,7 @@ asynchronous fashion.")
                            version ".tar.gz"))
        (sha256
         (base32
-         "0pw4m4z5qspsagxzbjb61xq5bhd57amw26xqvqzi6b8d3mf6azjc"))))
+         "17qwfmlls0w9kpkya3dlpn44b3kr87wsswzg3gawc13hh8yx8ysf"))))
     (build-system gnu-build-system)
     (outputs '("out" "python"))
     (native-inputs
@@ -443,9 +443,9 @@ served by AS112.  Stub and forward zones are supported.")
 (define-public yadifa
   (package
     (name "yadifa")
-    (version "2.2.5")
+    (version "2.2.6")
     (source
-     (let ((build "6937"))
+     (let ((build "7246"))
        (origin
          (method url-fetch)
          (uri
@@ -453,7 +453,7 @@ served by AS112.  Stub and forward zones are supported.")
                          name "-" version "-" build ".tar.gz"))
          (sha256
           (base32
-           "146fs52izf6dfwsxal3srpwin2yyl41g31cy4pyvbi5mqy2craj7")))))
+           "041a35f5jz2wcn8pxk1m7b2qln2wbvj4ddwb0a53lqabl912xi6p")))))
     (build-system gnu-build-system)
     (native-inputs
      `(("which" ,which)))
@@ -483,31 +483,27 @@ Extensions} (DNSSEC).")
 (define-public knot
   (package
     (name "knot")
-    (version "2.5.4")
+    (version "2.6.3")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://secure.nic.cz/files/knot-dns/"
                                   name "-" version ".tar.xz"))
               (sha256
                (base32
-                "1w14m9pmc8vl9mcgikvwbflwcxwz52l77jq98wvxyxab13lpdpiz"))
+                "143pk2124liiq1r4ja1s579nbv3hm2scbbfbfclc2pw60r07mcig"))
               (modules '((guix build utils)))
               (snippet
                '(begin
-                  ;; Remove bundled libraries and dependencies on them.
-                  (substitute* "configure"
-                    (("src/contrib/dnstap/Makefile") ""))
-                  (substitute* "src/Makefile.in"
-                    (("contrib/dnstap ") ""))
+                  ;; Delete bundled libraries.
                   (with-directory-excursion "src/contrib"
-                    (for-each delete-file-recursively
-                              (list "dnstap" "lmdb")))
+                    (delete-file-recursively "lmdb"))
                   #t))))
     (build-system gnu-build-system)
     (native-inputs
      `(("pkg-config" ,pkg-config)))
     (inputs
-     `(("gnutls" ,gnutls)
+     `(("fstrm" ,fstrm)
+       ("gnutls" ,gnutls)
        ("jansson" ,jansson)
        ("libcap-ng" ,libcap-ng)
        ("libedit" ,libedit)
@@ -516,6 +512,7 @@ Extensions} (DNSSEC).")
        ("lmdb" ,lmdb)
        ("ncurses" ,ncurses)
        ("nettle" ,nettle)
+       ("protobuf-c" ,protobuf-c)
 
        ;; For ‘pykeymgr’, needed to migrate keys from versions <= 2.4.
        ("python" ,python-2)
@@ -548,6 +545,7 @@ Extensions} (DNSSEC).")
        (list "--sysconfdir=/etc"
              "--localstatedir=/var"
              "--with-module-rosedb=yes" ; serve static records from a database
+             "--with-module-dnstap=yes" ; allow detailed query logging
              (string-append "--with-bash-completions="
                             (assoc-ref %outputs "out")
                             "/etc/bash_completion.d"))))
@@ -560,6 +558,11 @@ number of programming techniques to improve speed.  For example, the responder
 is completely lock-free, resulting in a very high response rate.  Other features
 include automatic @dfn{DNS Security Extensions} (DNSSEC) signing, dynamic record
 synthesis, and on-the-fly re-configuration.")
-    (license (list license:expat        ; src/contrib/{hat-trie,murmurhash3}
-                   license:lgpl2.0+     ; parts of scr/contrib/ucw
-                   license:gpl3+))))    ; everything else
+    (license
+     (list
+      ;; src/contrib/{hat-trie,murmurhash3,openbsd},
+      ;; src/dnssec/contrib/vpool.[ch], and parts of libtap/ are ‘MIT’ (expat).
+      license:expat
+      license:lgpl2.0+              ; parts of scr/contrib/ucw
+      license:public-domain         ; src/contrib/fnv and possibly murmurhash3
+      license:gpl3+))))             ; everything else

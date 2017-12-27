@@ -186,6 +186,9 @@
 
 (define lsh-service-type
   (service-type (name 'lsh)
+                (description
+                 "Run the GNU@tie{}lsh secure shell (SSH) daemon,
+@command{lshd}.")
                 (extensions
                  (list (service-extension shepherd-root-service-type
                                           lsh-shepherd-service)
@@ -301,7 +304,14 @@ The other options should be self-descriptive."
 
   ;; list of user-name/file-like tuples
   (authorized-keys       openssh-authorized-keys
-                         (default '())))
+                         (default '()))
+
+  ;; Boolean
+  ;; XXX: This should really be handled in an orthogonal way, for instance as
+  ;; proposed in <https://bugs.gnu.org/27155>.  Keep it internal/undocumented
+  ;; for now.
+  (%auto-start?          openssh-auto-start?
+                         (default #t)))
 
 (define %openssh-accounts
   (list (user-group (name "sshd") (system? #t))
@@ -442,7 +452,8 @@ of user-name/file-like tuples."
          (provision '(ssh-daemon))
          (start #~(make-forkexec-constructor #$openssh-command
                                              #:pid-file #$pid-file))
-         (stop #~(make-kill-destructor)))))
+         (stop #~(make-kill-destructor))
+         (auto-start? (openssh-auto-start? config)))))
 
 (define (openssh-pam-services config)
   "Return a list of <pam-services> for sshd with CONFIG."
@@ -460,6 +471,8 @@ of user-name/file-like tuples."
 
 (define openssh-service-type
   (service-type (name 'openssh)
+                (description
+                 "Run the OpenSSH secure shell (SSH) server, @command{sshd}.")
                 (extensions
                  (list (service-extension shepherd-root-service-type
                                           openssh-shepherd-service)
@@ -543,6 +556,8 @@ of user-name/file-like tuples."
 
 (define dropbear-service-type
   (service-type (name 'dropbear)
+                (description
+                 "Run the Dropbear secure shell (SSH) server.")
                 (extensions
                  (list (service-extension shepherd-root-service-type
                                           dropbear-shepherd-service)

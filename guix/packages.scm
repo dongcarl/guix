@@ -608,6 +608,7 @@ specifies modules in scope when evaluating SNIPPET."
       (gexp->derivation name build
                         #:graft? #f
                         #:system system
+                        #:deprecation-warnings #t ;to avoid a rebuild
                         #:guile-for-build guile-for-build))))
 
 (define (transitive-inputs inputs)
@@ -995,14 +996,18 @@ and return it."
   "Fold PROC over the packages BAG depends on.  Each package is visited only
 once, in depth-first order.  If NATIVE? is true, restrict to native
 dependencies; otherwise, restrict to target dependencies."
+  (define bag-direct-inputs*
+    (if native?
+        (lambda (bag)
+          (append (bag-build-inputs bag)
+                  (bag-target-inputs bag)
+                  (if (bag-target bag)
+                      '()
+                      (bag-host-inputs bag))))
+        bag-host-inputs))
+
   (define nodes
-    (match (if native?
-               (append (bag-build-inputs bag)
-                       (bag-target-inputs bag)
-                       (if (bag-target bag)
-                           '()
-                           (bag-host-inputs bag)))
-               (bag-host-inputs bag))
+    (match (bag-direct-inputs* bag)
       (((labels things _ ...) ...)
        things)))
 
@@ -1015,7 +1020,7 @@ dependencies; otherwise, restrict to target dependencies."
       (((? package? head) . tail)
        (if (set-contains? visited head)
            (loop tail result visited)
-           (let ((inputs (bag-direct-inputs (package->bag head))))
+           (let ((inputs (bag-direct-inputs* (package->bag head))))
              (loop (match inputs
                      (((labels things _ ...) ...)
                       (append things tail)))
