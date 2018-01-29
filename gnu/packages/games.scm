@@ -385,6 +385,13 @@ effects and music to make a completely free game.")
                '(begin
                   ;; Remove bundled lua.
                   (delete-file-recursively "lua")
+                  ;; Remove backup files.
+                  (for-each delete-file (find-files "." "~$"))
+                  ;; Remove vestigial script.
+                  (delete-file "Help/Lexicon/modify.pl")
+                  ;; Fix permissions.
+                  (for-each (lambda (f) (chmod f #o644))
+                            (find-files "."))
                   #t))))
     (build-system gnu-build-system)
     (arguments
@@ -428,8 +435,9 @@ effects and music to make a completely free game.")
                (for-each (lambda (folder)
                            (copy-recursively
                             folder
-                            (string-append share "/" folder)))
-                         '("Help" "Patterns" "Rules" "Scripts")))
+                            (string-append share "/" (basename folder))))
+                         '("gui-wx/bitmaps"
+                           "Help" "Patterns" "Rules" "Scripts")))
              #t)))))
     (native-inputs
      `(("pkg-config" ,pkg-config)))
@@ -440,7 +448,7 @@ effects and music to make a completely free game.")
        ("python" ,python-2)
        ("wxwidgets" ,wxwidgets-gtk2)
        ("zlib" ,zlib)))
-    (home-page "http://golly.sourceforge.net/")
+    (home-page "https://golly.sourceforge.net/")
     (synopsis "Software for exploring cellular automata")
     (description
      "Golly simulates Conway's Game of Life and many other types of cellular
@@ -460,7 +468,8 @@ automata.  The following features are available:
 @item Configurable keyboard shortcuts.
 @item Auto fit option to keep patterns within the view.
 @end enumerate")
-    (license license:gpl2+)))
+    (license (list license:gpl2+        ; main program
+                   license:psfl))))     ; python binding
 
 (define-public meandmyshadow
   (package
