@@ -752,6 +752,7 @@ dist_patch_DATA =						\
   %D%/packages/patches/gobject-introspection-absolute-shlib-path.patch \
   %D%/packages/patches/gobject-introspection-cc.patch		\
   %D%/packages/patches/gobject-introspection-girepository.patch	\
+  %D%/packages/patches/golly-system-lua.patch			\
   %D%/packages/patches/gpm-glibc-2.26.patch			\
   %D%/packages/patches/gpsbabel-minizip.patch     		\
   %D%/packages/patches/gpsbabel-qstring.patch     		\

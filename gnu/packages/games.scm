@@ -7,7 +7,7 @@
 ;;; Copyright © 2014 Sylvain Beucler <beuc@beuc.net>
 ;;; Copyright © 2014, 2015, 2018 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2014, 2015, 2016 Sou Bunnbu <iyzsong@gmail.com>
-;;; Copyright © 2014, 2015 Mark H Weaver <mhw@netris.org>
+;;; Copyright © 2014, 2015, 2018 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2015, 2016 Andreas Enge <andreas@enge.fr>
 ;;; Copyright © 2015 David Hashe <david.hashe@dhashe.com>
 ;;; Copyright © 2015, 2017 Christopher Allan Webber <cwebber@dustycloud.org>
@@ -378,11 +378,17 @@ effects and music to make a completely free game.")
                                   "-src.tar.gz"))
               (sha256
                (base32
-                "0dn74k3rylhx023n047lz4z6qrqijfcxi0b6jryqklhmm2n532f7"))))
+                "0dn74k3rylhx023n047lz4z6qrqijfcxi0b6jryqklhmm2n532f7"))
+              (patches (search-patches "golly-system-lua.patch"))
+              (modules '((guix build utils)))
+              (snippet
+               '(begin
+                  ;; Remove bundled lua.
+                  (delete-file-recursively "lua")
+                  #t))))
     (build-system gnu-build-system)
     (arguments
-     '(#:make-flags (list "CC=gcc"
-                          (string-append "GOLLYDIR="
+     '(#:make-flags (list (string-append "GOLLYDIR="
                                          (assoc-ref %outputs "out")
                                          "/share/golly"))
        #:tests? #f ; no check target
@@ -426,9 +432,10 @@ effects and music to make a completely free game.")
                          '("Help" "Patterns" "Rules" "Scripts")))
              #t)))))
     (native-inputs
-     `(("lua" ,lua)))
+     `(("pkg-config" ,pkg-config)))
     (inputs
      `(("glu" ,glu)
+       ("lua" ,lua-5.2)
        ("mesa" ,mesa)
        ("python" ,python-2)
        ("wxwidgets" ,wxwidgets-gtk2)

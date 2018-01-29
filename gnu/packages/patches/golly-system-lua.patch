@@ -1,0 +1,73 @@
+Use the system Lua, instead of the bundled one.  Adapted from Fedora.
+<http://pkgs.fedoraproject.org/cgit/rpms/golly.git/tree/golly-2.8-gtk3.patch>
+
+--- golly-3.1-src/gui-wx/makefile-gtk.orig	2017-10-16 18:51:05.000000000 -0400
++++ golly-3.1-src/gui-wx/makefile-gtk	2017-11-27 18:22:01.252358808 -0500
+@@ -17,7 +17,7 @@
+ DOCSDIR = ../docs
+ BASEDIR = ../gollybase
+ CMDDIR = ../cmdline
+-LUADIR = ../lua
++#LUADIR = ../lua
+ OTHERGUIS = ../gui-android ../gui-common ../gui-ios ../gui-web
+ 
+ # for building binary and source distributions:
+@@ -30,9 +30,9 @@
+ SRCFILES = $(DOCSDIR) $(BASEDIR) $(CMDDIR) $(OTHERGUIS)
+ GUIFILES = makefile-gtk makefile-mac makefile-win local-win-template.mk \
+    golly.rc Info.plist.in wx*.h wx*.cpp configure bitmaps icons
+-LUAFILES = $(LUADIR)/*.h $(LUADIR)/*.c $(LUADIR)/*.hpp $(LUADIR)/Makefile $(LUADIR)/ReadMe.html
++#LUAFILES = $(LUADIR)/*.h $(LUADIR)/*.c $(LUADIR)/*.hpp $(LUADIR)/Makefile $(LUADIR)/ReadMe.html
+ 
+-LUALIB = $(LUADIR)/liblua.a -ldl
++#LUALIB = $(LUADIR)/liblua.a -ldl
+ 
+ CXXC = g++
+ CXXFLAGS := -DVERSION=$(APP_VERSION) -DGOLLYDIR="$(GOLLYDIR)" \
+@@ -75,6 +75,10 @@
+ PYTHON_SHLIB = `python -c "import distutils.sysconfig; print distutils.sysconfig.get_config_var('LDLIBRARY')"`
+ PYTHON_PREFS = -DPYTHON_SHLIB="$(PYTHON_SHLIB)"
+ 
++LUA_INCLUDE = `pkg-config --cflags lua-5.2`
++LUA_LINK = `pkg-config --libs lua-5.2`
++
++
+ # default settings for zlib support, so clear these to build without zlib
+ ZLIB_CXXFLAGS = -DZLIB
+ ZLIB_LDFLAGS = -lz
+@@ -119,11 +123,11 @@
+ clean: 
+ 	rm -f $(OBJDIR)/*.o
+ 	rm -f $(EXEDIR)/golly $(EXEDIR)/bgolly $(EXEDIR)/RuleTableToTree
+-	-(cd $(LUADIR) && $(MAKE) clean)
++#	-(cd $(LUADIR) && $(MAKE) clean)
+ 
+-golly: $(OBJDIR) $(BASEOBJ) $(WXOBJ) $(LUALIB)
+-	$(CXXC) $(CXXFLAGS) -o $(EXEDIR)/golly $(BASEOBJ) $(WXOBJ) $(LUALIB) \
+-$(LDFLAGS) $(ZLIB_LDFLAGS) $(EXTRALIBS_OPENGL) $(WX_LDFLAGS) $(PYTHON_LINK) $(PERL_LINK) $(IRRKLANG_LINK)
++golly: $(OBJDIR) $(BASEOBJ) $(WXOBJ) # $(LUALIB)
++	$(CXXC) $(CXXFLAGS) -o $(EXEDIR)/golly $(BASEOBJ) $(WXOBJ) \
++$(LDFLAGS) $(ZLIB_LDFLAGS) $(EXTRALIBS_OPENGL) $(WX_LDFLAGS) $(PYTHON_LINK) $(PERL_LINK) $(LUA_LINK) $(IRRKLANG_LINK)
+ 
+ bgolly: $(OBJDIR) $(BASEOBJ) $(OBJDIR)/bgolly.o
+ 	$(CXXC) $(CXXFLAGS) -o $(EXEDIR)/bgolly $(BASEOBJ) $(OBJDIR)/bgolly.o $(LDFLAGS) $(ZLIB_LDFLAGS)
+@@ -131,8 +135,8 @@
+ RuleTableToTree: $(OBJDIR) $(BASEOBJ) $(OBJDIR)/RuleTableToTree.o
+ 	$(CXXC) $(CXXFLAGS) -o $(EXEDIR)/RuleTableToTree $(BASEOBJ) $(OBJDIR)/RuleTableToTree.o $(LDFLAGS) $(ZLIB_LDFLAGS)
+ 
+-$(LUALIB):
+-	(cd $(LUADIR) && $(MAKE) all)
++#$(LUALIB):
++#	(cd $(LUADIR) && $(MAKE) all)
+ 
+ $(OBJDIR)/bgolly.o: $(CMDDIR)/bgolly.cpp
+ 	$(CXXC) $(CXXFLAGS) $(ZLIB_CXXFLAGS) -c -o $@ $(CMDDIR)/bgolly.cpp
+@@ -237,7 +241,7 @@
+ 	$(CXXC) $(CXXFLAGS) $(WX_CXXFLAGS) -c -o $@ wxrender.cpp
+ 
+ $(OBJDIR)/wxlua.o: wxlua.cpp
+-	$(CXXC) $(CXXFLAGS) $(WX_CXXFLAGS) -I$(LUADIR) -c -o $@ wxlua.cpp
++	$(CXXC) $(CXXFLAGS) $(WX_CXXFLAGS) $(LUA_INCLUDE) -c -o $@ wxlua.cpp
+ 
+ $(OBJDIR)/wxperl.o: wxperl.cpp
+ 	$(CXXC) $(CXXFLAGS) $(WX_CXXFLAGS) $(PERL_INCLUDE) -c -o $@ wxperl.cpp
