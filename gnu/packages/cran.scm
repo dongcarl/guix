@@ -2,6 +2,7 @@
 ;;; Copyright © 2015, 2016, 2017, 2018 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2017 Roel Janssen <roel@gnu.org>
 ;;; Copyright © 2017 Tobias Geerinckx-Rice <me@tobias.gr>
+;;; Copyright © 2017 Raoul Bonnal <ilpuccio.febo@gmail.com>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -31,6 +32,32 @@
   #:use-module (gnu packages perl)
   #:use-module (gnu packages statistics)
   #:use-module (gnu packages web))
+
+(define-public r-ape
+  (package
+    (name "r-ape")
+    (version "5.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (cran-uri "ape" version))
+       (sha256
+        (base32
+         "0q59pmxawz498cb9mv5m49lhiwxib8ak94yyydz7qg8b6lpd4bn3"))))
+    (build-system r-build-system)
+    (propagated-inputs
+     `(("r-lattice" ,r-lattice)
+       ("r-nlme" ,r-nlme)
+       ("r-rcpp" ,r-rcpp)))
+    (home-page "http://ape-package.ird.fr/")
+    (synopsis "Analyses of phylogenetics and evolution")
+    (description
+     "This package provides functions for reading, writing, plotting, and
+manipulating phylogenetic trees, analyses of comparative data in a
+phylogenetic framework, ancestral character analyses, analyses of
+diversification and macroevolution, computing distances from DNA sequences,
+and several other tools.")
+    (license license:gpl2+)))
 
 (define-public r-colorspace
   (package
@@ -2924,3 +2951,244 @@ created.  Experimental designs may be blocked or blocked designs created from
 a candidate list, using several criteria.  The blocking can be done when whole
 and within plot factors interact.")
     (license license:gpl2+)))
+
+(define-public r-signal
+  (package
+    (name "r-signal")
+    (version "0.7-6")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (cran-uri "signal" version))
+       (sha256
+        (base32
+         "1vsxramz5qd9q9s3vlqzmfdpmwl2rhlb2n904zw6f0fg0xxjfq3b"))))
+    (build-system r-build-system)
+    (propagated-inputs `(("r-mass" ,r-mass)))
+    (native-inputs `(("gfortran" ,gfortran)))
+    (home-page "http://cran.r-project.org/web/packages/signal/")
+    (synopsis "Signal processing")
+    (description
+     "This package provides a set of signal processing functions originally
+written for Matlab and GNU Octave.  It includes filter generation utilities,
+filtering functions, resampling routines, and visualization of filter models.
+It also includes interpolation functions.")
+    (license license:gpl2)))
+
+(define-public r-psych
+  (package
+    (name "r-psych")
+    (version "1.7.8")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (cran-uri "psych" version))
+       (sha256
+        (base32
+         "0daismb8pdk392vdy304hqx0m3jx62gx3a0hygjygc125rhfla7k"))))
+    (build-system r-build-system)
+    (propagated-inputs
+     `(("r-foreign" ,r-foreign)
+       ("r-lattice" ,r-lattice)
+       ("r-mnormt" ,r-mnormt)
+       ("r-nlme" ,r-nlme)))
+    (home-page "http://cran.r-project.org/web/packages/psych")
+    (synopsis "Procedures for psychological, psychometric, and personality research")
+    (description
+     "This package provides a general purpose toolbox for personality,
+psychometric theory and experimental psychology.  The functions are primarily
+for multivariate analysis and scale construction using factor analysis,
+principal component analysis, cluster analysis and reliability analysis,
+although others provide basic descriptive statistics.  It provides functions
+for analyzing data at multiple levels within and between group statistics,
+including correlations and factor analysis; functions for simulating and
+testing particular item and test structures are included.  Several functions
+serve as a useful front end for structural equation modeling.")
+    (license license:gpl2+)))
+
+(define-public r-gsubfn
+  (package
+    (name "r-gsubfn")
+    (version "0.6-6")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (cran-uri "gsubfn" version))
+       (sha256
+        (base32
+         "196x4c3ihf4q3i0v7b1xa6jm8jjld2rsx00qz03n90wfnjdx5idv"))))
+    (build-system r-build-system)
+    (propagated-inputs `(("r-proto" ,r-proto)))
+    (home-page "http://gsubfn.googlecode.com")
+    (synopsis "Utilities for strings and function arguments.")
+    (description
+     "This package provides @code{gsubfn} which is like @code{gsub} but can
+take a replacement function or certain other objects instead of the
+replacement string.  Matches and back references are input to the replacement
+function and replaced by the function output.  @code{gsubfn} can be used to
+split strings based on content rather than delimiters and for quasi-perl-style
+string interpolation.  The package also has facilities for translating
+formulas to functions and allowing such formulas in function calls instead of
+functions.")
+    (license license:gpl2+)))
+
+(define-public r-sqldf
+  (package
+    (name "r-sqldf")
+    (version "0.4-11")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (cran-uri "sqldf" version))
+       (sha256
+        (base32
+         "0q12vsb53p2wchgp8wfz5bk08wfnm0jxjrakclj4jyy6x3a7ksff"))))
+    (build-system r-build-system)
+    (propagated-inputs
+     `(("r-chron" ,r-chron)
+       ("r-dbi" ,r-dbi)
+       ("r-gsubfn" ,r-gsubfn)
+       ("r-proto" ,r-proto)
+       ("r-rsqlite" ,r-rsqlite)))
+    (home-page "https://github.com/ggrothendieck/sqldf")
+    (synopsis "Manipulate R data frames using SQL")
+    (description
+     "The @code{sqldf} function is typically passed a single argument which is
+an SQL select statement where the table names are ordinary R data frame names.
+@code{sqldf} transparently sets up a database, imports the data frames into
+that database, performs the SQL statement and returns the result using a
+heuristic to determine which class to assign to each column of the returned
+data frame.  The @code{sqldf} or @code{read.csv.sql} functions can also be
+used to read filtered files into R even if the original files are larger than
+R itself can handle.")
+    (license license:gpl2)))
+
+(define-public r-abind
+  (package
+    (name "r-abind")
+    (version "1.4-5")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (cran-uri "abind" version))
+       (sha256
+        (base32
+         "0b1zd8jbnl6l292cr9rb50m09fy3ylxvzkpgi5lfb1nbzddcwfis"))))
+    (build-system r-build-system)
+    (home-page "http://cran.r-project.org/web/packages/abind/")
+    (synopsis "Combine multidimensional arrays")
+    (description
+     "This package provides tools to combine multidimensional arrays into a
+single array.  This is a generalization of @code{cbind} and @code{rbind}.  It
+works with vectors, matrices, and higher-dimensional arrays.  It also provides
+the functions @code{adrop}, @code{asub}, and @code{afill} for manipulating,
+extracting and replacing data in arrays.")
+    (license license:lgpl2.0+)))
+
+(define-public r-prroc
+  (package
+    (name "r-prroc")
+    (version "1.3")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (cran-uri "PRROC" version))
+       (sha256
+        (base32
+         "03hvh92lq4i4w4mla9bvwrwb4626f4hvlxgdn57hamp70960vjyc"))))
+    (properties `((upstream-name . "PRROC")))
+    (build-system r-build-system)
+    (home-page "http://cran.r-project.org/web/packages/PRROC/")
+    (synopsis "Precision-Recall and ROC curves for weighted and unweighted data")
+    (description
+     "This package computes the areas under the @dfn{precision-recall} (PR)
+and ROC curve for weighted (e.g. soft-labeled) and unweighted data.  In
+contrast to other implementations, the interpolation between points of the PR
+curve is done by a non-linear piecewise function.  In addition to the areas
+under the curves, the curves themselves can also be computed and plotted by a
+specific S3-method.")
+    (license license:gpl3)))
+
+(define-public r-vim
+  (package
+    (name "r-vim")
+    (version "4.7.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (cran-uri "VIM" version))
+       (sha256
+        (base32
+         "1vjcs5wvjv94ln01d94h9rs4j50d3ky4n26mm3prgh13raylrmnd"))))
+    (properties `((upstream-name . "VIM")))
+    (build-system r-build-system)
+    (propagated-inputs
+     `(("r-car" ,r-car)
+       ("r-colorspace" ,r-colorspace)
+       ("r-data-table" ,r-data-table)
+       ("r-e1071" ,r-e1071)
+       ("r-laeken" ,r-laeken)
+       ("r-mass" ,r-mass)
+       ("r-nnet" ,r-nnet)
+       ("r-rcpp" ,r-rcpp)
+       ("r-robustbase" ,r-robustbase)
+       ("r-sp" ,r-sp)
+       ("r-vcd" ,r-vcd)))
+    (home-page "https://github.com/alexkowa/VIM")
+    (synopsis "Visualization and imputation of missing values")
+    (description
+     "This package provides tools for the visualization of missing and/or
+imputed values are introduced, which can be used for exploring the data and
+the structure of the missing and/or imputed values.  Depending on this
+structure of the missing values, the corresponding methods may help to
+identify the mechanism generating the missing values and allows to explore the
+data including missing values.  In addition, the quality of imputation can be
+visually explored using various univariate, bivariate, multiple and
+multivariate plot methods.")
+    (license license:gpl2+)))
+
+(define-public r-fnn
+  (package
+    (name "r-fnn")
+    (version "1.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (cran-uri "FNN" version))
+       (sha256
+        (base32
+         "1kncmiaraq1mrykb9fj3fsxswabk3l71fnp1vks0x9aay5xfk8mj"))))
+    (properties `((upstream-name . "FNN")))
+    (build-system r-build-system)
+    (home-page "http://cran.r-project.org/web/packages/FNN")
+    (synopsis "Fast nearest neighbor search algorithms and applications")
+    (description
+     "This package provides cover-tree and kd-tree fast k-nearest neighbor
+search algorithms.  Related applications including KNN classification,
+regression and information measures are implemented.")
+    ;; The DESCRIPTION file erroneously states that GPL version 2.1 or
+    ;; later can be used.
+    (license license:gpl2+)))
+
+(define-public r-smoother
+  (package
+    (name "r-smoother")
+    (version "1.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (cran-uri "smoother" version))
+       (sha256
+        (base32
+         "0nqr1bvlr5bnasqg74zmknjjl4x28kla9h5cxpga3kq5z215pdci"))))
+    (build-system r-build-system)
+    (propagated-inputs
+     `(("r-ttr" ,r-ttr)))
+    (home-page "http://cran.r-project.org/web/packages/smoother")
+    (synopsis "Functions relating to the smoothing of numerical data")
+    (description
+     "This package provides a collection of methods for smoothing numerical
+data, commencing with a port of the Matlab gaussian window smoothing function.
+In addition, several functions typically used in smoothing of financial data
+are included.")
+    (license license:gpl2)))

@@ -110,32 +110,6 @@
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 match))
 
-(define-public r-ape
-  (package
-    (name "r-ape")
-    (version "5.0")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (cran-uri "ape" version))
-       (sha256
-        (base32
-         "0q59pmxawz498cb9mv5m49lhiwxib8ak94yyydz7qg8b6lpd4bn3"))))
-    (build-system r-build-system)
-    (propagated-inputs
-     `(("r-lattice" ,r-lattice)
-       ("r-nlme" ,r-nlme)
-       ("r-rcpp" ,r-rcpp)))
-    (home-page "http://ape-package.ird.fr/")
-    (synopsis "Analyses of phylogenetics and evolution")
-    (description
-     "This package provides functions for reading, writing, plotting, and
-manipulating phylogenetic trees, analyses of comparative data in a
-phylogenetic framework, ancestral character analyses, analyses of
-diversification and macroevolution, computing distances from DNA sequences,
-and several other tools.")
-    (license license:gpl2+)))
-
 (define-public aragorn
   (package
     (name "aragorn")
@@ -10878,6 +10852,34 @@ contains high-performing functions operating on rows and columns of
 are optimized per data type and for subsetted calculations such that both
 memory usage and processing time is minimized.")
     (license license:expat)))
+
+(define-public r-phangorn
+  (package
+    (name "r-phangorn")
+    (version "2.4.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (cran-uri "phangorn" version))
+       (sha256
+        (base32
+         "0xc8k552nxczy19jr0xjjagrzc8x6lafasgk2c099ls8bc1yml1i"))))
+    (build-system r-build-system)
+    (propagated-inputs
+     `(("r-ape" ,r-ape)
+       ("r-fastmatch" ,r-fastmatch)
+       ("r-igraph" ,r-igraph)
+       ("r-magrittr" ,r-magrittr)
+       ("r-matrix" ,r-matrix)
+       ("r-quadprog" ,r-quadprog)
+       ("r-rcpp" ,r-rcpp)))
+    (home-page "https://github.com/KlausVigo/phangorn")
+    (synopsis "Phylogenetic analysis in R")
+    (description
+     "Phangorn is a package for phylogenetic analysis in R.  It supports
+estimation of phylogenetic trees and networks using Maximum Likelihood,
+Maximum Parsimony, distance methods and Hadamard conjugation.")
+    (license license:gpl2+)))
 
 (define-public r-dropbead
   (let ((commit "d746c6f3b32110428ea56d6a0001ce52a251c247")
