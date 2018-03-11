@@ -12725,3 +12725,133 @@ and a configuration file which describes the experiment.  In addition to
 quality control of the experiment, the pipeline produces a differential
 expression report comparing samples in an easily configurable manner.")
     (license license:gpl3+)))
+
+(define-public pigx-chipseq
+  (package
+    (name "pigx-chipseq")
+    (version "0.0.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/BIMSBbioinfo/pigx_chipseq/"
+                                  "releases/download/v" version
+                                  "/pigx_chipseq-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1jliwhifnjgl9x0z730bzpxswi2s84fyg5y8cagbyzpw509452f5"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-after 'install 'wrap-executable
+           ;; Make sure the executable finds all R modules.
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out")))
+               (wrap-program (string-append out "/bin/pigx-chipseq")
+                 `("R_LIBS_SITE" ":" = (,(getenv "R_LIBS_SITE")))
+                 `("PYTHONPATH"  ":" = (,(getenv "PYTHONPATH")))))
+             #t)))))
+    (inputs
+     `(("r-minimal" ,r-minimal)
+       ("r-argparser" ,r-argparser)
+       ("r-chipseq" ,r-chipseq)
+       ("r-data-table" ,r-data-table)
+       ("r-genomation" ,r-genomation)
+       ("r-genomicranges" ,r-genomicranges)
+       ("r-rtracklayer" ,r-rtracklayer)
+       ("r-rcas" ,r-rcas)
+       ("r-stringr" ,r-stringr)
+       ("r-jsonlite" ,r-jsonlite)
+       ("r-heatmaply" ,r-heatmaply)
+       ("r-ggplot2" ,r-ggplot2)
+       ("r-plotly" ,r-plotly)
+       ("python-wrapper" ,python-wrapper)
+       ("python-pyyaml" ,python-pyyaml)
+       ("snakemake" ,snakemake)
+       ("macs" ,macs)
+       ("multiqc" ,multiqc)
+       ("perl" ,perl)
+       ("ghc-pandoc" ,ghc-pandoc)
+       ("ghc-pandoc-citeproc" ,ghc-pandoc-citeproc)
+       ("fastqc" ,fastqc)
+       ("bowtie" ,bowtie)
+       ("idr" ,idr)
+       ("snakemake" ,snakemake)
+       ("samtools" ,samtools)
+       ("bedtools" ,bedtools)
+       ("kentutils" ,kentutils)))
+    (native-inputs
+     `(("python-pytest" ,python-pytest)))
+    (home-page "http://bioinformatics.mdc-berlin.de/pigx/")
+    (synopsis "Analysis pipeline for ChIP sequencing experiments")
+    (description "PiGX ChIPseq is an analysis pipeline for preprocessing, peak
+calling and reporting for ChIP sequencing experiments.  It is easy to use and
+produces high quality reports.  The inputs are reads files from the sequencing
+experiment, and a configuration file which describes the experiment.  In
+addition to quality control of the experiment, the pipeline enables to set up
+multiple peak calling analysis and allows the generation of a UCSC track hub
+in an easily configurable manner.")
+    (license license:gpl3+)))
+
+(define-public pigx-bsseq
+  (package
+    (name "pigx-bsseq")
+    (version "0.0.5")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/BIMSBbioinfo/pigx_bsseq/"
+                                  "releases/download/v" version
+                                  "/pigx_bsseq-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1h8ma99vi7hs83nafvjpq8jmaq9977j3n11c4zd95hai0cf7zxmp"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'set-timezone
+           ;; The readr package is picky about timezones.
+           (lambda* (#:key inputs #:allow-other-keys)
+             (setenv "TZ" "UTC+1")
+             (setenv "TZDIR"
+                     (string-append (assoc-ref inputs "tzdata")
+                                    "/share/zoneinfo"))
+             #t))
+         (add-after 'install 'wrap-executable
+           ;; Make sure the executable finds all R modules.
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out")))
+               (wrap-program (string-append out "/bin/pigx-bsseq")
+                 `("R_LIBS_SITE" ":" = (,(getenv "R_LIBS_SITE")))
+                 `("PYTHONPATH"  ":" = (,(getenv "PYTHONPATH")))))
+             #t)))))
+    (native-inputs
+     `(("tzdata" ,tzdata)))
+    (inputs
+     `(("r-minimal" ,r-minimal)
+       ("r-annotationhub" ,r-annotationhub)
+       ("r-dt" ,r-dt)
+       ("r-genomation" ,r-genomation)
+       ("r-methylkit" ,r-methylkit)
+       ("r-rtracklayer" ,r-rtracklayer)
+       ("r-rmarkdown" ,r-rmarkdown)
+       ("r-bookdown" ,r-bookdown)
+       ("r-ggplot2" ,r-ggplot2)
+       ("r-ggbio" ,r-ggbio)
+       ("ghc-pandoc" ,ghc-pandoc)
+       ("ghc-pandoc-citeproc" ,ghc-pandoc-citeproc)
+       ("python-wrapper" ,python-wrapper)
+       ("python-pyyaml" ,python-pyyaml)
+       ("snakemake" ,snakemake)
+       ("bismark" ,bismark)
+       ("fastqc" ,fastqc)
+       ("bowtie" ,bowtie)
+       ("trim-galore" ,trim-galore)
+       ("cutadapt" ,cutadapt)
+       ("samtools" ,samtools)))
+    (home-page "http://bioinformatics.mdc-berlin.de/pigx/")
+    (synopsis "Bisulfite sequencing pipeline from fastq to methylation reports")
+    (description "PiGx BSseq is a data processing pipeline for raw fastq read
+data of bisulfite experiments; it produces reports on aggregate methylation
+and coverage and can be used to produce information on differential
+methylation and segmentation.")
+    (license license:gpl3+)))
