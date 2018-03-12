@@ -2001,14 +2001,14 @@ something else) to Python data-types.")
 (define-public python-kitchen
   (package
     (name "python-kitchen")
-    (version "1.2.4")
+    (version "1.2.5")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri "kitchen" version))
        (sha256
         (base32
-         "0ggv3p4x8jvmmzhp0xm00h6pvh1g0gmycw71rjwagnrj8n23vxrq"))))
+         "1zakh6l0yjvwic9p0nkvmbidpnkygkxbigh2skmb5gccyrhbp7xg"))))
     (build-system python-build-system)
     (propagated-inputs
      `(("python-chardet" ,python-chardet)))
@@ -5646,14 +5646,14 @@ Python.")
 (define-public python-markdown
   (package
     (name "python-markdown")
-    (version "2.6.8")
+    (version "2.6.11")
     (source
      (origin
        (method url-fetch)
        (uri (pypi-uri "Markdown" version))
        (sha256
         (base32
-         "0cqfhr1km2s5d8jm6hbwgkrrj9hvkjf2gab3s2axlrw1clgaij0a"))))
+         "108g80ryzykh8bj0i7jfp71510wrcixdi771lf2asyghgyf8cmm8"))))
     (build-system python-build-system)
     (arguments
      `(#:phases
@@ -5832,7 +5832,7 @@ from an XML-based format.")
 (define-public python-ly
   (package
     (name "python-ly")
-    (version "0.9.4")
+    (version "0.9.5")
     (source
      (origin
        (method url-fetch)
@@ -5841,7 +5841,7 @@ from an XML-based format.")
                            "/python-ly-" version ".tar.gz"))
        (sha256
         (base32
-         "0g6n288l83sfwavxh1aryi0aqvsr3sp7v6f903mckwqa4scpky62"))))
+         "0x98dv7p8mg26p4816yy8hz4f34zf6hpnnfmr56msgh9jnsm2qfl"))))
     (build-system python-build-system)
     (arguments
      ;; FIXME: Some tests need network access.
@@ -6198,13 +6198,13 @@ implementations of ASN.1-based codecs and protocols.")
 (define-public python-ipaddress
   (package
     (name "python-ipaddress")
-    (version "1.0.18")
+    (version "1.0.19")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "ipaddress" version))
               (sha256
                (base32
-                "1q8klj9d84cmxgz66073x1j35cplr3r77vx1znhxiwl5w74391ax"))))
+                "10agaa1cys1bk1ycpl2w8lky9vjx8h1xh1z29mg0niqx0638c390"))))
     (build-system python-build-system)
     (home-page "https://github.com/phihag/ipaddress")
     (synopsis "IP address manipulation library")
@@ -7297,13 +7297,13 @@ Abstract Syntax Tree.")
 (define-public python-rply
   (package
     (name "python-rply")
-    (version "0.7.4")
+    (version "0.7.5")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "rply" version))
               (sha256
                (base32
-                "12rp1d9ba7nvd5rhaxi6xzx1rm67r1k1ylsrkzhpwnphqpb06cvj"))))
+                "0lv428895zxsz43968qx0q9bimwqnfykndz4dpjbq515w2gvzhjh"))))
     (build-system python-build-system)
     (propagated-inputs
      `(("python-appdirs" ,python-appdirs)))
@@ -7473,14 +7473,14 @@ concurrent.futures package from Python 3.2")
 (define-public python-colorama
   (package
    (name "python-colorama")
-   (version "0.3.7")
+   (version "0.3.9")
    (source
     (origin
      (method url-fetch)
      (uri (pypi-uri "colorama" version))
      (sha256
       (base32
-       "0avqkn6362v7k2kg3afb35g4sfdvixjgy890clip4q174p9whhz0"))))
+       "1wd1szk0z3073ghx26ynw43gnc140ibln1safgsis6s6z3s25ss8"))))
    (build-system python-build-system)
    (synopsis "Colored terminal text rendering for Python")
    (description "Colorama is a Python library for rendering colored terminal
@@ -7576,14 +7576,14 @@ servers.")
 (define-public python-jmespath
   (package
    (name "python-jmespath")
-   (version "0.9.0")
+   (version "0.9.3")
    (source
     (origin
      (method url-fetch)
      (uri (pypi-uri "jmespath" version))
      (sha256
       (base32
-       "0g9xvl69y7nr3w7ag4fsp6sm4fqf6vrqjw7504x2hzrrsh3ampq8"))))
+       "0r7wc7fsxmlwzxx9j1j7rms06c6xs6d4sysirdhz1jk2mb4x90ba"))))
    (build-system python-build-system)
    (native-inputs
     `(("python-nose" ,python-nose)))
@@ -8675,12 +8675,12 @@ own code, responding to click events and updating clock every second.")
 (define-public python-tblib
   (package
     (name "python-tblib")
-    (version "1.3.0")
+    (version "1.3.2")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "tblib" version))
               (sha256 (base32
-                       "02iahfkfa927hb4jq2bak36ldihwapzacfiq5lyxg8llwn98a1yi"))))
+                       "1rsg8h069kqgncyv8fgzyj6qflk6j10cb78pa5jk34ixwq044vj3"))))
     (build-system python-build-system)
     (arguments
      `(#:phases
@@ -12146,14 +12146,14 @@ ignoring formatting changes.")
 (define-public python-tqdm
   (package
     (name "python-tqdm")
-    (version "4.19.5")
+    (version "4.19.6")
     (source
       (origin
         (method url-fetch)
         (uri (pypi-uri "tqdm" version))
          (sha256
            (base32
-             "0xvkffm77nqckk29xjy5fkqvig5b97vk7nzafp3cn36w4zqyccnz"))))
+             "1pw0ngm0zn9papdmkwipi3yih5c3di6d0w849bdmrraq4d2d9h2y"))))
     (build-system python-build-system)
     (native-inputs
      `(("python-flake8" ,python-flake8)
