@@ -7307,6 +7307,7 @@ configuration.")
               (method url-fetch)
               (uri (string-append "https://bitbucket.org/asomov/snakeyaml/get/v"
                                   version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
                 "0rf5ha6w0waz50jz2479jsrbgmd0dnx0gs337m126j5z7zlmg7mg"))))
@@ -7982,6 +7983,7 @@ to use.")
                 (uri (git-reference
                       (url "https://github.com/neilalexander/jnacl.git")
                       (commit commit)))
+                (file-name (git-file-name name version))
                 (sha256
                  (base32
                   "1d6g6xhn83byv5943n7935wwjsk0ibk0qdvqgr699qqgqqmwisbb"))))

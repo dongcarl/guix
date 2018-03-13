@@ -120,6 +120,7 @@ GNU_SYSTEM_MODULES =				\
   %D%/packages/datastructures.scm		\
   %D%/packages/dav.scm				\
   %D%/packages/dc.scm				\
+  %D%/packages/debian.scm			\
   %D%/packages/debug.scm			\
   %D%/packages/dejagnu.scm			\
   %D%/packages/dico.scm				\
@@ -885,6 +886,7 @@ dist_patch_DATA =						\
   %D%/packages/patches/llvm-3.5-fix-clang-build-with-gcc5.patch	\
   %D%/packages/patches/llvm-for-extempore.patch			\
   %D%/packages/patches/lm-sensors-hwmon-attrs.patch		\
+  %D%/packages/patches/lrzip-CVE-2017-8842.patch		\
   %D%/packages/patches/lua-CVE-2014-5461.patch                      \
   %D%/packages/patches/lua-pkgconfig.patch                      \
   %D%/packages/patches/lua51-liblua-so.patch                    \

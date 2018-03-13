@@ -39,6 +39,7 @@
   #:use-module (guix build-system trivial)
   #:use-module (gnu packages)
   #:use-module (gnu packages algebra)
+  #:use-module (gnu packages bash)
   #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages cran)
@@ -261,6 +262,9 @@ as.POSIXct(if (\"\" != Sys.getenv(\"SOURCE_DATE_EPOCH\")) {\
        ("libxt" ,libxt)
        ("pcre" ,pcre)
        ("readline" ,readline)
+       ;; This avoids a reference to the ungraftable static bash.  R uses the
+       ;; detected shell for the "system" procedure.
+       ("bash" ,bash-minimal)
        ("which" ,which)
        ("zlib" ,zlib)))
     (native-search-paths
@@ -2592,7 +2596,11 @@ certain criterion, e.g., it contains a certain regular file.")
        ("r-rprojroot" ,r-rprojroot)
        ("r-stringr" ,r-stringr)
        ("r-yaml" ,r-yaml)
-       ("ghc-pandoc" ,ghc-pandoc)))
+       ;; rmarkdown works with the 2.x release of Pandoc, but with degraded
+       ;; functionality.  For example, tabbed plots do not currently work with
+       ;; Pandoc 2.  The authors of rmarkdown recommend the use of Pandoc 1
+       ;; for the time being.
+       ("ghc-pandoc" ,ghc-pandoc-1)))
     (home-page "http://rmarkdown.rstudio.com")
     (synopsis "Convert R Markdown documents into a variety of formats")
     (description

@@ -2691,7 +2691,7 @@ floating in an ocean using only your brain and a little bit of luck.")
 (define-public gnome-sudoku
   (package
     (name "gnome-sudoku")
-    (version "3.26.0")
+    (version "3.28.0")
     (source
      (origin
        (method url-fetch)
@@ -2700,7 +2700,7 @@ floating in an ocean using only your brain and a little bit of luck.")
                            name "-" version ".tar.xz"))
        (sha256
         (base32
-         "186k2axryn3ic8blc9ddnvyrqqf88khg2hlisfa1n4wp784wfx47"))))
+         "07b4lzniaf3gjsss6zl1lslv18smwc4nrijykvn2z90f423q2xav"))))
     (build-system glib-or-gtk-build-system)
     (native-inputs
      `(("pkg-config" ,pkg-config)
@@ -4647,7 +4647,7 @@ javascript engine and the GObject introspection framework.")
 (define-public gedit
   (package
     (name "gedit")
-    (version "3.22.1")
+    (version "3.28.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://gnome/sources/" name "/"
@@ -4655,7 +4655,7 @@ javascript engine and the GObject introspection framework.")
                                   name "-" version ".tar.xz"))
               (sha256
                (base32
-                "0as9r5zvnyrxh699q6jnd0p9ddqy5qamfbxggpdjzagzixhw6yxa"))))
+                "0pyam0zi44xq776x20ycqnvmf86l98jns8ldv4m81gnp9wnhmycv"))))
     (build-system glib-or-gtk-build-system)
     (arguments
      `(#:phases
@@ -5602,7 +5602,7 @@ like switching to windows and launching applications.")
 (define-public gtk-vnc
   (package
     (name "gtk-vnc")
-    (version "0.7.0")
+    (version "0.7.1")
     (source
      (origin
        (method url-fetch)
@@ -5611,7 +5611,7 @@ like switching to windows and launching applications.")
                            name "-" version ".tar.xz"))
        (sha256
         (base32
-         "0gj8dpy3sj4dp810gy67spzh5f0jd8aqg69clcwqjcskj1yawbiw"))))
+         "1cdaywj5lqnl5b22qzd7k7lmacsnmk8b8rc4drk6gvqmcrlsljzk"))))
     (build-system gnu-build-system)
     (arguments
      '(#:configure-flags '("--with-gtk=3.0")))
@@ -5627,6 +5627,7 @@ like switching to windows and launching applications.")
        ("gobject-introspection" ,gobject-introspection)
        ("intltool" ,intltool)
        ("pkg-config" ,pkg-config)
+       ("python-wrapper" ,python-wrapper)
        ("vala" ,vala)))
     (home-page "https://wiki.gnome.org/Projects/gtk-vnc")
     (synopsis "VNC viewer widget for GTK+")
