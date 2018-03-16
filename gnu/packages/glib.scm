@@ -5,7 +5,7 @@
 ;;; Copyright © 2014, 2015, 2016, 2017 Mark H Weaver <mhw@netris.org>
 ;;; Copyright © 2016 Efraim Flashner <efraim@flashner.co.il>
 ;;; Copyright © 2016 Lukas Gradl <lgradl@openmailbox.org>
-;;; Copyright © 2017 Ricardo Wurmus <rekado@elephly.net>
+;;; Copyright © 2017, 2018 Ricardo Wurmus <rekado@elephly.net>
 ;;; Copyright © 2017 Petter <petter@mykolab.ch>
 ;;; Copyright © 2018 Tobias Geerinckx-Rice <me@tobias.gr>
 ;;; Copyright © 2018 Alex Vong <alexvong1995@gmail.com>
@@ -333,7 +333,10 @@ dynamic loading, and an object system.")
     (arguments
      `(;; The patch 'gobject-introspection-absolute-shlib-path.patch' causes
        ;; some tests to fail.
-       #:tests? #f))
+       #:tests? #f
+       ;; When parallel building is enabled, there can be a race condition as
+       ;; too many Python processes access the same pyc files.
+       #:parallel-build? #f))
     (home-page "https://wiki.gnome.org/GObjectIntrospection")
     (synopsis "Generate interface introspection data for GObject libraries")
     (description
