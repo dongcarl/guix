@@ -183,6 +183,9 @@ shared NFS home directories.")
       (modify-phases %standard-phases
         (add-before 'build 'pre-build
           (lambda* (#:key inputs outputs #:allow-other-keys)
+            ;; For building deterministic pyc files
+            (setenv "DETERMINISTIC_BUILD" "1")
+
             ;; For tests/gdatetime.c.
             (setenv "TZDIR"
                     (string-append (assoc-ref inputs "tzdata")
