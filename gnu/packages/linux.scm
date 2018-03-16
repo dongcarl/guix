@@ -1437,10 +1437,7 @@ transparently through a bridge.")
        ("python-3" ,python-3)))
     (outputs '("out" "doc" "python2" "python3"))
     (arguments
-     `(#:modules ((guix build gnu-build-system)
-                  (guix build utils)
-                  (srfi srfi-1))
-       #:phases
+     `(#:phases
        (modify-phases %standard-phases
          (add-after 'install 'install-python
            (lambda* (#:key outputs #:allow-other-keys)
@@ -1448,22 +1445,23 @@ transparently through a bridge.")
                (let ((ldflags (format #f "LDFLAGS=-Wl,-rpath=~a/lib"
                                       (assoc-ref %outputs "out")))
                      (pyout (assoc-ref %outputs python)))
-                 (and
-                  (zero? (system (format #f "~a ~a setup.py build"
-                                         ldflags python pyout)))
-                  (zero?
-                   (system (format #f "~a ~a setup.py install --prefix=~a"
-                                   ldflags python pyout)))
-                  (zero? (system* python "setup.py" "clean")))))
+                 (invoke "sh" "-c"
+                         (format #f "~a ~a setup.py build"
+                                 ldflags python pyout))
+                 (invoke "sh" "-c"
+                         (format #f "~a ~a setup.py install --prefix=~a"
+                                 ldflags python pyout))
+                 (invoke python "setup.py" "clean")))
              (with-directory-excursion "./python"
-               (every python-inst '("python2" "python3")))))
+               (for-each python-inst '("python2" "python3")))
+             #t))
          (add-after 'install 'install-doc
            (lambda* (#:key inputs outputs #:allow-other-keys)
              (let ((dest (string-append (assoc-ref outputs "doc")
                                         "/share/doc/libnl")))
                (mkdir-p dest)
-               (zero? (system* "tar" "xf" (assoc-ref inputs "libnl3-doc")
-                               "--strip-components=1" "-C" dest))))))))
+               (invoke "tar" "xf" (assoc-ref inputs "libnl3-doc")
+                       "--strip-components=1" "-C" dest)))))))
     (home-page "https://www.infradead.org/~tgr/libnl/")
     (synopsis "NetLink protocol library suite")
     (description
