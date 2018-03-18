@@ -778,7 +778,8 @@ MANIFEST.  Single-file bundles are required by programs such as Git and Lynx."
   ;; for a discussion.
 
   (define glibc-utf8-locales                      ;lazy reference
-    (module-ref (resolve-interface '(gnu packages base)) 'glibc-utf8-locales))
+    ((module-ref (resolve-interface '(gnu packages base)) 'canonical-package)
+     (module-ref (resolve-interface '(gnu packages base)) 'glibc-utf8-locales)))
 
   (define build
     (with-imported-modules '((guix build utils))
@@ -1236,8 +1237,8 @@ are cross-built for TARGET."
               (manifest-inputs manifest)))
 
     (define glibc-utf8-locales                    ;lazy reference
-      (module-ref (resolve-interface '(gnu packages base))
-                  'glibc-utf8-locales))
+      ((module-ref (resolve-interface '(gnu packages base)) 'canonical-package)
+       (module-ref (resolve-interface '(gnu packages base)) 'glibc-utf8-locales)))
 
     (define set-utf8-locale
       ;; Some file names (e.g., in 'nss-certs') are UTF-8 encoded so
