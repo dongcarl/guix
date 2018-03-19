@@ -1655,7 +1655,7 @@ speed.")
     (source (package-source zstd))
     (build-system gnu-build-system)
     (native-inputs
-     `(("googletest", googletest)))
+     `(("googletest" ,googletest)))
     (arguments
      `(#:phases
        (modify-phases %standard-phases

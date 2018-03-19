@@ -1309,7 +1309,8 @@ SAX2 APIs.")
                                   version ".zip"))
               (sha256
                (base32
-                "0w19k1awslmihpwsxwjbg89hv0vjhk4k3i0vrfchy3mqknd988y5"))))
+                "0w19k1awslmihpwsxwjbg89hv0vjhk4k3i0vrfchy3mqknd988y5"))
+              (patches (search-patches "java-simple-xml-fix-tests.patch"))))
     (build-system ant-build-system)
     (arguments
      `(#:build-target "build"
@@ -1415,7 +1416,7 @@ characters into a single event.")
     (propagated-inputs
      `(("perl-libxml" ,perl-libxml)
        ("perl-xml-filter-buffertext" ,perl-xml-filter-buffertext)
-       ("perl-xml-namespacesupport", perl-xml-namespacesupport)
+       ("perl-xml-namespacesupport" ,perl-xml-namespacesupport)
        ("perl-xml-sax-base" ,perl-xml-sax-base)))
     (home-page "http://search.cpan.org/dist/XML-SAX-Writer/")
     (synopsis "SAX2 XML Writer")
@@ -1472,7 +1473,7 @@ It provides a flexible escaping technique and pretty printing.")
        ("perl-xml-sax-writer" ,perl-xml-sax-writer)
        ("perl-xml-simple" ,perl-xml-simple)
        ("perl-xml-xpathengine" ,perl-xml-xpathengine)
-       ("perl-test-pod", perl-test-pod)
+       ("perl-test-pod" ,perl-test-pod)
        ("perl-tree-xpathengine" ,perl-tree-xpathengine)))
     (home-page "http://search.cpan.org/dist/XML-Twig/")
     (synopsis "Perl module for processing huge XML documents in tree mode")

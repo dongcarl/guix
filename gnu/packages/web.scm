@@ -955,9 +955,9 @@ of people.")
      ; named 'stubout'". The tests can be run by replacing the check phase with
      ; the command "python setup.py nosetests --verbosity=3".
     (native-inputs `(; Required for tests:
-                     ("python-mox3", python-mox3)
-                     ("python-nose", python-nose)))
-    (propagated-inputs `(("python-numpy", python-numpy)))
+                     ("python-mox3" ,python-mox3)
+                     ("python-nose" ,python-nose)))
+    (propagated-inputs `(("python-numpy" ,python-numpy)))
     (home-page "https://github.com/novnc/websockify")
     (synopsis "WebSockets support for any application/server")
     (description "Websockify translates WebSockets traffic to normal socket
@@ -984,7 +984,7 @@ directions.")
        #:tests? #f))                         ; no test target
     (native-inputs `(("flex" ,flex)))
     (inputs `(("gnutls" ,gnutls)
-              ("libcrypt", libgcrypt)))
+              ("libcrypt" ,libgcrypt)))
     (home-page "https://www.gedanken.org.uk/software/wwwoffle/")
     (synopsis "Caching web proxy optimized for intermittent internet links")
     (description "WWWOFFLE is a proxy web server that is especially good for
@@ -4962,10 +4962,10 @@ used to start services with both privileged and non-privileged port numbers.")
          "0n29wcgw32rhnraj9j21ibhwi0xagmmcskhbaz8ihxly7nx3p9h8"))))
     (build-system cmake-build-system)
     (outputs '("out"
-               "static")) ; 1.0MiB of .a files
+               "static"))               ; 1.0MiB of .a files
     (arguments
-     `(#:tests? #f ; No tests available
-       #:configure-flags (list "-DCMAKE_BUILD_TYPE=Release")
+     `(#:tests? #f                      ; no tests available
+       #:build-type "Release"
        #:phases
        (modify-phases %standard-phases
          (add-after 'install 'move-static-libraries
