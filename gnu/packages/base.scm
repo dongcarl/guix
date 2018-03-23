@@ -535,9 +535,8 @@ store.")
    (version "2.25")
    (source (origin
             (method url-fetch)
-            (uri (string-append "https://alpha.gnu.org/gnu/guix/mirror/"
-                                "glibc-" (version-major+minor version) "-"
-                                (caddr (string-split version #\.)) ".tar.xz"))
+            (uri (string-append "mirror://gnu/glibc/glibc-"
+                                version ".tar.xz"))
             (sha256
              (base32
               "1813dzkgw6v8q8q1m4v96yfis7vjqc9pslqib6j9mrwh6fxxjyq6"))
@@ -554,7 +553,6 @@ store.")
                                      "glibc-o-largefile.patch"
                                      "glibc-memchr-overflow-i686.patch"
                                      "glibc-vectorized-strcspn-guards.patch"
-                                     "glibc-CVE-2017-15670-15671.patch"
                                      "glibc-CVE-2017-1000366-pt1.patch"
                                      "glibc-CVE-2017-1000366-pt2.patch"
                                      "glibc-CVE-2017-1000366-pt3.patch"))))
