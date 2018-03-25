@@ -778,6 +778,7 @@ slabtop, and skill.")
                                ;; Install libext2fs et al.
                                "--enable-elf-shlibs")
 
+       #:tests? #f   ; XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'patch-shells
