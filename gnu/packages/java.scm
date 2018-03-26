@@ -448,6 +448,15 @@ the standard javac executable.")))
              "--disable-gjdoc")
        #:phases
        (modify-phases %standard-phases
+         ;; javac does not seem to create the target directories for class
+         ;; files quickly enough at compile time, so we create them in
+         ;; advance.
+         (add-after 'unpack 'create-directories
+           (lambda _
+             (substitute* "lib/Makefile.in"
+               (("./gen-classlist.sh standard" m)
+                (string-append m "&& cut -d' ' -f1 classes.1 | sort -u | xargs mkdir -p\n")))
+             #t))
          (add-after 'install 'install-data
            (lambda _ (zero? (system* "make" "install-data")))))))
     (native-inputs
