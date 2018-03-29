@@ -609,6 +609,8 @@ useful for C++.")
         (base32
          "1zdzznrj2s1gsrv2z4r0n88fzba8zjc1n2r313xi77lhl1daja56"))))
     (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f))
     (native-inputs
      `(;; Use gcc-7 to work around an internal compiler error that happens
        ;; when using gcc-5.5.0.  FIXME: Try removing this when the default
@@ -639,6 +641,7 @@ useful for C++.")
 (define-public python2-pygobject
   (package (inherit (strip-python2-variant python-pygobject))
     (name "python2-pygobject")
+    (arguments '())
     (inputs
      `(("python" ,python-2)
        ("python-pycairo" ,python2-pycairo)
