@@ -79,6 +79,7 @@
   #:use-module (gnu packages enchant)
   #:use-module (gnu packages fontutils)
   #:use-module (gnu packages game-development)
+  #:use-module (gnu packages gcc)
   #:use-module (gnu packages gettext)
   #:use-module (gnu packages glib)
   #:use-module (gnu packages gnupg)
@@ -4614,8 +4615,22 @@ configuration program to choose applications starting on login.")
                 "04nkig077r7xq55dxg9v46w8i7p8zkkdyja92yv81grq9fx6apz8"))))
     (build-system gnu-build-system)
     (arguments
-     '(#:phases
+     '(#:configure-flags
+       (list (string-append "CXXFLAGS=-idirafter "
+                            (assoc-ref %build-inputs "libc")
+                            "/include"))
+       #:phases
        (modify-phases %standard-phases
+         (add-after 'set-paths 'adjust-paths
+           (lambda* (#:key inputs #:allow-other-keys)
+             (let ((libc-includes (string-append (assoc-ref inputs "libc")
+                                                 "/include")))
+               (define (adjust var)
+                 (let* ((items (string-split (getenv var) #\:))
+                        (items* (delete libc-includes items)))
+                   (setenv var (string-join items* ":"))))
+               (adjust "CPLUS_INCLUDE_PATH")
+               #t)))
          (add-before
           'check 'pre-check
           (lambda _
@@ -4633,7 +4648,8 @@ configuration program to choose applications starting on login.")
               ((".*expect\\(datestr\\).*") ""))
             #t)))))
     (native-inputs
-     `(("glib:bin" ,glib "bin")       ; for glib-compile-resources
+     `(("gcc" ,gcc-7)
+       ("glib:bin" ,glib "bin")       ; for glib-compile-resources
        ("pkg-config" ,pkg-config)
        ("xmllint" ,libxml2)
        ;; For testing
