@@ -798,6 +798,11 @@ dist_patch_DATA =						\
   %D%/packages/patches/icecat-avoid-bundled-libraries.patch	\
   %D%/packages/patches/icecat-use-system-graphite2.patch	\
   %D%/packages/patches/icecat-use-system-harfbuzz.patch		\
+  %D%/packages/patches/icedove-CVE-2018-5148.patch		\
+  %D%/packages/patches/icedove-avoid-bundled-libraries.patch	\
+  %D%/packages/patches/icedove-libre.patch			\
+  %D%/packages/patches/icedove-use-system-graphite2.patch	\
+  %D%/packages/patches/icedove-use-system-harfbuzz.patch	\
   %D%/packages/patches/id3lib-CVE-2007-4460.patch			\
   %D%/packages/patches/ilmbase-fix-tests.patch			\
   %D%/packages/patches/intltool-perl-compatibility.patch	\

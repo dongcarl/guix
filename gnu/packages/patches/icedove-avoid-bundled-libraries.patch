@@ -1,0 +1,35 @@
+Fixes needed when avoiding bundled libraries.
+
+--- icedove-52.7.0/mozilla/xpcom/build/moz.build.orig
++++ icedove-52.7.0/mozilla/xpcom/build/moz.build
+@@ -93,10 +93,5 @@
+     '/docshell/base',
+ ]
+ 
+-if CONFIG['MOZ_VPX']:
+-    LOCAL_INCLUDES += [
+-        '/media/libvpx',
+-    ]
+-
+ if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'cocoa':
+     CXXFLAGS += CONFIG['TK_CFLAGS']
+--- icedove-52.7.0/mozilla/storage/moz.build.orig
++++ icedove-52.7.0/mozilla/storage/moz.build
+@@ -114,7 +114,6 @@
+     DEFINES['MOZ_MEMORY_TEMP_STORE_PRAGMA'] = True
+ 
+ LOCAL_INCLUDES += [
+-    '/db/sqlite3/src',
+     '/dom/base',
+ ]
+ 
+--- icedove-52.7.0/mozilla/dom/indexedDB/moz.build.orig
++++ icedove-52.7.0/mozilla/dom/indexedDB/moz.build
+@@ -101,7 +101,6 @@
+     CXXFLAGS += ['-Wno-error=shadow']
+ 
+ LOCAL_INCLUDES += [
+-    '/db/sqlite3/src',
+     '/dom/base',
+     '/dom/storage',
+     '/dom/workers',

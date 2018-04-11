@@ -31,6 +31,7 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
   #:use-module (guix download)
+  #:use-module (guix git-download)
   #:use-module (guix utils)
   #:use-module (guix build-system gnu)
   #:use-module (gnu packages autotools)
@@ -763,3 +764,206 @@ features built-in privacy-protecting features.")
      `((ftp-directory . "/gnu/gnuzilla")
        (cpe-name . "firefox_esr")
        (cpe-version . ,(first (string-split version #\-)))))))
+
+(define-public icedove
+  (package
+    (name "icedove")
+    (version "52.7.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://ftp.mozilla.org/pub/mozilla.org/"
+                                  "thunderbird/releases/" version "/source/"
+                                  "thunderbird-" version ".source.tar.xz"))
+              (sha256
+               (base32 "18rf576mhx9sf4g0gdb22mnpnssrcrhlm4i66b07ivcksf82hil2"))
+              (patches (search-patches "icedove-avoid-bundled-libraries.patch"
+                                       "icedove-use-system-harfbuzz.patch"
+                                       "icedove-use-system-graphite2.patch"
+                                       "icedove-libre.patch"
+                                       "icedove-CVE-2018-5148.patch"))
+              (modules (origin-modules (package-source icecat)))
+              (snippet
+               `(begin
+                  (with-directory-excursion "mozilla"
+                    ,(origin-snippet (package-source icecat)))))))
+    (build-system gnu-build-system)
+    (arguments
+     (substitute-keyword-arguments (package-arguments icecat)
+       ((#:configure-flags icecat-configure-flags ''())
+        `(append (list "--enable-application=mail"
+                       "--enable-calendar"
+                       "--enable-release"
+                       "--disable-official-branding"
+                       "--with-branding=mail/branding/icedove"
+                       "--disable-safe-browsing"
+                       "--disable-url-classifier"
+                       "--disable-webrtc"
+                       "--disable-elf-hack")
+                 (delete "--enable-official-branding"
+                         ,icecat-configure-flags)))
+       ((#:make-flags icecat-make-flags ''())
+        `(append (list "-f" "client.mk"
+                       "SH=sh")
+                 ,icecat-make-flags))
+       ((#:out-of-source? icecat-out-of-source?)
+        #f)
+       ((#:phases icecat-phases)
+        `(let ((icecat-phases ,icecat-phases))
+           (modify-phases %standard-phases
+             (add-after 'unpack 'unpack-branding
+               (lambda* (#:key inputs native-inputs #:allow-other-keys)
+                 (define (first-file directory)
+                   (car (scandir directory
+                                 (lambda (name)
+                                   (not (member name '("." "..")))))))
+                 (with-directory-excursion ".."
+                   (let* ((native-inputs (or native-inputs inputs))
+                          (tar           (assoc-ref native-inputs "tar"))
+                          (branding      (assoc-ref native-inputs "branding"))
+                          (tmp           ".tmp-unpack"))
+                     (mkdir tmp)
+                     (with-directory-excursion tmp
+                       (invoke (string-append tar "/bin/tar") "xf" branding)
+                       (rename-file (first-file ".") "../branding"))
+                     (rmdir tmp)))
+                 #t))
+
+             (add-after 'unpack-branding 'apply-branding
+               (lambda* (#:key inputs native-inputs #:allow-other-keys)
+                 (let ((native-inputs (or native-inputs inputs))
+                       (branding "../branding"))
+
+                   ;; Populate mail/branding/icedove.
+                   (copy-recursively (string-append branding "/icedove-branding")
+                                     "mail/branding/icedove")
+
+                   ;; Copy the icons.
+                   (let ((icons-dir (string-append branding "/app-icons")))
+                     (define (copy-icons target-fmt sizes)
+                       (for-each (lambda (size)
+                                   (copy-file (format #f "~a/icedove~a.png"
+                                                      icons-dir size)
+                                              (format #f target-fmt size)))
+                                 sizes))
+                     (copy-icons "mail/branding/icedove/mailicon~a.png"
+                                 '(16 22 24 32 48 64 128 256))
+                     (copy-icons "mail/branding/icedove/content/icon~a.png"
+                                 '(48 64))
+                     (copy-file (string-append branding "/preview.png")
+                                "mail/themes/linux/mail/preview.png"))
+
+                   ;; Fix branding in migration wizard, etc.
+                   (substitute* "mail/app/profile/all-thunderbird.js"
+                     (("%APP%") "thunderbird"))
+
+                   ;; Apply the included patches.
+                   (let* ((patch         (assoc-ref native-inputs "patch"))
+                          (patch-dir     (string-append branding "/patches"))
+                          (series-file   (string-append patch-dir "/series"))
+                          (file-contents (call-with-input-file series-file
+                                           read-string))
+                          (patches       (filter (negate string-null?)
+                                                 (string-split file-contents
+                                                               #\newline))))
+                     (for-each (lambda (file)
+                                 (unless (string-contains file "migration-wizard")
+                                   (invoke (string-append patch "/bin/patch")
+                                           "--force" "--no-backup-if-mismatch"
+                                           "-p1" "--input"
+                                           (string-append patch-dir "/" file))))
+                               patches))
+                   #t)))
+
+             (add-after 'apply-branding 'replace-search-plugins
+               (lambda* (#:key inputs native-inputs #:allow-other-keys)
+                 ;; Replace the default search plugins with those of IceCat.
+                 (let* ((native-inputs (or native-inputs inputs))
+                        (gnuzilla      (assoc-ref native-inputs "gnuzilla"))
+                        (plugins-dir   "mail/locales/en-US/searchplugins"))
+                   (delete-file-recursively plugins-dir)
+                   (mkdir plugins-dir)
+                   (copy-recursively (string-append gnuzilla "/data/searchplugins")
+                                     plugins-dir))
+                 #t))
+
+             (add-before 'configure 'link-libxul-with-libraries
+               (lambda args
+                 (with-directory-excursion "mozilla"
+                   (apply (assoc-ref icecat-phases 'link-libxul-with-libraries)
+                          args))))
+
+             (add-before 'configure 'ensure-no-mtimes-pre-1980
+               (assoc-ref icecat-phases 'ensure-no-mtimes-pre-1980))
+
+             (replace 'configure
+               ;; configure does not work followed by both "SHELL=..." and
+               ;; "CONFIG_SHELL=..."; set environment variables instead
+               (lambda* (#:key outputs configure-flags #:allow-other-keys)
+                 (let* ((out   (assoc-ref outputs "out"))
+                        (bash  (which "bash"))
+                        (flags (cons (string-append "--prefix=" out)
+                                     configure-flags)))
+                   (format #t "configure flags: ~s~%" flags)
+                   (call-with-output-file ".mozconfig"
+                     (lambda (port)
+                       (for-each (lambda (flag)
+                                   (format port "ac_add_options ~a~%" flag))
+                                 flags)))
+                   (setenv "SHELL" bash)
+                   (setenv "CONFIG_SHELL" bash)
+                   (setenv "AUTOCONF" (which "autoconf")) ; must be autoconf-2.13
+                   (substitute* "configure"
+                     (("^SRCDIR=.*") (format #f "SRCDIR=~s~%" (getcwd))))
+                   ;; The configure script is run during the 'build' phase.
+                   #t)))
+
+             ;; FIXME: Add a phase to install the desktop file.
+             )))))
+    (inputs (package-inputs icecat))
+    (native-inputs
+     `(,@(package-native-inputs icecat)
+       ("patch" ,patch)
+       ("tar" ,tar)
+       ("xz" ,xz)
+       ("gnuzilla"
+        ,(let ((commit "95d8edd62741b0ef504f0c47e374c8af90650458"))
+           (origin
+             (method git-fetch)
+             (uri (git-reference (url "git://git.savannah.gnu.org/gnuzilla.git")
+                                 (commit commit)))
+             (file-name (string-append "gnuzilla-source-"
+                                       (string-take commit 7)
+                                       "-checkout"))
+             (sha256
+              (base32 "0qlwad45ln318ifhh29q2aafa3g0lfhmcbdqh7ny1nzzf9i4z2ca")))))
+       ("branding"
+        ,(let ((branding-version "52.1-1"))
+           (origin
+             (method url-fetch)
+             (uri (string-append "https://repomirror.parabola.nu/other/icedove/"
+                                 "icedove_" branding-version ".branding.tar.xz"))
+             (file-name (string-append "icedove-branding" branding-version))
+             (sha256
+              (base32 "0rgwvv68xbk1apkrrpqfbv2d9y12fgwjfqlyp7aymyr4cnbihr14")))))
+       ("desktop-file"
+        ,(origin
+           (method url-fetch)
+           (uri (string-append
+                 "https://git.parabola.nu/abslibre.git"
+                 "/plain/libre/icedove/icedove.desktop"
+                 "?id=053755d6cabfc82cc3cf83042ea7b09e91d83bde"))
+           (sha256
+            (base32 "1w1jcsjli9194gf23l8f87rsyw805lgbsn1l2jfih2dy5shrk0dg"))))))
+    (home-page "https://directory.fsf.org/wiki/Icedove")
+    (synopsis "Mail/news client with RSS and integrated spam filter support")
+    (description
+     "Icedove is an unbranded Thunderbird mail client suitable for free
+distribution.  It supports different mail accounts (POP, IMAP, Gmail), has an
+integrated learning Spam filter, and offers easy organization of mails with
+tagging and virtual folders.  More features can be added by installing
+extensions.")
+    ;; TODO: Check licensing more carefully.
+    (license (list license:mpl1.1
+                   license:mpl2.0
+                   license:gpl2+
+                   license:lgpl2.1+))))

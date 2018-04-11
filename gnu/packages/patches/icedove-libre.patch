@@ -1,0 +1,448 @@
+Based on the following patch from Parabola:
+<https://git.parabola.nu/abslibre.git/tree/libre/icedove/libre.patch?id=70c99b45b3cfd2b5f6b33b858c35dff893988875>
+
+with additional changes to mail/installer/package-manifest.in and
+mail/app/profile/all-thunderbird.js based on similar changes made by
+Parabola's PKGBUILD using 'sed'.
+
+--- a/mail/locales/search/list.json
++++ b/mail/locales/search/list.json
+@@ -1,315 +1,315 @@
+ {
+   "default": {
+     "visibleDefaultEngines": [
+-      "amazondotcom", "aol-web-search", "bing", "twitter", "wikipedia", "yahoo"
++      "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+     ]
+   },
+   "locales": {
+     "en-US": {
+       "default": {
+         "visibleDefaultEngines": [
+-           "amazondotcom", "aol-web-search", "bing", "twitter", "wikipedia", "yahoo"
++           "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "ar": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "bing", "yahoo", "twitter", "wikipedia-ar", "amazondotcom"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "ast": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazondotcom", "aol-web-search", "bing", "twitter", "wikipedia-ast", "yahoo"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "be": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "be.wikipedia.org", "be-x-old.wikipedia.org", "ru.wikipedia.org-be", "tut.by", "yahoo", "yandex.by"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "br": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazondotcom", "aol-web-search", "bing", "google", "twitter", "wikipedia", "yahoo"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "ca": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "bing", "huubs", "diec2", "wikipedia-ca", "llibres"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "cs": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "seznam-cz", "duckduckgo-cz", "heureka-cz", "mapy-cz", "wikipedia-cz"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "da": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazon-co-uk", "bing", "google", "wikipedia-da"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "de": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazondotcom-de", "bing", "twitter-de", "wikipedia-de", "yahoo-de"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "en-GB": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazon-en-GB", "aol-en-GB", "bing", "google", "twitter", "wikipedia", "yahoo-en-GB"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "es-AR": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "yahoo-ar", "amazondotcom", "mercadolibre-ar", "drae", "wikipedia-es"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "es-ES": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "yahoo-es", "bing", "drae", "twitter", "wikipedia-es"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "et": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "neti-ee", "osta-ee", "eki-ee", "wikipedia-et"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "fi": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazondotcom", "bing", "twitter", "wikipedia-fi", "yahoo-fi"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "fr": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazon-france", "bing", "wikipedia-fr", "yahoo-france", "cnrtl-tlfi-fr"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "ga-IE": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "twitter", "yahoo-en-GB", "amazon-en-GB", "focal", "wikipedia-ga-IE"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "gd": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "yahoo-en-GB", "bbc-alba", "amazon-en-GB", "faclair-beag", "wikipedia-gd"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "he": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazondotcom", "aol-web-search", "bing", "google", "twitter", "wikipedia", "yahoo"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "hr": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazondotcom", "aol-web-search", "bing", "google", "twitter", "wikipedia", "yahoo"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "hu": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "sztaki-en-hu", "vatera", "wikipedia-hu"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "id": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "yahoo-id", "wikipedia-id"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "is": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazondotcom", "bing", "leit-is", "wikipedia-is", "yahoo"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "it": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazon-it", "bing", "google", "twitter", "wikipedia-it", "yahoo-it"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "ja-JP-mac": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google-jp", "yahoo-jp", "amazon-jp", "rakuten", "yahoo-jp-auctions", "oshiete-goo", "twitter-ja", "wikipedia-ja"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "ja": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google-jp", "yahoo-jp", "amazon-jp", "rakuten", "yahoo-jp-auctions", "oshiete-goo", "twitter-ja", "wikipedia-ja"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "kab": {
+       "default": {
+         "visibleDefaultEngines": [
+-           "amazondotcom", "aol-web-search", "bing", "twitter", "wikipedia", "yahoo"
++           "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "ko": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "danawa-kr", "daum-kr", "google","naver-kr", "wikipedia-kr"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "lt": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazondotcom", "bing", "google", "twitter", "wikipedia-lt"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "nb-NO": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazondotcom", "aol-web-search", "bing", "google", "twitter", "wikipedia", "yahoo", "gulesider-NO"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "nl": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "bing", "yahoo", "google", "twitter", "wikipedia-nl", "marktplaats-nl"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "nn-NO": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazondotcom", "aol-web-search", "bing", "twitter", "wikipedia", "yahoo", "gulesider-NO"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "pl": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "allegro-pl", "google", "pwn-pl", "wikipedia-pl", "wolnelektury-pl"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "pt-PT": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "sapo", "priberam", "wikipedia-ptpt", "amazon-en-GB"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "rm": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "bing", "google", "leo_ende_de", "pledarigrond", "wikipedia-rm", "yahoo-ch"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "ro": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "yahoo", "bing", "amazondotcom", "wikipediaro"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "ru": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "bing", "duckduckgo-ru", "ozonru", "priceru", "wikipedia-ru", "yandex"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "sk": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "atlas-sk", "azet-sk", "bing", "google", "slovnik-sk", "wikipedia-sk", "zoznam-sk"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "sl": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "najdi-si", "ceneji", "google", "odpiralni", "twitter", "wikipedia-sl"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "sq": {
+       "default": {
+         "visibleDefaultEngines": [
+-           "amazondotcom", "bing", "twitter", "wikipedia-sq", "yahoo"
++           "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "sv-SE": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "bing", "yahoo", "wikipedia-sv-SE", "tyda-sv-SE", "prisjakt-sv-SE"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "tr": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "yandex-tr", "wikipedia-tr"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "uk": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "yandex", "meta-ua", "metamarket", "wikipedia-uk"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "vi": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "amazondotcom", "aol-web-search", "bing", "google", "twitter", "wikipedia", "yahoo"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     },
+     "zh-TW": {
+       "default": {
+         "visibleDefaultEngines": [
+-          "google", "yahoo-zh-TW", "yahoo-bid-zh-TW", "wikipedia-zh-TW", "chunghwapost-zh-TW", "google-maps-zh-TW", "ipeen-zh-TW", "findbook-zh-TW"
++          "duckduckgo-html", "duckduckgo-lite", "internet-archive", "parabola-packages", "parabola-wiki-en", "searx", "seeks", "wikipedia-en", "yacy"
+         ]
+       }
+     }
+diff --git a/mail/locales/en-US/chrome/messenger-region/region.properties b/mail/locales/en-US/chrome/messenger-region/region.properties
+index fcc870d..f810450 100644
+--- a/mail/locales/en-US/chrome/messenger-region/region.properties
++++ b/mail/locales/en-US/chrome/messenger-region/region.properties
+@@ -3,12 +3,12 @@
+ # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ 
+ # Default search engine
+-browser.search.defaultenginename=Bing
++browser.search.defaultenginename=searx
+ 
+ # Search engine order (order displayed in the search bar dropdown)s
+-browser.search.order.1=Bing
+-browser.search.order.2=Yahoo
+-browser.search.order.3=
++browser.search.order.1=searx
++browser.search.order.2=DuckDuckGo HTML
++browser.search.order.3=DuckDuckGo Lite
+ 
+ # To make mapit buttons to disappear in the addressbook, specify empty string.  For example:
+ # mail.addr_book.mapit_url.format=
+@@ -23,14 +23,12 @@ browser.search.order.3=
+ # @ZI == zip code
+ # @CO == country
+ # Default map service:
+-mail.addr_book.mapit_url.format=https://maps.google.com/maps?q=@A1%20@A2%20@CI%20@ST%20@ZI%20@CO
++mail.addr_book.mapit_url.format=https://nominatim.openstreetmap.org/search.php?polygon=1&q=@A1%2C@A2%2C@CI%2C@ST%2C@ZI%2C@CO
+ # List of available map services (up to 5 can be defined here):
+-mail.addr_book.mapit_url.1.name=Google Maps
+-mail.addr_book.mapit_url.1.format=https://maps.google.com/maps?q=@A1%20@A2%20@CI%20@ST%20@ZI%20@CO
+-mail.addr_book.mapit_url.2.name=OpenStreetMap
+-mail.addr_book.mapit_url.2.format=https://nominatim.openstreetmap.org/search.php?polygon=1&q=@A1%2C@A2%2C@CI%2C@ST%2C@ZI%2C@CO
++mail.addr_book.mapit_url.1.name=OpenStreetMap
++mail.addr_book.mapit_url.1.format=https://nominatim.openstreetmap.org/search.php?polygon=1&q=@A1%2C@A2%2C@CI%2C@ST%2C@ZI%2C@CO
+ 
+-mailnews.messageid_browser.url=http://groups.google.com/search?as_umsgid=%mid
++mailnews.messageid_browser.url=
+ 
+ # Recognize non-standard versions of "Re:" in subjects from localized versions of MS Outlook et al.
+ # Specify a comma-separated list without spaces. For example: mailnews.localizedRe=AW,SV
+--- a/mail/installer/package-manifest.in
++++ b/mail/installer/package-manifest.in
+@@ -696,12 +696,6 @@
+ ; Modules
+ @RESPATH@/modules/*
+ 
+-@RESPATH@/components/nsURLClassifier.manifest
+-@RESPATH@/components/nsUrlClassifierHashCompleter.js
+-@RESPATH@/components/nsUrlClassifierListManager.js
+-@RESPATH@/components/nsUrlClassifierLib.js
+-@RESPATH@/components/url-classifier.xpt
+-
+ ; Security Reports
+ @RESPATH@/components/SecurityReporter.manifest
+ @RESPATH@/components/SecurityReporter.js
+--- a/mail/app/profile/all-thunderbird.js
++++ b/mail/app/profile/all-thunderbird.js
+@@ -156,13 +156,13 @@
+ // Preferences for AMO integration
+ pref("extensions.getAddons.cache.enabled", true);
+ pref("extensions.getAddons.maxResults", 15);
+-pref("extensions.getAddons.get.url", "https://services.addons.mozilla.org/%LOCALE%/%APP%/api/%API_VERSION%/search/guid:%IDS%?src=thunderbird&appOS=%OS%&appVersion=%VERSION%");
+-pref("extensions.getAddons.getWithPerformance.url", "https://services.addons.mozilla.org/%LOCALE%/%APP%/api/%API_VERSION%/search/guid:%IDS%?src=thunderbird&appOS=%OS%&appVersion=%VERSION%&tMain=%TIME_MAIN%&tFirstPaint=%TIME_FIRST_PAINT%&tSessionRestored=%TIME_SESSION_RESTORED%");
+-pref("extensions.getAddons.link.url", "https://addons.mozilla.org/%LOCALE%/%APP%/");
+-pref("extensions.getAddons.recommended.url", "https://services.addons.mozilla.org/%LOCALE%/%APP%/api/%API_VERSION%/list/recommended/all/%MAX_RESULTS%/%OS%/%VERSION%?src=thunderbird");
+-pref("extensions.getAddons.search.browseURL", "https://addons.mozilla.org/%LOCALE%/%APP%/search?q=%TERMS%");
+-pref("extensions.getAddons.search.url", "https://services.addons.mozilla.org/%LOCALE%/%APP%/api/%API_VERSION%/search/%TERMS%/all/%MAX_RESULTS%/%OS%/%VERSION%/%COMPATIBILITY_MODE%?src=thunderbird");
+-pref("extensions.webservice.discoverURL", "https://services.addons.mozilla.org/%LOCALE%/%APP%/discovery/pane/%VERSION%/%OS%");
++pref("extensions.getAddons.get.url", "https://directory.fsf.org/wiki/Icedove");
++pref("extensions.getAddons.getWithPerformance.url", "https://directory.fsf.org/wiki/Icedove");
++pref("extensions.getAddons.link.url", "https://directory.fsf.org/wiki/Icedove");
++pref("extensions.getAddons.recommended.url", "https://directory.fsf.org/wiki/Icedove");
++pref("extensions.getAddons.search.browseURL", "https://directory.fsf.org/wiki/Icedove");
++pref("extensions.getAddons.search.url", "https://directory.fsf.org/wiki/Icedove");
++pref("extensions.webservice.discoverURL", "https://directory.fsf.org/wiki/Icedove");
+ 
+ // Blocklist preferences
+ pref("extensions.blocklist.enabled", true);
