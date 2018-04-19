@@ -1,5 +1,6 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2012, 2013, 2014, 2015, 2016, 2017 Ludovic Courtès <ludo@gnu.org>
+;;; Copyright © 2018 Mark H Weaver <mhw@netris.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -51,6 +52,20 @@
        (loop #'(rest ...)))
       ((weird _ ...)                              ;weird!
        (syntax-violation name "invalid field specifier" #'weird)))))
+
+(define (find-duplicates lst)
+  "Return a list of all elements that occur more than once in LST.
+Elements are compared using eq?."
+  (let loop ((lst lst)
+             (dups '()))
+    (match lst
+      (()
+       dups)
+      ((x . rest)
+       (loop rest (if (and (memq x rest)
+                           (not (memq x dups)))
+                      (cons x dups)
+                      dups))))))
 
 (define-syntax make-syntactic-constructor
   (syntax-rules ()
@@ -133,15 +148,21 @@ fields, and DELAYED is the list of identifiers of delayed fields."
                 #,(record-inheritance #'orig-record
                                       #'((field value) (... ...)))))
            ((_ (field value) (... ...))
-            (let ((fields (map syntax->datum #'(field (... ...)))))
+            (let ((provided-fields (map syntax->datum #'(field (... ...)))))
               (define (field-value f)
                 (or (find (lambda (x)
                             (eq? f (syntax->datum x)))
                           #'(field (... ...)))
                     (wrap-field-value f (field-default-value f))))
 
-              (let ((fields (append fields (map car default-values))))
-                (cond ((lset= eq? fields '(expected ...))
+              (let ((fields (append provided-fields (map car default-values))))
+                (cond ((find-duplicates provided-fields)
+                       pair?
+                       => (lambda (duplicates)
+                            (record-error 'name s
+                                          "duplicate field initializers ~a"
+                                          duplicates)))
+                      ((lset= eq? fields '(expected ...))
                        #`(let* #,(field-bindings
                                   #'((field value) (... ...)))
                            (ctor #,@(map field-value '(expected ...)))))
