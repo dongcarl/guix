@@ -87,7 +87,8 @@
               (sha256
                (base32
                 "17w21spvaxaidi2am5lpsln8yjpyp2zi3s3gc6nsxj5arlgamzgw"))
-              (patches (search-patches "qemu-glibc-2.27.patch"))))))
+              (patches (search-patches "qemu-glibc-2.27.patch"
+                                       "qemu-CVE-2018-7550.patch"))))))
 
 (define-public grub
   (package
