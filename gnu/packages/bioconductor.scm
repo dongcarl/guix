@@ -21,7 +21,8 @@
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix build-system r)
-  #:use-module (gnu packages))
+  #:use-module (gnu packages)
+  #:use-module (gnu packages bioinformatics))
 
 (define-public r-bsgenome-dmelanogaster-ucsc-dm6
   (package
