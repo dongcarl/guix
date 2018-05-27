@@ -3330,6 +3330,54 @@ script engines.")
     ;; dual licensed
     (license (list license:gpl2+ license:lgpl2.1+))))
 
+(define-public purpose
+  (package
+    (name "purpose")
+    (version "5.46.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "mirror://kde/stable/frameworks/"
+                    (version-major+minor version) "/"
+                    name "-" version ".tar.xz"))
+              (sha256
+               (base32
+                "1mrssw484hb3nk9hafys0ns1ixd8h3l6m8qnyry9ky964xqmbkg1"))))
+    (build-system cmake-build-system)
+    (native-inputs
+     `(("extra-cmake-modules" ,extra-cmake-modules)))
+    (inputs
+     `(("kconfig" ,kconfig)
+       ("kcoreaddons" ,kcoreaddons)
+       ("ki18n" ,ki18n)
+       ("kio" ,kio)
+       ;; optional: KAccounts, which is not part of the framework
+       ;; optional run-time packages: Ubuntu.OnlineAccounts-QMLModule,
+       ;; org.kde.kdeconnect-QMLModule, org.kde.kquickcontrolsaddons-QMLModule
+       ("qtbase" ,qtbase)
+       ("qtdeclarative" ,qtdeclarative)))
+    (arguments
+     `(;;#:tests? #f  TODO: tests fail
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'check-setup
+           (lambda _
+             (setenv "XDG_RUNTIME_DIR" (getcwd))
+             ;; make Qt render "offscreen", required for tests
+             (setenv "QT_QPA_PLATFORM" "offscreen")
+             #t)))))
+    (home-page "https://community.kde.org/Frameworks")
+    (synopsis "Offers available actions for a specific purpose")
+    (description "This framework offers the possibility to create integrate
+services and actions on any application without having to implement them
+specifically.  Purpose will offer them mechanisms to list the different
+alternatives to execute given the requested action type and will facilitate
+components so that all the plugins can receive all the information they
+need.")
+    ;; dual licensed
+    ;; TODO: Check this!
+    (license (list license:gpl2+ license:lgpl2.1+))))
+
 ;; This version of kdbusaddons does not use kinit as an input, and is used to
 ;; build kinit-bootstrap, as well as bootstrap versions of all kinit
 ;; dependencies which also rely on kdbusaddons.
