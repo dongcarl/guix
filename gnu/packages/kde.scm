@@ -346,41 +346,6 @@ features include brush stabilizers, brush engines and wrap-around mode.")
                (base32
                 "0pc6hnakkqy81x5b5ncivaps6hqv43i50sjwgi3i3cz9j8rlxh5y"))))))
 
-(define-public kholidays
-  (package
-    (name "kholidays")
-    (version "17.12.1")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append
-             "mirror://kde/stable/applications/" version "/src/"
-             name "-" version ".tar.xz"))
-       (sha256
-        (base32 "0595d7wbnz8kyq1bnivdrp20lwdp8ykvdll1fmb0fgm4q24z0cl8"))))
-    (build-system cmake-build-system)
-    (arguments
-     `(#:phases
-       (modify-phases %standard-phases
-         (add-before 'check 'check-setup
-           (lambda _
-             ;; blacklist a failing test function TODO: make it pass
-             (with-output-to-file "autotests/BLACKLIST"
-               (lambda _
-                 (display "[testDefaultRegions]\n*\n")))
-             #t)))))
-    (native-inputs
-     `(("extra-cmake-modules" ,extra-cmake-modules)
-       ("qttools" ,qttools)))
-    (inputs
-     `(("qtbase" ,qtbase)
-       ("qtdeclarative" ,qtdeclarative)))
-    (home-page "https://cgit.kde.org/kholidays.git")
-    (synopsis "Library for regional holiday information")
-    (description "This library provides a C++ API that determines holiday and
-other special events for a geographical region.")
-    (license license:lgpl2.0+)))
-
 (define-public libkomparediff2
   (package
     (name "libkomparediff2")
