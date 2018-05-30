@@ -2409,7 +2409,10 @@ with su and ssh respectively.")
        ("kservice" ,kservice)
        ("kwallet" ,kwallet)
        ("qtbase" ,qtbase)
-       ("qtwebkit" ,qtwebkit)))
+       ;; fehlen: Qt5WebKitWidgetsConfig.cmake
+       ("qtwebglplugin" ,qtwebglplugin)
+       ("qtwebview" ,qtwebview)
+       ))
     (home-page "https://community.kde.org/Frameworks")
     (synopsis "KDE Integration for QtWebKit")
     (description "This library provides KDE integration of the HTML rendering
