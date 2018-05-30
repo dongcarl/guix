@@ -65,6 +65,17 @@
   #:use-module (gnu packages sdl)
   #:use-module (gnu packages tls)
   #:use-module (gnu packages xdisorg)
+
+  #:use-module (gnu packages video)
+  ;; ---#:use-module (gnu packages re2c)
+  #:use-module (gnu packages ninja)
+  #:use-module (gnu packages xiph)
+  #:use-module (gnu packages ghostscript)
+  #:use-module (gnu packages serialization)
+  ;;#:use-module (gnu packages compression)
+  #:use-module (gnu packages protobuf)
+  #:use-module (gnu packages libevent)
+ 
   #:use-module (gnu packages xorg)
   #:use-module (gnu packages xml))
 
@@ -1136,6 +1147,90 @@ applications (with some limitations) to run in a web browser that supports
 WebGL.  WebGL is a JavaScript API for rendering 2D and 3D graphics within any
 compatible web browser without the use of plug-ins.  The API is similar to
 OpenGL ES 2.0 and can be used in HTML5 canvas elements")))
+
+(define-public qtwebengine
+  (package (inherit qtsvg)
+    (name "qtwebengine")
+    (version "5.11.0")
+    (source (origin
+             (method url-fetch)
+             (uri (string-append "https://download.qt.io/official_releases/qt/"
+                                 (version-major+minor version) "/" version
+                                 "/submodules/" name "-everywhere-src-"
+                                 version ".tar.xz"))
+             (sha256
+              (base32
+               "0iabqkan99msp0jab0hndap6jqkf9b1ggd4n7glkcvf60gb59msx"))))
+    ;; (native-inputs
+    ;;  `(("perl" ,perl)
+    ;;    ("qtdeclarative" ,qtdeclarative)
+    ;;    ("qtwebsockets" ,qtwebsockets)))
+    ;; (inputs `(("qtbase" ,qtbase)))
+    (native-inputs
+     `(;;("perl" ,perl)
+       ("bison" ,bison)
+       ("flex" ,flex)
+       ("gperf" ,gperf)
+       ("pkg-config" ,pkg-config)
+       ("python" ,python-2.7)
+       ("ruby" ,ruby)
+       ("ninja" ,ninja)
+       ))
+    (inputs
+     `(
+       ("alsa-lib" ,alsa-lib)
+       ("pulseaudio" ,pulseaudio)
+       ("fontconfig" ,fontconfig)
+       ("icu4c" ,icu4c)
+       ("libjpeg" ,libjpeg) ;; not compatible
+       ("libpng" ,libpng)
+       ("libwebp" ,libwebp)
+       ;;("libx11" ,libx11)
+       ("libxcomposite" ,libxcomposite)
+       ("libxml2" ,libxml2)
+       ("libxrender" ,libxrender)
+       ("libxslt" ,libxslt)
+       ("qtbase" ,qtbase)
+       ("qtdeclarative" ,qtdeclarative)
+       ;;("qtmultimedia" ,qtmultimedia)
+       ;;; ---- ("re2c" ,re2c)
+       ("pcre2" ,pcre2)
+       ("ffmpeg", ffmpeg)
+       ("harfbuzz" ,harfbuzz) ;; "-system-harfbuzz"
+       ("libxcursor" ,libxcursor)
+       ;; also, pulseaudio
+       ;; embedded
+       ;; srtp
+       ;; libvpx... no
+       ;; compatible system libxml2... no
+       ;; re2... no
+       ;; icu: no
+       ("dbus" ,dbus)
+       ("xinput" ,xinput) ;; xi ???
+       ("protobuf" ,protobuf)
+       ("libxtst" ,libxtst)
+       ("libxrandr" ,libxrandr)
+       ("nss" ,nss)
+       ("opus" ,opus)
+       ("libvpx" ,libvpx)
+       ("lcms" ,lcms)
+       ("jsoncpp" ,jsoncpp)
+       ("snappy" ,snappy)
+       ("minizip" ,minizip)
+       ("libevent" ,libevent)
+       ("sqlite" ,sqlite)
+       ))
+    
+    ;; (arguments
+    ;;  `(#:phases
+    ;;    (modify-phases %standard-phases
+    ;;      (add-after 'configure 'fail
+    ;;        (lambda _
+    ;;          #)))))
+
+    (synopsis "Web content engine library for Qt")
+    (description "Provides a Web browser engine that makes it easy to embed
+dynamic content from the World Wide Web into your Qt application.")))
 
 (define-public qtwebview
   (package (inherit qtsvg)
