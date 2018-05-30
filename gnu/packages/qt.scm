@@ -1046,6 +1046,47 @@ interacting with serial ports from within Qt.")))
 access the various industrial serial buses and protocols, such as CAN, ModBus,
 and others.")))
 
+(define-public qtvirtualkeyboard
+  (package (inherit qtsvg)
+    (name "qtvirtualkeyboard")
+    (version "5.11.0")
+    (source (origin
+             (method url-fetch)
+             (uri (string-append "https://download.qt.io/official_releases/qt/"
+                                 (version-major+minor version) "/" version
+                                 "/submodules/" name "-everywhere-src-"
+                                 version ".tar.xz"))
+             (sha256
+              (base32
+               "1g9wj4j29lysqp6wxnck6s7h36qj87g3lbapvkfsqchvm00yckci"))))
+    (arguments
+     (substitute-keyword-arguments (package-arguments qtsvg)
+       ((#:phases phases)
+        `(modify-phases ,phases
+           (add-before 'check 'check-setup
+             (lambda _
+               ;; Make QtQuick.VirtualKeyboard available without installing
+               (setenv "QML2_IMPORT_PATH"
+                       (string-append
+                        (getcwd) "/qml:" (getenv "QML2_IMPORT_PATH")))
+               #t))
+           (add-after 'install 'check-post-install
+             (assoc-ref %standard-phases 'check))
+           (delete 'check)
+           ))))
+    (native-inputs
+     `(("python" ,python)
+       ("qtdeclarative" ,qtdeclarative)
+       ("qtsvg" ,qtsvg)
+       ))
+    (inputs `(("qtbase" ,qtbase)))
+    (synopsis "Qt virtual keyboard")
+    (description "The Qt Virtual Keyboard project provides an input framework
+and reference keyboard frontend for Qt 5 on Linux Desktop/X11, Windows
+Desktop, and Boot2Qt targets.  The input framework makes it easy to write
+custom input methods or to integrate 3rd party input engines.  The input
+methods can be implemented in C++ or QML.")))
+
 (define-public qtwebchannel
   (package (inherit qtsvg)
     (name "qtwebchannel")
