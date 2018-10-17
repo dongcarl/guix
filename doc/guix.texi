@@ -20,7 +20,7 @@ Copyright @copyright{} 2014, 2015, 2016 Alex Kost@*
 Copyright @copyright{} 2015, 2016 Mathieu Lirzin@*
 Copyright @copyright{} 2014 Pierre-Antoine Rault@*
 Copyright @copyright{} 2015 Taylan Ulrich Bayırlı/Kammer@*
-Copyright @copyright{} 2015, 2016, 2017 Leo Famulari@*
+Copyright @copyright{} 2015, 2016, 2017, 2018 Leo Famulari@*
 Copyright @copyright{} 2015, 2016, 2017, 2018 Ricardo Wurmus@*
 Copyright @copyright{} 2016 Ben Woodcroft@*
 Copyright @copyright{} 2016, 2017, 2018 Chris Marusich@*
@@ -7179,6 +7179,13 @@ Import metadata from the crates.io Rust package repository
 @cindex OCaml
 Import metadata from the @uref{https://opam.ocaml.org/, OPAM} package
 repository used by the OCaml community.
+
+@item gopkg
+@cindex gopkg
+@cindex Golang
+@cindex Go
+Import metadata from the @uref{https://gopkg.in/, gopkg} package
+versioning service used by some Go software.
 @end table
 
 The structure of the @command{guix import} code is modular.  It would be
