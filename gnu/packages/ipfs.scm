@@ -21,10 +21,35 @@
   #:use-module (guix packages)
   ;; #:use-module (guix download)
   #:use-module (guix git-download)
+  #:use-module (guix gx-download)
   #:use-module (guix build-system go)
   ;; #:use-module (guix build-system python)
   ;; #:use-module (gnu packages)
   #:use-module (gnu packages golang))
+
+(define-public ipfs-go-ipfs-cmdkit
+  (let ((ipfs-hash "QmSP88ryZkHSRn1fnngAaV2Vcn63WUJzAavnRM9CVdU1Ky"))
+    (package
+      (name "ipfs-go-ipfs-cmdkit")
+      (version (gx-version "1.1.3" "1" ipfs-hash))
+      (source
+       (origin
+         (method gx-fetch)
+         (uri (gx-reference (hash ipfs-hash)))
+         (file-name (gx-file-name name version))
+         (sha256
+          (base32
+           "0qk6fshgdmhp8dip2ksm13j6nywi41m9mn0czkvmw6b697z85l2r"))))
+      (build-system go-build-system)
+      (arguments
+       `(#:unpack-path ,(string-append "gx/ipfs/" ipfs-hash "/go-ipfs-config")
+         #:import-path ,(string-append "gx/ipfs/" ipfs-hash "/go-ipfs-config")))
+      (home-page
+       "https://github.com/ipfs/go-ipfs-cmdkit")
+      (synopsis "Shared types, functions and values for go-ipfs")
+      (description "@command{cmdkit} offers some types, functions and values
+that are shared between @command{go-ipfs/commands} and its rewrite @command{go-ipfs-cmds}.")
+      (license license:expat))))
 
 (define-public go-github-com-ipfs-go-ipfs-cmdkit-files
   (let ((commit
