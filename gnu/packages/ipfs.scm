@@ -152,3 +152,55 @@ that are shared between @command{go-ipfs/commands} and its rewrite
 distributed, content addressed filesystem IPFS.  It aims to be flexible,
 powerful and simple.")
       (license license:expat))))
+
+(define-public go-ipfs
+  (let ((commit
+          "9bf4e4145ea897ced2f9aa2087296b3beda6e941")
+        (revision "0"))
+    (package
+      (name "go-ipfs")
+      (version (git-version "0.4.17" revision commit))
+      (source
+        (origin
+          (method git-fetch)
+          (uri (git-reference
+                 (url "https://github.com/ipfs/go-ipfs.git")
+                 (commit commit)))
+          (file-name (git-file-name name version))
+          (sha256
+            (base32
+              "01zqll453gbjjfkm6jvpp49i1al8ic3pdg3ivqhyiilcsmhf8b8i"))))
+      (build-system go-build-system)
+      (arguments
+       ;; install_unsupported:
+       ;;  @echo "note: this command has yet to be tested to build in the system you are using"
+       ;;  @echo "installing gx"
+       ;;  go get -v -u github.com/whyrusleeping/gx
+       ;;  go get -v -u github.com/whyrusleeping/gx-go
+       ;;  @echo check gx and gx-go
+       ;;  gx -v && gx-go -v
+       ;;  @echo downloading dependencies
+       ;;  gx install --global
+       ;;  @echo "installing go-ipfs"
+       ;;  go install -v -tags nofuse ./cmd/ipfs
+       '(#:import-path "github.com/ipfs/go-ipfs/cmd/ipfs"
+         #:unpack-path "github.com/ipfs/go-ipfs"
+         #:phases
+         (modify-phases %standard-phases
+           (add-before 'reset-gzip-timestamps 'make-gzip-archive-writable
+             (lambda* (#:key outputs #:allow-other-keys)
+               (map (lambda (file)
+                      (make-file-writable file))
+                    (find-files
+                     (assoc-ref outputs "out")
+                     ".*\\.gz$"))
+               #t)))))
+      (native-inputs `())
+      (home-page "https://ipfs.io")
+      (synopsis "IPFS implementation in Go ")
+      (description "IPFS is a global, versioned, peer-to-peer filesystem.  It
+combines good ideas from Git, BitTorrent, Kademlia, SFS, and the Web.  It is
+like a single bittorrent swarm, exchanging git objects.  IPFS provides an
+interface as simple as the HTTP web, but with permanence built in.  You can
+also mount the world at /ipfs.")
+      (license license:expat))))
