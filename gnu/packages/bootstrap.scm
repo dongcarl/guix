@@ -43,6 +43,7 @@
             bootstrap-guile-origin
 
             %bootstrap-guile
+            %bootstrap-gash
             %bootstrap-coreutils&co
             %bootstrap-linux-libre-headers
             %bootstrap-binutils
@@ -712,6 +713,62 @@ exec ~a/bin/.gcc-wrapped -B~a/lib \
               "0k7kkl68a6xaadv47ij0nr9jm5ca1ffj38n7f2lg80y72wdkwr9h")))))))
     (supported-systems '("i686-linux" "x86_64-linux"))
     (synopsis "Bootstrap binaries of Mes")
+    (description synopsis)
+    (home-page #f)
+    (license gpl3+)))
+
+(define %bootstrap-gash
+  ;; The initial Gash.  Uses .go files from a tarball typically built by
+  ;; %GUILE-GASH-BOOTSTRAP-TARBALL.
+  (package
+    (name "bootstrap-gash")
+    (version "0")
+    (source #f)
+    (build-system trivial-build-system)
+    (arguments
+     `(#:guile ,%bootstrap-guile
+       #:modules ((guix build utils))
+       #:builder
+       (begin
+         (use-modules (guix build utils)
+                      (ice-9 popen))
+         (let ((out     (assoc-ref %outputs "out"))
+               (tar     (assoc-ref %build-inputs "tar"))
+               (xz      (assoc-ref %build-inputs "xz"))
+               (tarball (assoc-ref %build-inputs "tarball")))
+
+           (mkdir out)
+           (copy-file tarball "binaries.tar.xz")
+           (invoke xz "-d" "binaries.tar.xz")
+           (let ((build   (getcwd))
+                 (bin     (string-append out "/bin"))
+                 (libexec (string-append out "/libexec/gash")))
+
+           (define (rewire-script script)
+             (substitute* script
+               (("/gnu/store/[^ ]*gash-bootstrap[^/]*") out)))
+
+             (with-directory-excursion out
+               (invoke tar "xvf"
+                       (string-append build "/binaries.tar")))
+             (chmod bin #o755)
+             (chmod libexec #o755)
+             (for-each rewire-script (append (find-files bin)
+                                             (find-files libexec))))))))
+    (inputs
+     `(("tar" ,(search-bootstrap-binary "tar" (%current-system)))
+       ("xz"  ,(search-bootstrap-binary "xz" (%current-system)))
+       ("tarball" ,(bootstrap-origin
+                    (origin
+                      (method url-fetch)
+                      (uri (string-append
+                            "http://lilypond.org/janneke/mes/"
+                            "gash-bootstrap-guile-0.1-0.273ecc2-x86_64-linux.tar.xz"))
+                      (sha256
+                       (base32
+                        "1iwpha7yamk4df581zh8rzqrd9ry26ya9qbb1jc5q7bwxhwf2kms")))))))
+    (supported-systems '("i686-linux" "x86_64-linux"))
+    (synopsis "Bootstrap binaries of Gash")
     (description synopsis)
     (home-page #f)
     (license gpl3+)))
