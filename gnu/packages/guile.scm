@@ -9,7 +9,7 @@
 ;;; Copyright © 2016, 2017 Alex Kost <alezost@gmail.com>
 ;;; Copyright © 2016, 2017 Adonay "adfeno" Felipe Nogueira <https://libreplanet.org/wiki/User:Adfeno> <adfeno@openmailbox.org>
 ;;; Copyright © 2016 Amirouche <amirouche@hypermove.net>
-;;; Copyright © 2016 Jan Nieuwenhuizen <janneke@gnu.org>
+;;; Copyright © 2016,2018 Jan Nieuwenhuizen <janneke@gnu.org>
 ;;; Copyright © 2017 Andy Wingo <wingo@igalia.com>
 ;;; Copyright © 2017 David Thompson <davet@gnu.org>
 ;;; Copyright © 2017, 2018 Mathieu Othacehe <m.othacehe@gmail.com>
@@ -42,6 +42,7 @@
   #:use-module (gnu packages aspell)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages bdw-gc)
+  #:use-module (gnu packages code)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages gawk)
   #:use-module (gnu packages gperf)
@@ -2327,6 +2328,42 @@ Guile.")
 color text mode, widget based user interfaces.  The bindings are written in pure
 Scheme by using Guile’s foreign function interface.")
       (home-page "https://gitlab.com/mothacehe/guile-newt")
+      (license license:gpl3+))))
+
+(define-public guile-gash
+  (let ((version "0.1")
+        (commit "273ecc2a0e9d7cf544777b552dfc04a2f13f8056")
+        (revision "0"))
+    (package
+      (name "guile-gash")
+      (version (string-append version "-" revision "." (string-take commit 7)))
+      (source (origin
+                (method url-fetch)
+                (uri (string-append "https://gitlab.com/janneke/gash"
+                                    "/-/archive/" commit
+                                    "/gash-" commit ".tar.gz"))
+                (sha256
+                 (base32
+                  "1mqkcnpfiscz16aw5xm2i0xm42n2wb8p9fbdmdfc93dqfy4rf2nh"))))
+      (build-system gnu-build-system)
+      (native-inputs
+       `(("autoconf" ,autoconf)
+         ("automake" ,automake)
+         ("lcov" ,lcov)                 ; For generating test coverage data
+         ("pkg-config" ,pkg-config)))
+      (inputs
+       `(("guile" ,guile-2.2)
+         ("guile-readline" ,guile-readline)))
+      (arguments
+       '(#:make-flags
+         '("GUILE_AUTO_COMPILE=0")))    ;to prevent guild warnings
+      (home-page "https://gitlab.com/samplet/gash")
+      (synopsis "POSIX-compatible shell written in Guile Scheme")
+      (description
+       "Gash --Guile As SHell--is a POSIX-compatible shell written in Guile
+Scheme.  It is designed to be capable of bootstrapping GNU Bash and intends
+to make Scheme more pleasant for interactive and shell scripting use by
+creating a shelly library and DSL.")
       (license license:gpl3+))))
 
 ;;; guile.scm ends here
