@@ -614,6 +614,43 @@ for `sh' in $PATH, and without nscd, and with static NSS modules."
               ("bootstrap-guile" ,(@ (gnu packages bootstrap) %bootstrap-guile))
               ("gash" ,guile-gash)))))
 
+(define %gash-bootstrap-guile
+  ;; Gash with %bootstrap-guile she-bangs.
+  (package
+    (inherit guile-gash)
+    (name "gash-bootstrap-guile")
+    (build-system trivial-build-system)
+    (source #f)
+    (arguments
+     `(#:modules ((guix build utils))
+       #:builder
+       (begin
+         (use-modules (srfi srfi-1)
+                      (guix build utils))
+
+         (setvbuf (current-output-port) _IOLBF)
+         (let* ((out     (assoc-ref %outputs "out"))
+                (bin     (string-append out "/bin"))
+                (libexec (string-append out "/libexec/gash"))
+                (gash    (assoc-ref %build-inputs "gash"))
+                (guile   (assoc-ref %build-inputs "guile"))
+                (bootstrap-guile (assoc-ref %build-inputs "bootstrap-guile")))
+
+           (define (rewire-script script)
+             (substitute* script
+               ((gash) out)
+               ((guile) bootstrap-guile)
+               (("bin/guile") "bin/.guile-real")))
+
+           (copy-recursively gash out)
+           (for-each rewire-script (append (find-files bin)
+                                           (find-files libexec)))
+
+           #t))))
+    (inputs `(("guile" ,guile-2.2)
+              ("bootstrap-guile" ,(@ (gnu packages bootstrap) %bootstrap-guile))
+              ("gash" ,guile-gash)))))
+
 (define %guile-static
   ;; A statically-linked Guile that is relocatable--i.e., it can search
   ;; .scm and .go files relative to its installation directory, rather
