@@ -204,7 +204,8 @@ or false to signal an error."
 
 (define %bootstrap-base-urls
   ;; This is where the initial binaries come from.
-  '("https://alpha.gnu.org/gnu/guix/bootstrap"
+  '("http://lilypond.org/janneke/mes"
+    "https://alpha.gnu.org/gnu/guix/bootstrap"
     "http://alpha.gnu.org/gnu/guix/bootstrap"
     "ftp://alpha.gnu.org/gnu/guix/bootstrap"
     "http://www.fdn.fr/~lcourtes/software/guix/packages"
@@ -218,6 +219,8 @@ or false to signal an error."
                     "/20170217/guile-2.0.14.tar.xz")
                    ("armhf-linux"
                     "/20150101/guile-2.0.11.tar.xz")
+                   ("x86_64-linux"
+                    "/guile-static-stripped-2.2.4-x86_64-linux.tar.xz")
                    (_
                     "/20131110/guile-2.0.9.tar.xz"))))
 
@@ -225,7 +228,7 @@ or false to signal an error."
   "Return the SHA256 hash of the Guile bootstrap tarball for SYSTEM."
   (match system
     ("x86_64-linux"
-     (base32 "1w2p5zyrglzzniqgvyn1b55vprfzhgk8vzbzkkbdgl5248si0yq3"))
+     (base32 "1285hlbfahp414hy3jjdghxjfgi94aj7y3fw0pz7z27421b7z2f9"))
     ("i686-linux"
      (base32 "0im800m30abgh7msh331pcbjvb4n02smz5cfzf1srv0kpx3csmxp"))
     ("mips64el-linux"
@@ -239,8 +242,10 @@ or false to signal an error."
   "Return an <origin> object for the Guile tarball of SYSTEM."
   (origin
     (method url-fetch)
-    (uri (map (cute string-append <> (bootstrap-guile-url-path system))
-              %bootstrap-base-urls))
+    (uri (match system
+           ("x86_64-linux" "http://lilypond.org/janneke/mes/guile-static-stripped-2.2.4-x86_64-linux.tar.xz")
+           (_ (map (cute string-append <> (bootstrap-guile-url-path system))
+                   %bootstrap-base-urls))))
     (sha256 (bootstrap-guile-hash system))))
 
 (define (download-bootstrap-guile store system)
@@ -288,8 +293,8 @@ or false to signal an error."
                     (lambda (p)
                       (format p "\
 #!~a
-export GUILE_SYSTEM_PATH=~a/share/guile/2.0
-export GUILE_SYSTEM_COMPILED_PATH=~a/lib/guile/2.0/ccache
+export GUILE_SYSTEM_PATH=~a/share/guile/2.2
+export GUILE_SYSTEM_COMPILED_PATH=~a/lib/guile/2.2/ccache
 exec -a \"~a0\" ~a \"~a@\"\n"
                               bash out out dollar guile-real dollar)))
                   (chmod guile   #o555)
@@ -304,8 +309,8 @@ cd $out
 ~a -dc < $GUILE_TARBALL | ~a xv
 
 # Use the bootstrap guile to create its own wrapper to set the load path.
-GUILE_SYSTEM_PATH=$out/share/guile/2.0 \
-GUILE_SYSTEM_COMPILED_PATH=$out/lib/guile/2.0/ccache \
+GUILE_SYSTEM_PATH=$out/share/guile/2.2 \
+GUILE_SYSTEM_COMPILED_PATH=$out/lib/guile/2.2/ccache \
 $out/bin/guile -c ~s $out ~a
 
 # Sanity check.
@@ -343,7 +348,7 @@ $out/bin/guile --version~%"
                (lower make-raw-bag))))
    (package
      (name "guile-bootstrap")
-     (version "2.0")
+     (version "2.2")
      (source #f)
      (build-system raw)
      (synopsis "Bootstrap Guile")
