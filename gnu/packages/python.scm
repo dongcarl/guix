@@ -185,6 +185,7 @@
     (build-system gnu-build-system)
     (arguments
      `(#:test-target "test"
+       #:tests? #f
        #:configure-flags
        (list "--enable-shared"                    ;allow embedding
              "--with-system-ffi"                  ;build ctypes
