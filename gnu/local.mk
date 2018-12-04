@@ -711,6 +711,7 @@ dist_patch_DATA =						\
   %D%/packages/patches/gcc-arm-link-spec-fix.patch		\
   %D%/packages/patches/gcc-asan-missing-include.patch		\
   %D%/packages/patches/gcc-boot-2.95.3.patch			\
+  %D%/packages/patches/gcc-boot-4.6.4.patch			\
   %D%/packages/patches/gcc-cross-environment-variables.patch	\
   %D%/packages/patches/gcc-fix-texi2pod.patch			\
   %D%/packages/patches/gcc-4.8-libsanitizer-fix.patch		\
@@ -761,6 +762,7 @@ dist_patch_DATA =						\
   %D%/packages/patches/glibc-boot-2.16.0.patch			\
   %D%/packages/patches/glibc-boot-2.2.5.patch			\
   %D%/packages/patches/glibc-bootstrap-system-2.16.0.patch 	\
+  %D%/packages/patches/glibc-bootstrap-system-2.2.5.patch 	\
   %D%/packages/patches/glibc-bootstrap-system.patch		\
   %D%/packages/patches/glibc-hidden-visibility-ldconfig.patch	\
   %D%/packages/patches/glibc-hurd-magic-pid.patch		\
