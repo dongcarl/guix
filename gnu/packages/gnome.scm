@@ -5504,11 +5504,14 @@ to virtual private networks (VPNs) via OpenVPN.")
               (sha256
                (base32
                 "0y31g0lxr93370xi74hbpvcy9m81n5wdkdhq8xy2nqp0y4219p13"))))
-    (build-system glib-or-gtk-build-system)
-    (arguments '(#:configure-flags '("--disable-migration")))
+    (build-system meson-build-system)
+    (arguments
+     '(#:glib-or-gtk? #t))
     (native-inputs
      `(("intltool" ,intltool)
+       ("glib:bin" ,glib "bin") ; for glib-compile-resources, etc.
        ("gobject-introspection" ,gobject-introspection)
+       ("gtk-doc" ,gtk-doc)
        ("pkg-config" ,pkg-config)))
     (propagated-inputs
      ;; libnm-gtk.pc refers to all these.
@@ -5516,7 +5519,8 @@ to virtual private networks (VPNs) via OpenVPN.")
        ("gtk+" ,gtk+)
        ("network-manager" ,network-manager)))
     (inputs
-     `(("iso-codes" ,iso-codes)
+     `(("gcr" ,gcr)
+       ("iso-codes" ,iso-codes)
        ("libgudev" ,libgudev)
        ("libnotify" ,libnotify)
        ("libsecret" ,libsecret)
