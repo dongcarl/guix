@@ -23,6 +23,7 @@
   #:use-module (web client)
   #:use-module (web response)
   #:use-module (json)
+  #:use-module (guix json)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-11)
@@ -126,40 +127,6 @@
   (if (string-suffix? "/" url)
       url
       (string-append url "/")))
-
-(define-syntax-rule (define-json-reader json->record ctor spec ...)
-  "Define JSON->RECORD as a procedure that converts a JSON representation,
-read from a port, string, or hash table, into a record created by CTOR and
-following SPEC, a series of field specifications."
-  (define (json->record input)
-    (let ((table (cond ((port? input)
-                        (json->scm input))
-                       ((string? input)
-                        (json-string->scm input))
-                       ((hash-table? input)
-                        input))))
-      (let-syntax ((extract-field (syntax-rules ()
-                                    ((_ table (field key json->value))
-                                     (json->value (hash-ref table key)))
-                                    ((_ table (field key))
-                                     (hash-ref table key))
-                                    ((_ table (field))
-                                     (hash-ref table
-                                               (symbol->string 'field))))))
-        (ctor (extract-field table spec) ...)))))
-
-(define-syntax-rule (define-json-mapping rtd ctor pred json->record
-                      (field getter spec ...) ...)
-  "Define RTD as a record type with the given FIELDs and GETTERs, à la SRFI-9,
-and define JSON->RECORD as a conversion from JSON to a record of this type."
-  (begin
-    (define-record-type rtd
-      (ctor field ...)
-      pred
-      (field getter) ...)
-
-    (define-json-reader json->record ctor
-      (field spec ...) ...)))
 
 (define %date-regexp
   ;; Match strings like "2014-11-17T22:09:38+01:00" or
