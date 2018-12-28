@@ -59,6 +59,7 @@
   #:use-module ((guix build utils)
                 #:select (dump-port mkdir-p find-files))
   #:use-module ((guix build syscalls) #:select (set-thread-name))
+  #:use-module ((guix ipfs) #:prefix ipfs:)
   #:export (%public-key
             %private-key
 
@@ -78,6 +79,8 @@ Publish ~a over HTTP.\n") %store-directory)
                          compress archives at LEVEL"))
   (display (G_ "
   -c, --cache=DIRECTORY  cache published items to DIRECTORY"))
+  (display (G_ "
+      --ipfs[=GATEWAY]   publish items over IPFS via GATEWAY"))
   (display (G_ "
       --workers=N        use N workers to bake items"))
   (display (G_ "
@@ -168,6 +171,10 @@ compression disabled~%"))
         (option '(#\c "cache") #t #f
                 (lambda (opt name arg result)
                   (alist-cons 'cache arg result)))
+        (option '("ipfs") #f #t
+                (lambda (opt name arg result)
+                  (alist-cons 'ipfs (or arg (ipfs:%ipfs-base-url))
+                              result)))
         (option '("workers") #t #f
                 (lambda (opt name arg result)
                   (alist-cons 'workers (string->number* arg)
@@ -237,12 +244,15 @@ compression disabled~%"))
 
 (define* (narinfo-string store store-path key
                          #:key (compression %no-compression)
-                         (nar-path "nar") file-size)
+                         (nar-path "nar") file-size ipfs)
   "Generate a narinfo key/value string for STORE-PATH; an exception is raised
 if STORE-PATH is invalid.  Produce a URL that corresponds to COMPRESSION.  The
 narinfo is signed with KEY.  NAR-PATH specifies the prefix for nar URLs.
+
 Optionally, FILE-SIZE can specify the size in bytes of the compressed NAR; it
-informs the client of how much needs to be downloaded."
+informs the client of how much needs to be downloaded.
+
+When IPFS is true, it is the IPFS object identifier for STORE-PATH."
   (let* ((path-info  (query-path-info store store-path))
          (compression (actual-compression store-path compression))
          (url        (encode-and-join-uri-path
@@ -295,7 +305,12 @@ References: ~a~%~a"
                                  (apply throw args))))))
          (signature  (base64-encode-string
                       (canonical-sexp->string (signed-string info)))))
-    (format #f "~aSignature: 1;~a;~a~%" info (gethostname) signature)))
+    (format #f "~aSignature: 1;~a;~a~%~a" info (gethostname) signature
+
+            ;; Append IPFS info below the signed part.
+            (if ipfs
+                (string-append "IPFS: " ipfs "\n")
+                ""))))
 
 (define* (not-found request
                     #:key (phrase "Resource not found")
@@ -406,10 +421,12 @@ items.  Failing that, we could eventually have to recompute them and return
 (define* (render-narinfo/cached store request hash
                                 #:key ttl (compression %no-compression)
                                 (nar-path "nar")
-                                cache pool)
+                                cache pool ipfs?)
   "Respond to the narinfo request for REQUEST.  If the narinfo is available in
 CACHE, then send it; otherwise, return 404 and \"bake\" that nar and narinfo
-requested using POOL."
+requested using POOL.
+
+When IPFS? is true, additionally publish binaries over IPFS."
   (define (delete-entry narinfo)
     ;; Delete NARINFO and the corresponding nar from CACHE.
     (let ((nar (string-append (string-drop-right narinfo
@@ -447,7 +464,8 @@ requested using POOL."
                  (bake-narinfo+nar cache item
                                    #:ttl ttl
                                    #:compression compression
-                                   #:nar-path nar-path)))
+                                   #:nar-path nar-path
+                                   #:ipfs? ipfs?)))
 
              (when ttl
                (single-baker 'cache-cleanup
@@ -465,7 +483,7 @@ requested using POOL."
 
 (define* (bake-narinfo+nar cache item
                            #:key ttl (compression %no-compression)
-                           (nar-path "/nar"))
+                           (nar-path "/nar") ipfs?)
   "Write the narinfo and nar for ITEM to CACHE."
   (let* ((compression (actual-compression item compression))
          (nar         (nar-cache-file cache item
@@ -502,7 +520,11 @@ requested using POOL."
                                    #:nar-path nar-path
                                    #:compression compression
                                    #:file-size (and=> (stat nar #f)
-                                                      stat:size))
+                                                      stat:size)
+                                   #:ipfs
+                                   (and ipfs?
+                                        (ipfs:content-name
+                                         (ipfs:add-file-tree item))))
                    port))))))
 
 ;; XXX: Declare the 'X-Nar-Compression' HTTP header, which is in fact for
@@ -766,7 +788,8 @@ blocking."
                                cache pool
                                narinfo-ttl
                                (nar-path "nar")
-                               (compression %no-compression))
+                               (compression %no-compression)
+                               ipfs?)
   (define nar-path?
     (let ((expected (split-and-decode-uri-path nar-path)))
       (cut equal? expected <>)))
@@ -793,7 +816,8 @@ blocking."
                                       #:pool pool
                                       #:ttl narinfo-ttl
                                       #:nar-path nar-path
-                                      #:compression compression)
+                                      #:compression compression
+                                      #:ipfs? ipfs?)
                (render-narinfo store request hash
                                #:ttl narinfo-ttl
                                #:nar-path nar-path
@@ -847,13 +871,14 @@ blocking."
 (define* (run-publish-server socket store
                              #:key (compression %no-compression)
                              (nar-path "nar") narinfo-ttl
-                             cache pool)
+                             cache pool ipfs?)
   (run-server (make-request-handler store
                                     #:cache cache
                                     #:pool pool
                                     #:nar-path nar-path
                                     #:narinfo-ttl narinfo-ttl
-                                    #:compression compression)
+                                    #:compression compression
+                                    #:ipfs? ipfs?)
               concurrent-http-server
               `(#:socket ,socket)))
 
@@ -902,6 +927,7 @@ blocking."
            (repl-port (assoc-ref opts 'repl))
            (cache     (assoc-ref opts 'cache))
            (workers   (assoc-ref opts 'workers))
+           (ipfs      (assoc-ref opts 'ipfs))
 
            ;; Read the key right away so that (1) we fail early on if we can't
            ;; access them, and (2) we can then drop privileges.
@@ -930,14 +956,15 @@ consider using the '--user' option!~%")))
         (set-thread-name "guix publish")
 
         (with-store store
-          (run-publish-server socket store
-                              #:cache cache
-                              #:pool (and cache (make-pool workers
-                                                           #:thread-name
-                                                           "publish worker"))
-                              #:nar-path nar-path
-                              #:compression compression
-                              #:narinfo-ttl ttl))))))
+          (parameterize ((ipfs:%ipfs-base-url ipfs))
+            (run-publish-server socket store
+                                #:cache cache
+                                #:pool (and cache (make-pool workers
+                                                             #:thread-name
+                                                             "publish worker"))
+                                #:nar-path nar-path
+                                #:compression compression
+                                #:narinfo-ttl ttl)))))))
 
 ;;; Local Variables:
 ;;; eval: (put 'single-baker 'scheme-indent-function 1)

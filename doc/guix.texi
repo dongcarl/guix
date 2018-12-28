@@ -8470,6 +8470,15 @@ caching of the archives before they are sent to clients---see below for
 details.  The @command{guix weather} command provides a handy way to
 check what a server provides (@pxref{Invoking guix weather}).
 
+@cindex peer-to-peer, substitute distribution
+@cindex distributed storage, of substitutes
+@cindex IPFS, for substitutes
+It is also possible to publish substitutes over @uref{https://ipfs.io, IFPS},
+a distributed, peer-to-peer storage mechanism.  To enable it, pass the
+@option{--ipfs} option alongside @option{--cache}, and make sure you're
+running @command{ipfs daemon}.  Capable clients will then be able to choose
+whether to fetch substitutes over HTTP or over IPFS.
+
 As a bonus, @command{guix publish} also serves as a content-addressed
 mirror for source files referenced in @code{origin} records
 (@pxref{origin Reference}).  For instance, assuming @command{guix
@@ -8559,6 +8568,30 @@ thread per CPU core is created, but this can be customized.  See
 
 When @option{--ttl} is used, cached entries are automatically deleted
 when they have expired.
+
+@item --ifps[=@var{gateway}]
+When used in conjunction with @option{--cache}, instruct @command{guix
+publish} to publish substitutes over the @uref{https://ipfs.io, IPFS
+distributed data store} in addition to HTTP.
+
+@quotation Note
+As of version @value{VERSION}, IPFS support is experimental.  You're welcome
+to share your experience with the developers by emailing
+@email{guix-devel@@gnu.org}!
+@end quotation
+
+The IPFS HTTP interface must be reachable at @var{gateway}, by default
+@code{localhost:5001}.  To get it up and running, it is usually enough to
+install IPFS and start the IPFS daemon:
+
+@example
+$ guix package -i go-ipfs
+$ ipfs init
+$ ipfs daemon
+@end example
+
+For more information on how to get started with IPFS, please refer to the
+@uref{https://docs.ipfs.io/introduction/usage/, IPFS documentation}.
 
 @item --workers=@var{N}
 When @option{--cache} is used, request the allocation of @var{N} worker
