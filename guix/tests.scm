@@ -26,9 +26,12 @@
   #:use-module (gcrypt hash)
   #:use-module (guix build-system gnu)
   #:use-module (gnu packages bootstrap)
+  #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-34)
   #:use-module (srfi srfi-64)
   #:use-module (rnrs bytevectors)
+  #:use-module (ice-9 ftw)
   #:use-module (ice-9 binary-ports)
   #:use-module (web uri)
   #:export (open-connection-for-tests
@@ -138,16 +141,31 @@ too expensive to build entirely in the test store."
             (loop (1+ i)))
           bv))))
 
+(define (not-dot? entry)
+  (not (member entry '("." ".."))))
+
 (define (file=? a b)
-  "Return true if files A and B have the same type and same content."
+  "Return true if files A and B have the same type and same content,
+recursively."
+  (define (executable? file)
+    (->bool (logand (stat:mode (lstat file)) #o100)))
+
   (and (eq? (stat:type (lstat a)) (stat:type (lstat b)))
        (case (stat:type (lstat a))
          ((regular)
-          (equal?
-           (call-with-input-file a get-bytevector-all)
-           (call-with-input-file b get-bytevector-all)))
+          (and (eqv? (executable? a) (executable? b))
+               (equal?
+                (call-with-input-file a get-bytevector-all)
+                (call-with-input-file b get-bytevector-all))))
          ((symlink)
           (string=? (readlink a) (readlink b)))
+         ((directory)
+          (let ((lst1 (scandir a not-dot?))
+                (lst2 (scandir b not-dot?)))
+            (and (equal? lst1 lst2)
+                 (every file=?
+                        (map (cut string-append a "/" <>) lst1)
+                        (map (cut string-append b "/" <>) lst2)))))
          (else
           (error "what?" (lstat a))))))
 
