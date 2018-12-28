@@ -42,6 +42,7 @@
   #:use-module (guix progress)
   #:use-module ((guix build syscalls)
                 #:select (set-thread-name))
+  #:use-module ((guix ipfs) #:prefix ipfs:)
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 regex)
   #:use-module (ice-9 match)
@@ -281,7 +282,7 @@ failure, return #f and #f."
 
 (define-record-type <narinfo>
   (%make-narinfo path uri uri-base compression file-hash file-size nar-hash nar-size
-                 references deriver system signature contents)
+                 references deriver system ipfs signature contents)
   narinfo?
   (path         narinfo-path)
   (uri          narinfo-uri)
@@ -294,6 +295,7 @@ failure, return #f and #f."
   (references   narinfo-references)
   (deriver      narinfo-deriver)
   (system       narinfo-system)
+  (ipfs         narinfo-ipfs)
   (signature    narinfo-signature)      ; canonical sexp
   ;; The original contents of a narinfo file.  This field is needed because we
   ;; want to preserve the exact textual representation for verification purposes.
@@ -335,7 +337,7 @@ s-expression: ~s~%")
   "Return a narinfo constructor for narinfos originating from CACHE-URL.  STR
 must contain the original contents of a narinfo file."
   (lambda (path url compression file-hash file-size nar-hash nar-size
-                references deriver system signature)
+                references deriver system ipfs signature)
     "Return a new <narinfo> object."
     (%make-narinfo path
                    ;; Handle the case where URL is a relative URL.
@@ -352,6 +354,7 @@ must contain the original contents of a narinfo file."
                      ((or #f "") #f)
                      (_ deriver))
                    system
+                   ipfs
                    (false-if-exception
                     (and=> signature narinfo-signature->canonical-sexp))
                    str)))
@@ -386,7 +389,7 @@ No authentication and authorization checks are performed here!"
                    (narinfo-maker str url)
                    '("StorePath" "URL" "Compression"
                      "FileHash" "FileSize" "NarHash" "NarSize"
-                     "References" "Deriver" "System"
+                     "References" "Deriver" "System" "IPFS"
                      "Signature"))))
 
 (define (narinfo-sha256 narinfo)
@@ -947,13 +950,58 @@ authorized substitutes."
     (wtf
      (error "unknown `--query' command" wtf))))
 
+(define* (process-substitution/http narinfo destination uri
+                                    #:key print-build-trace?)
+  (unless print-build-trace?
+    (format (current-error-port)
+            (G_ "Downloading ~a...~%") (uri->string uri)))
+
+  (let*-values (((raw download-size)
+                 ;; Note that Hydra currently generates Nars on the fly
+                 ;; and doesn't specify a Content-Length, so
+                 ;; DOWNLOAD-SIZE is #f in practice.
+                 (fetch uri #:buffered? #f #:timeout? #f))
+                ((progress)
+                 (let* ((comp     (narinfo-compression narinfo))
+                        (dl-size  (or download-size
+                                      (and (equal? comp "none")
+                                           (narinfo-size narinfo))))
+                        (reporter (if print-build-trace?
+                                      (progress-reporter/trace
+                                       destination
+                                       (uri->string uri) dl-size
+                                       (current-error-port))
+                                      (progress-reporter/file
+                                       (uri->string uri) dl-size
+                                       (current-error-port)
+                                       #:abbreviation nar-uri-abbreviation))))
+                   (progress-report-port reporter raw)))
+                ((input pids)
+                 ;; NOTE: This 'progress' port of current process will be
+                 ;; closed here, while the child process doing the
+                 ;; reporting will close it upon exit.
+                 (decompressed-port (and=> (narinfo-compression narinfo)
+                                           string->symbol)
+                                    progress)))
+    ;; Unpack the Nar at INPUT into DESTINATION.
+    (restore-file input destination)
+    (close-port input)
+
+    ;; Wait for the reporter to finish.
+    (every (compose zero? cdr waitpid) pids)
+
+    ;; Skip a line after what 'progress-reporter/file' printed, and another
+    ;; one to visually separate substitutions.
+    (display "\n\n" (current-error-port))))
+
 (define* (process-substitution store-item destination
                                #:key cache-urls acl print-build-trace?)
   "Substitute STORE-ITEM (a store file name) from CACHE-URLS, and write it to
 DESTINATION as a nar file.  Verify the substitute against ACL."
   (let* ((narinfo (lookup-narinfo cache-urls store-item
                                   (cut valid-narinfo? <> acl)))
-         (uri     (and=> narinfo narinfo-uri)))
+         (uri     (and=> narinfo narinfo-uri))
+         (ipfs    (and=> narinfo narinfo-ipfs)))
     (unless uri
       (leave (G_ "no valid substitute for '~a'~%")
              store-item))
@@ -961,47 +1009,15 @@ DESTINATION as a nar file.  Verify the substitute against ACL."
     ;; Tell the daemon what the expected hash of the Nar itself is.
     (format #t "~a~%" (narinfo-hash narinfo))
 
-    (unless print-build-trace?
-      (format (current-error-port)
-              (G_ "Downloading ~a...~%") (uri->string uri)))
-
-    (let*-values (((raw download-size)
-                   ;; Note that Hydra currently generates Nars on the fly
-                   ;; and doesn't specify a Content-Length, so
-                   ;; DOWNLOAD-SIZE is #f in practice.
-                   (fetch uri #:buffered? #f #:timeout? #f))
-                  ((progress)
-                   (let* ((comp     (narinfo-compression narinfo))
-                          (dl-size  (or download-size
-                                        (and (equal? comp "none")
-                                             (narinfo-size narinfo))))
-                          (reporter (if print-build-trace?
-                                        (progress-reporter/trace
-                                         destination
-                                         (uri->string uri) dl-size
-                                         (current-error-port))
-                                        (progress-reporter/file
-                                         (uri->string uri) dl-size
-                                         (current-error-port)
-                                         #:abbreviation nar-uri-abbreviation))))
-                     (progress-report-port reporter raw)))
-                  ((input pids)
-                   ;; NOTE: This 'progress' port of current process will be
-                   ;; closed here, while the child process doing the
-                   ;; reporting will close it upon exit.
-                   (decompressed-port (and=> (narinfo-compression narinfo)
-                                             string->symbol)
-                                      progress)))
-      ;; Unpack the Nar at INPUT into DESTINATION.
-      (restore-file input destination)
-      (close-port input)
-
-      ;; Wait for the reporter to finish.
-      (every (compose zero? cdr waitpid) pids)
-
-      ;; Skip a line after what 'progress-reporter/file' printed, and another
-      ;; one to visually separate substitutions.
-      (display "\n\n" (current-error-port)))))
+    (if ipfs
+        (begin
+          (unless print-build-trace?
+            (format (current-error-port)
+                    (G_ "Downloading from IPFS ~s...~%") ipfs))
+          (ipfs:restore-file-tree ipfs destination))
+        (process-substitution/http narinfo destination uri
+                                   #:print-build-trace?
+                                   print-build-trace?))))
 
 
 ;;;
