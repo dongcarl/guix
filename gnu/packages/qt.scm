@@ -1915,7 +1915,7 @@ contain over 620 classes.")
 (define-public qscintilla
   (package
     (name "qscintilla")
-    (version "2.10.7")
+    (version "2.10.8")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://sourceforge/pyqt/QScintilla2/"
@@ -1923,7 +1923,7 @@ contain over 620 classes.")
                                   version ".tar.gz"))
               (sha256
                (base32
-                "06hs6civq13dvzlws0spjb7gwyk6kynpnfwg5plhahnxf7g5h137"))))
+                "1swjr786w04r514pry9pn32ivza4il1cg35s60qy39cwc175pka6"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
@@ -1971,19 +1971,21 @@ indicators, code completion and call tips.")
        #:phases
        (modify-phases %standard-phases
          (replace 'configure
-           (lambda* (#:key outputs configure-flags #:allow-other-keys)
-             (chdir "Python")
-             (apply invoke "python3" "configure.py"
-                    configure-flags)
-             ;; Install to the right directory
-             (substitute* '("Makefile"
-                            "Qsci/Makefile")
-               (("\\$\\(INSTALL_ROOT\\)/gnu/store/[^/]+")
-                (assoc-ref outputs "out")))
-             ;; And fix the installed.txt file
-             (substitute* "installed.txt"
-               (("/gnu/store/[^/]+")
-                (assoc-ref outputs "out")))
+           (lambda* (#:key inputs outputs configure-flags #:allow-other-keys)
+             (let ((out    (assoc-ref outputs "out"))
+                   (python (assoc-ref inputs "python")))
+               (chdir "Python")
+               (apply invoke "python3" "configure.py"
+                      configure-flags)
+               ;; Install to the right directory
+               (substitute* '("Makefile"
+                              "Qsci/Makefile")
+                 (("\\$\\(INSTALL_ROOT\\)/gnu/store/[^/]+") out)
+                 (((string-append python "/lib"))
+                  (string-append out "/lib")))
+               ;; And fix the installed.txt file
+               (substitute* "installed.txt"
+                 (("/gnu/store/[^/]+") out)))
              #t)))))
     (inputs
      `(("qscintilla" ,qscintilla)
