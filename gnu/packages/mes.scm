@@ -62,14 +62,15 @@ extensive examples, including parsers for the Javascript and C99 languages.")
   (let ((triplet "i686-unknown-linux-gnu"))
     (package
       (name "mes")
-      (version "0.19")
+      (version "0.20")
       (source (origin
                 (method url-fetch)
-                (uri (string-append "mirror://gnu/mes/"
-                                    "mes-" version ".tar.gz"))
+                (uri (string-append
+                      "http://lilypond.org/janneke/mes/"
+                      "mes-0.19-46-g4b921d1b.tar"))
                 (sha256
                  (base32
-                  "15h4yhaywdc0djpjlin2jz1kzahpqxfki0r0aav1qm9nxxmnp1l0"))))
+                  "1ar217kzl59cx9bk0jw9xw0ql3jsrmps3f0qqbqidr9k0vaa7jmp"))))
       (build-system gnu-build-system)
       (supported-systems '("i686-linux" "x86_64-linux"))
       (propagated-inputs
@@ -89,7 +90,7 @@ extensive examples, including parsers for the Javascript and C99 languages.")
          ("perl" ,perl)                 ; build-aux/gitlog-to-changelog
          ("texinfo" ,texinfo)))
       (arguments
-       `(#:strip-binaries? #f))  ; binutil's strip b0rkes MesCC/M1/hex2 binaries
+       `(#:strip-binaries? #f)) ; binutil's strip b0rkes MesCC/M1/hex2 binaries
       (synopsis "Scheme interpreter and C compiler for full source bootstrapping")
       (description
        "GNU Mes--Maxwell Equations of Software--brings the Reduced Binary Seed

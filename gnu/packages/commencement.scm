@@ -134,6 +134,7 @@
                ;; fail fast tests
                ;; (invoke "sh" "-x" "build-aux/test.sh" "scaffold/tests/t")
                ;; (invoke "sh" "-x" "build-aux/test.sh" "scaffold/tests/63-struct-cell")
+                (setenv "MES_PREFIX" "mes")
                (invoke "sh" "check.sh"))))
           (replace 'install
             (lambda _
