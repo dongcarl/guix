@@ -203,7 +203,7 @@
   ;; mature, this package should use the 0.9.27 sources (or later).
   (let ((version "0.9.26")
         (revision "6")
-        (commit "c004e9a34fb026bb44d211ab98bb768e79900eef"))
+        (commit "337acca2b8666375f97c0522ebc318bdce8bfe81"))
     (package-with-bootstrap-guile
      (package
        (inherit tcc)
@@ -216,7 +216,7 @@
                                      "/tinycc-" commit ".tar.gz"))
                  (sha256
                   (base32
-                   "1hmzn1pq0x22ppd80hyrn5qzqq94mxd0ychzj6vrr2vnj2frjv5b"))))
+                   "0sdi60gbdkby4swqxfn4bgz0mkn6q9r7r734nbd4ii79mpnhpv9h"))))
        (build-system gnu-build-system)
        (supported-systems '("i686-linux" "x86_64-linux"))
        (inputs '())
@@ -284,7 +284,7 @@
             (replace 'build
               (lambda _
                 (substitute* "bootstrap.sh"
-                  (("^    cmp") "#    cmp"))
+                  (("^( *)cmp" all indent) (string-append indent "#cmp")))
                 (invoke "sh" "bootstrap.sh")))
             (replace 'check
               (lambda _
