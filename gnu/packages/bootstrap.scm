@@ -705,12 +705,12 @@ exec ~a/bin/.gcc-wrapped -B~a/lib \
             (method url-fetch)
             (uri (map
                   (cute string-append <>
-                        "/i686-linux/20181020/"
-                        "mes-minimal-stripped-0.19-i686-linux.tar.xz")
+                        "/i686-linux/20190105/"
+                        "mes-minimal-stripped-0.20-i686-linux.tar.xz")
                   %bootstrap-base-urls))
             (sha256
              (base32
-              "0k7kkl68a6xaadv47ij0nr9jm5ca1ffj38n7f2lg80y72wdkwr9h")))))))
+              "11w9wlikngpbclmp4l9w9q136pr3h8nkb8lscigdqgdw1rws8fxp")))))))
     (supported-systems '("i686-linux" "x86_64-linux"))
     (synopsis "Bootstrap binaries of Mes")
     (description synopsis)
