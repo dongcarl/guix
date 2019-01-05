@@ -81,52 +81,10 @@
 ;;;
 ;;; Code:
 
-(define mes-boot0
-  (let ((version "0.19")
-        (revision "0")
-        (commit #f))
-    (package
-      (inherit mes)
-      (name "mes-boot0")
-      (version (if commit (string-append version "-" revision "." (string-take commit 7))
-                   version))
-      (source (origin
-                (method url-fetch)
-                (uri (string-append "mirror://gnu/mes/"
-                                    "mes-" version ".tar.gz"))
-                (sha256
-                 (base32
-                  "15h4yhaywdc0djpjlin2jz1kzahpqxfki0r0aav1qm9nxxmnp1l0"))))
-      (native-inputs '())
-      (propagated-inputs '()))))
-
-(define nyacc-boot
-  (let ((version "0.86.0")
-        (revision "0")
-        (commit #f))
-    (package
-      (inherit nyacc)
-      (name "nyacc-boot")
-      (version
-       (if commit
-           (string-append version "-" revision "." (string-take commit 7))
-           version))
-      (source
-       (if commit
-           (origin
-             (method url-fetch)
-             (uri (string-append "https://gitlab.com/janneke/nyacc"
-                                 "/-/archive/" commit
-                                 "/nyacc-" commit ".tar.gz"))
-             (sha256
-              (base32
-               "0dlcqmchhl57nh7f0v6qb1kkbi7zbs3b185hcqv57fhb60b7rgcq")))
-           (package-source nyacc))))))
-
 (define mes-boot
   (package-with-bootstrap-guile
    (package
-     (inherit mes-boot0)
+     (inherit mes)
      (name "mes-boot")
      (inputs '())
      (propagated-inputs '())
