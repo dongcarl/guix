@@ -1,6 +1,7 @@
 ;;; GNU Guix --- Functional package management for GNU
 ;;; Copyright © 2012, 2013, 2014, 2015, 2016, 2017, 2018 Ludovic Courtès <ludo@gnu.org>
 ;;; Copyright © 2018 Mark H Weaver <mhw@netris.org>
+;;; Copyright © 2019 Jan (janneke) Nieuwenhuizen <janneke@gnu.org>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -269,6 +270,8 @@ makefiles."
          (docdir     (assoc-ref outputs "doc"))
          (bash       (or (and=> (assoc-ref (or native-inputs inputs) "bash")
                                 (cut string-append <> "/bin/bash"))
+                         (and=> (assoc-ref (or native-inputs inputs) "gash")
+                                (cut string-append <> "/bin/gash"))
                          "/bin/sh"))
          (flags      `(,@(if target             ; cross building
                              '("CC_FOR_BUILD=gcc")
