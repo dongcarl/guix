@@ -44,10 +44,11 @@ partprobe, and then 2) resizing the filesystem with resize2fs.\n"))
   (users %base-user-accounts)
 
   ;; Globally-installed packages.
-  (packages (cons* nvi fdisk
-                   grub   ; mostly so xrefs to its manual work
-                   parted ; partprobe
-                   %base-packages))
+  (packages (append (list nvi fdisk
+                          grub          ; mostly so xrefs to its manual work
+                          parted        ; partprobe
+                          )
+                    %base-packages))
 
   (services (modify-services %base-services
               (login-service-type config =>
