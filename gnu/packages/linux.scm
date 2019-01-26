@@ -60,6 +60,7 @@
   #:use-module (gnu packages base)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages bison)
+  #:use-module (gnu packages boost)
   #:use-module (gnu packages calendar)
   #:use-module (gnu packages check)
   #:use-module (gnu packages crypto)
@@ -3388,6 +3389,113 @@ repair and easy administration.")
     (description "This package provides the statically-linked @command{btrfs}
 from the btrfs-progs package.  It is meant to be used in initrds.")
     (license (package-license btrfs-progs))))
+
+(define-public snapper
+  (package
+    (name "snapper")
+    (version "0.8.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "ftp://ftp.suse.com/pub/projects/snapper/snapper-"
+                                  version
+                                  ".tar.bz2"))
+              (sha256
+               (base32
+                "0s73x5h0fdggcxxcmjlf1q7pqlwd1ac4pngwsm6ayg8n4gxk3acy"))))
+    (build-system gnu-build-system)
+    (arguments
+     `( ;; TODO: 2 tests are failing:
+       ;; unknown location(0): fatal error: in "test_byte_to_humanstring": std::runtime_error: locale::facet::_S_create_c_locale name not valid
+       ;; unknown location(0): fatal error: in "test_big_numbers": std::runtime_error: locale::facet::_S_create_c_locale name not valid
+       ;; unknown location(0): fatal error: in "test1": std::runtime_error: locale::facet::_S_create_c_locale name not valid
+       #:tests? #f
+       #:configure-flags (list
+                          (string-append "CPPFLAGS="
+                                         "-I"
+                                         (assoc-ref %build-inputs "libxml2")
+                                         "/include/libxml2")
+                          "--disable-zypp")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'make-local-docbook-xml
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "doc/html.xsl"
+               (("http://docbook.sourceforge.net/release/xsl/current/xhtml/docbook.xsl")
+                (string-append (assoc-ref inputs "docbook-xsl")
+                               "/xml/xsl/docbook-xsl-"
+                               ,(package-version docbook-xsl)
+                               "/xhtml/docbook.xsl")))
+             (substitute* "doc/manpages.xsl"
+               (("http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl")
+                (string-append (assoc-ref inputs "docbook-xsl")
+                               "/xml/xsl/docbook-xsl-"
+                               ,(package-version docbook-xsl)
+                               "/manpages/docbook.xsl")))
+             #t))
+         (add-before 'build 'patch-makefiles
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out")))
+               (substitute* "client/Makefile.am"
+                 (("libexecdir = /usr/lib/snapper")
+                  (string-append "libexecdir = " out
+                                 "/lib/snapper")))
+               ;; TODO: Why is $(DESTDIR) not doing the right thing for scripts?
+               ;; Changing it in #:make-flags produces the wrong behaviour.
+               (substitute* "scripts/Makefile.am"
+                 (("\\$\\(DESTDIR\\)") out)
+                 (("(pam_snapperdir = )/usr(/lib/pam_snapper)" _ before after)
+                  (string-append before out after)))
+               (substitute* "data/Makefile.am"
+                 (("\\$\\(DESTDIR\\)") out))
+               (substitute* "pam/Makefile.am"
+                 (("(securelibdir = )\\$\\(shell echo /`basename \\$\\(libdir\\)`/security\\)" _ before)
+                  (string-append before out "/lib/security"))))
+             #t))
+         (add-after 'install 'clean-up-systemd-services
+           (lambda* (#:key outputs #:allow-other-keys)
+             ;; TODO: Maybe we should not remove everything, we need dbus.
+             (delete-file-recursively
+              (string-append (assoc-ref outputs "out") "/usr"))
+             #t)))))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)
+       ("gettext" ,gettext-minimal)     ;for msgfmt
+       ("libxslt" ,libxslt)
+       ("docbook-xsl" ,docbook-xsl)
+       ("autoconf" ,autoconf)
+       ("automake" ,automake)))
+    (inputs
+     `(("libmount" ,util-linux)
+       ("dbus" ,dbus)
+       ("acl" ,acl)
+       ("boost" ,boost)
+       ("libxml2" ,libxml2)
+       ("btrfs-progs" ,btrfs-progs)
+       ("e2fsprogs" ,e2fsprogs)
+       ("linux-pam" ,linux-pam)))
+    (home-page "http://snapper.io/")
+    (synopsis "Manage BTRFS and LVM snapshots")
+    (description " Snapper is a tool for Linux filesystem snapshot
+management.  Apart from the obvious creation and deletion of snapshots, it can
+compare snapshots and revert differences between snapshots.  In simple terms,
+this allows root and non-root users to view older versions of files and revert
+changes.
+
+The features include:
+
+@itemize
+@item Manually create snapshots.
+@item Automatically create snapshots.
+@item Automatically create timeline of snapshots.
+@item Show and revert changes between snapshots.
+@item Works with btrfs, ext4 and thin-provisioned LVM volumes.
+@item Supports Access Control Lists and Extended Attributes.
+@item Automatic cleanup of old snapshots.
+@item Command line interface.
+@item D-Bus interface.
+@item PAM module to create snapshots during login and logout.
+@end itemize\n")
+    (license license:gpl2)))
 
 (define-public f2fs-tools-1.7
   (package
