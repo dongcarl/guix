@@ -280,7 +280,8 @@ endif BUILD_DAEMON_OFFLOAD
 STORE_MODULES =					\
   guix/store/database.scm			\
   guix/store/deduplication.scm			\
-  guix/store/roots.scm
+  guix/store/roots.scm				\
+  guix/store/build-derivations.scm
 
 MODULES += $(STORE_MODULES)
 
