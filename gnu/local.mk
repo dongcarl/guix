@@ -1188,7 +1188,7 @@ dist_patch_DATA =						\
   %D%/packages/patches/python-2-deterministic-build-info.patch	\
   %D%/packages/patches/python-2.7-adjust-tests.patch		\
   %D%/packages/patches/python-2.7-search-paths.patch		\
-  %D%/packages/patches/python-2.7-site-prefixes.patch		\
+  %D%/packages/patches/python-2.7-site-prefixes.patch.in	\
   %D%/packages/patches/python-2.7-source-date-epoch.patch	\
   %D%/packages/patches/python-3-deterministic-build-info.patch	\
   %D%/packages/patches/python-3-search-paths.patch		\

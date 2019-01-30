@@ -76,6 +76,7 @@
 (define-module (gnu packages python)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
+  #:use-module (gnu packages base)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages dbm)
@@ -106,7 +107,6 @@
         "0x2mvz9dp11wj7p5ccvmk9s0hzjk2fa1m462p395l4r6bfnb3n92"))
       (patches (search-patches "python-2.7-search-paths.patch"
                                "python-2-deterministic-build-info.patch"
-                               "python-2.7-site-prefixes.patch"
                                "python-2.7-source-date-epoch.patch"
                                "python-2.7-adjust-tests.patch"))
       (modules '((guix build utils)))
@@ -138,7 +138,10 @@
                             (assoc-ref %outputs "out") "/lib"))
 
         #:modules ((ice-9 ftw) (ice-9 match)
-                   (guix build utils) (guix build gnu-build-system))
+                   (guix build utils) (guix build gnu-build-system)
+                   (guix config))
+        #:imported-modules ,(cons '(guix config)
+                                    %gnu-build-system-modules)
         #:phases
         (modify-phases %standard-phases
           (add-before
@@ -188,6 +191,19 @@
                           (utime file circa-1980 circa-1980)
                           #t))
                #t)))
+          (add-after 'unpack 'apply-templated-patch
+           (lambda* (#:key inputs #:allow-other-keys)
+             (let ((patch-template (assoc-ref inputs "site-patch"))
+                   (patch "python-2.7-site-prefixes.patch"))
+               ;; generate actual patch
+               (copy-file patch-template patch)
+               (substitute* patch
+                 (("@storedir@")
+                  %store-directory))
+               ;; apply it (taken from (guix packages))
+               (invoke (string-append (assoc-ref inputs "patch") "/bin/patch")
+                       "--force" "--no-backup-if-mismatch"
+                       "-p1" "--input" patch))))
           (add-after 'install 'remove-tests
             ;; Remove 25 MiB of unneeded unit tests.  Keep test_support.*
             ;; because these files are used by some libraries out there.
@@ -244,7 +260,9 @@
        ("readline" ,readline)
        ("zlib" ,zlib)
        ("tcl" ,tcl)
-       ("tk" ,tk)))                               ; for tkinter
+       ("tk" ,tk)                                 ; for tkinter
+       ("site-patch" ,(search-patch "python-2.7-site-prefixes.patch.in"))
+       ("patch" ,patch)))
     (native-inputs
      `(("pkg-config" ,pkg-config)))
     (native-search-paths
@@ -320,6 +338,7 @@ data types.")
      (substitute-keyword-arguments (package-arguments python-2)
        ((#:phases phases)
        `(modify-phases ,phases
+          (delete 'apply-templated-patch)
           ;; Unset SOURCE_DATE_EPOCH while running the test-suite and set it
           ;; again afterwards.  See <https://bugs.python.org/issue34022>.
           (add-before 'check 'unset-SOURCE_DATE_EPOCH
@@ -384,7 +403,9 @@ data types.")
     ;; is invoked upon 'make install'.  'pip' also expects 'ctypes' and thus
     ;; libffi.
     (inputs `(("libffi" ,libffi)
-              ("zlib" ,zlib)))))
+              ("zlib" ,zlib)
+              ("site-patch" ,(search-patch "python-2.7-site-prefixes.patch.in"))
+              ("patch" ,patch)))))
 
 (define-public python-minimal
   (package/inherit python
