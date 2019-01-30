@@ -285,12 +285,6 @@ that host UIDs (respectively GIDs) map to in the namespace."
               (_                                  ;unexpected termination
                #f)))))))))
 
-(define (try-umount maybe-mountpoint)
-  (catch #t
-    (lambda ()
-      (umount maybe-mountpoint))
-    noop))
-
 (define* (call-with-container mounts thunk #:key (namespaces %namespaces)
                               (host-uids 1) (guest-uid 0) (guest-gid 0)
                               use-output)
@@ -333,7 +327,8 @@ load path must be adjusted as needed."
                 (use-output root))
               status))))
        (lambda ()
-         (try-umount root))))))
+         (false-if-exception
+          (umount root)))))))
 
 (define (container-excursion pid thunk)
   "Run THUNK as a child process within the namespaces of process PID and
