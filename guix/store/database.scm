@@ -21,6 +21,8 @@
   #:use-module (sqlite3)
   #:use-module (guix config)
   #:use-module (guix serialization)
+  #:use-module (guix store derivations)
+  #:use-module (guix store files)
   #:use-module (guix store deduplication)
   #:use-module (guix base16)
   #:use-module (guix progress)
@@ -42,6 +44,7 @@
             sqlite-register
             register-path
             register-items
+            registered-derivation-outputs
             %epoch
             reset-timestamps))
 
@@ -282,6 +285,26 @@ be used internally by the daemon's build hook."
   ;; When it all began.
   (make-time time-utc 0 1))
 
+(define derivation-outputs-sql "SELECT id, path FROM DerivationOutputs WHERE
+drv in (SELECT id from ValidPaths where path = :drv)")
+
+(define (registered-derivation-outputs db drv)
+  "Get the list of (id, output-path) pairs registered for DRV."
+  (let ((stmt (sqlite-prepare db derivation-outputs-sql #:cache? #t)))
+    (sqlite-bind-arguments stmt #:drv drv)
+    (let ((result (sqlite-fold (lambda (current prev)
+                                 (match current
+                                   (#(id path)
+                                    (cons (cons id path)
+                                          prev))))
+                               '() stmt)))
+      (sqlite-finalize stmt)
+      result)))
+
+(define register-output-sql
+  "INSERT OR REPLACE INTO DerivationOutputs (drv, id, path) SELECT id, :outid,
+:outpath FROM ValidPaths WHERE path = :drvpath;")
+
 (define* (register-items items
                          #:key prefix state-directory
                          (deduplicate? #t)
@@ -330,6 +353,21 @@ Write a progress report to LOG-PORT."
     (define real-file-name
       (string-append store-dir "/" (basename (store-info-item item))))
 
+    (define (register-derivation-outputs drv)
+      "Register all output paths of DRV as being produced by it (note that
+this doesn't mean 'already produced by it', but rather just 'associated with
+it')."
+      (let ((stmt (sqlite-prepare db register-output-sql #:cache? #t)))
+        (for-each (match-lambda
+                    ((outid . ($ <derivation-output> path))
+                     (sqlite-bind-arguments stmt
+                                            #:drvpath (derivation-file-name
+                                                       drv)
+                                            #:outid outid
+                                            #:outpath path)
+                     (sqlite-fold noop #f stmt)))
+                  (derivation-outputs drv))
+        (sqlite-finalize stmt)))
 
     ;; When TO-REGISTER is already registered, skip it.  This makes a
     ;; significant differences when 'register-closures' is called
@@ -345,6 +383,9 @@ Write a progress report to LOG-PORT."
                                                (bytevector->base16-string hash))
                          #:nar-size nar-size
                          #:time registration-time)
+        (when (derivation-path? real-file-name)
+          (register-derivation-outputs (read-derivation-from-file
+                                        real-file-name)))
         (when deduplicate?
           (deduplicate real-file-name hash #:store store-dir)))))
 

@@ -20,6 +20,7 @@
   #:use-module (guix tests)
   #:use-module (guix store)
   #:use-module (guix store database)
+  #:use-module (guix derivations)
   #:use-module ((guix utils) #:select (call-with-temporary-output-file))
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-64))
@@ -44,14 +45,41 @@
           (drv (string-append file ".drv")))
       (call-with-output-file file
         (cut display "This is a fake store item.\n" <>))
+      (when (valid-path? %store drv)
+        (delete-paths %store (list drv)))
+      (call-with-output-file drv
+        (lambda (port)
+          ;; XXX: we should really go from derivation to output path as is
+          ;; usual, currently any verification done on this derivation will
+          ;; cause an error.
+          (write-derivation ((@@ (guix derivations) make-derivation)
+                             ;; outputs
+                             (list (cons "out"
+                                         ((@@ (guix derivations)
+                                              make-derivation-output)
+                                          file
+                                          #f
+                                          #f
+                                          #f)))
+                             ;; inputs sources system builder args
+                             '() '() "" "" '()
+                             ;; env-vars filename
+                             '() drv)
+                            port)))
+      (register-path drv)
       (register-path file
                      #:references (list ref)
                      #:deriver drv)
 
       (and (valid-path? %store file)
            (equal? (references %store file) (list ref))
-           (null? (valid-derivers %store file))
+           ;; We expect the derivation outputs to be automatically
+           ;; registered.
+           (not (null? (valid-derivers %store file)))
            (null? (referrers %store file))
+           (equal? (with-database %default-database-file db
+                     (registered-derivation-outputs db drv))
+                   `(("out" . ,file)))
            (list (stat:mtime (lstat file))
                  (stat:mtime (lstat ref)))))))
 
