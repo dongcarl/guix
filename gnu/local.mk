@@ -545,6 +545,7 @@ GNU_SYSTEM_MODULES =				\
   %D%/system/shadow.scm				\
   %D%/system/uuid.scm				\
   %D%/system/vm.scm				\
+  %D%/machine.scm			\
 						\
   %D%/build/accounts.scm			\
   %D%/build/activation.scm			\
@@ -611,7 +612,7 @@ GNU_SYSTEM_MODULES +=                           \
   %D%/installer/newt/user.scm			\
   %D%/installer/newt/utils.scm			\
   %D%/installer/newt/welcome.scm		\
-  %D%/installer/newt/wifi.scm	
+  %D%/installer/newt/wifi.scm
 
 installerdir = $(guilemoduledir)/%D%/installer
 dist_installer_DATA =				\
