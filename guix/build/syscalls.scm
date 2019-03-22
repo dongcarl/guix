@@ -1953,4 +1953,114 @@ entry."
     ((? bytevector? bv)
      (read-utmpx bv))))
 
+
+;;;
+;;; netlink.
+;;;
+
+(define-c-struct %iovec
+  sizeof-iovec
+  iovec
+  read-iovec
+  write-iovec!
+  (base void*)
+  (len size_t))
+
+(define-c-struct %msghrd
+  sizeof-msghrd
+  msghdr
+  read-msghdr
+  write-msghrd!
+  (name void*)
+  (namelen socklen_t)
+  (iov void*) ; struct iovec *
+  (iovlen size_t)
+  (control void*)
+  (controllen size_t)
+  (flags int))
+
+(define-c-struct %nlmsghdr
+  sizeof-nlmsghdr
+  nlmsghdr
+  read-nlmsghdr
+  write-nlmsghdr!
+  (len uint32)
+  (type uint16)
+  (flags uint16)
+  (seq uint32)
+  (port-id uint32))
+
+(define-c-struct %nlmsgerr
+  sizeof-nlmsgerr
+  nlmsgerr
+  read-nlmsgerr
+  write-nlmsgerr!
+  (error int)
+  ;; here comes a %nlmsghrd, no padding needed
+  (len uint32)
+  (type uint16)
+  (flags uint16)
+  (seq unint32)
+  (port-id uint32))
+
+(define sa-family-t unsigned-short) ; linux/socket.h
+(define pid-t int) ; glibc manual
+
+(define-c-struct %sockaddr-nl
+  sizeof-sockaddr-nl
+  sockaddr-nl
+  read-sockaddr-nl
+  write-sockaddr-nl!
+  (nl_family sa-family-t)
+  (nl-pad unsigned-short)
+  (nl-pid pid-t)
+  (nl-groups uint32))
+
+(define AF_NETLINK 16) ; bits/socket.h
+;; the current guile socket implementation passes the family parameter
+;; unchecked to the libc socket wrapper, so it is ok to specify AF_NETLINK
+
+(define NETLINK_ROUTE 0) ; linux/netlink.h
+;; TODO: implement the rest of the types
+
+(define netlink-socket (family)
+  (socket AF_NETLINK SOCK_RAW family))
+
+(define rtnetlink-socket ()
+  (get-netlink-socket NETLINK_ROUTE))
+
+(define-c-struct %rtattr
+  sizeof-rtattr
+  rtattr
+  read-rtattr
+  write-rtattr!
+  (len unsigned-short)
+  (type unsigned-short))
+
+;; linux/rtnetlink.h
+;; message types
+(define RTM_NEW_ADDR 20)
+;;TODO: implement the rest of the types
+
+;; scopes
+(define RT_SCOPE_UNIVERSE 0)
+;; TODO: implement the rest of the scopes
+;; linux/rtnetlink.h ends here
+
+(define-c-struct %ifaddrmsg
+  sizeof-ifaddrmsg
+  ifaddrmsg
+  read-ifaddrmsg
+  write-ifaddrmsg!
+  (ifa-family uint8) ; should be unsigned-char
+  (ifa-prefixlen uint8) ; should be unsigned-char
+  (ifa-flags uint8) ; should be unsigned-char
+  (ifa-scope uint8) ; should be unsigned-char
+  (ifa-index int)) ; should be unsigned-char
+
+(define IFA_F_PERMANENT #x80) ; linux/if_addr.h
+;; TODO: implement the other flags
+
+
+
 ;;; syscalls.scm ends here
