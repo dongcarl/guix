@@ -111,6 +111,7 @@
             configure-network-interface
             add-network-route/gateway
             delete-network-route
+            initialize-loopback
 
             interface?
             interface-name
@@ -159,7 +160,10 @@
             utmpx-entries
             (read-utmpx-from-port . read-utmpx)
             personality
-            ADDR_NO_RANDOMIZE))
+            ADDR_NO_RANDOMIZE
+            setdomainname
+            UNAME26
+            PER_LINUX32))
 
 ;;; Commentary:
 ;;;
@@ -511,6 +515,27 @@ constants from <sys/mount.h>."
       (when update-mtab?
         (remove-from-mtab target)))))
 
+(define (octal-escaped str)
+  "Convert a string that may contain octal-escaped characters of the form \\ooo
+to a string with the corresponding code points."
+    ;; I'm using "octet" here like I would normally use "digit".
+  (define (octal-triplet->char octet1 octet2 octet3)
+   (integer->char (string->number (string octet1 octet2 octet3)
+                                   8)))
+
+  (let next-char ((result-list '())
+                  (to-convert (string->list str)))
+    (match to-convert
+      ((#\\ octet1 octet2 octet3 . others)
+       (next-char (cons (octal-triplet->char octet1 octet2 octet3)
+                        result-list)
+                  others))
+      ((char . others)
+       (next-char (cons char result-list)
+                  others))
+      (()
+       (list->string (reverse! result-list))))))
+
 (define (mount-points)
   "Return the mounts points for currently mounted file systems."
   (call-with-input-file "/proc/mounts"
@@ -521,7 +546,7 @@ constants from <sys/mount.h>."
               (reverse result)
               (match (string-tokenize line)
                 ((source mount-point _ ...)
-                 (loop (cons mount-point result))))))))))
+                 (loop (cons (octal-escaped mount-point) result))))))))))
 
 (define swapon
   (let ((proc (syscall->procedure int "swapon" (list '* int))))
@@ -1455,6 +1480,16 @@ is true, it must be a socket address to use as the network mask."
       (lambda ()
         (close-port sock)))))
 
+(define (initialize-loopback)
+  (let ((sock (socket PF_INET SOCK_DGRAM IPPROTO_IP)))
+    (dynamic-wind
+      (const #t)
+      (lambda ()
+        (set-network-interface-flags sock "lo"
+                                     (logior IFF_UP IFF_LOOPBACK IFF_RUNNING)))
+      (lambda ()
+        (close sock)))))
+
 
 ;;;
 ;;; Network routes.
@@ -1960,6 +1995,8 @@ entry."
      (read-utmpx bv))))
 
 (define ADDR_NO_RANDOMIZE #x0040000)
+(define UNAME26           #x0020000)
+(define PER_LINUX32          #x0008)
 
 (define personality
   (let ((proc (syscall->procedure int "personality" `(,unsigned-long))))
@@ -1967,6 +2004,18 @@ entry."
       (let-values (((ret err) (proc persona)))
         (if (= -1 ret)
             (throw 'system-error "personality" "~A"
+                   (list (strerror err))
+                   (list err))
+            ret)))))
+
+(define setdomainname
+  (let ((proc (syscall->procedure int "setdomainname" (list '* int))))
+    (lambda (domain-name)
+      (let-values (((ret err) (proc (string->pointer/utf-8 domain-name)
+                                    (bytevector-length (string->utf8
+                                                        domain-name)))))
+        (if (= -1 ret)
+            (throw 'system-error "setdomainname" "~A"
                    (list (strerror err))
                    (list err))
             ret)))))

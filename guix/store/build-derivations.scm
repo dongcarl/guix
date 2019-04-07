@@ -312,30 +312,6 @@ provide."
                         ,@(derivation-sources drv)
                         ,@input-paths)))))
 
-;; Sigh... I just HAD to go and ask "what if there are spaces in the mountinfo
-;; entries"... I couldn't find the behavior documented anywhere, but
-;; experimentally it appears to be octal-escaped.
-(define (octal-escaped str)
-  "Converts octal escapes of the form \\abc to the corresponding character
-code points."
-  (define (octal-triplet->char octet1 octet2 octet3) 
-    ;; I'm using "octet" here like I would normally use "digit".
-    (integer->char (string->number (string octet1 octet2 octet3)
-                                   8)))
-
-  (let next-char ((result-list '())
-                  (to-convert (string->list str)))
-    (match to-convert
-      ((#\\ octet1 octet2 octet3 . others)
-       (next-char (cons (octal-triplet->char octet1 octet2 octet3)
-                        result-list)
-                  others))
-      ((char . others)
-       (next-char (cons char result-list)
-                  others))
-      (()
-       (list->string (reverse! result-list))))))
-
 (define (special-filesystems input-paths)
   "Returns whatever new filesystems need to be created in the container, which
 depends on whether they're already set to be bind-mounted. INPUT-PATHS must be
@@ -364,13 +340,6 @@ a list of paths or pairs of paths."
                   (check? #f)))
           '())
     ))
-
-(define (initialize-loopback)
-  ;; XXX: Implement this. I couldn't find anything in the manual about ioctl,
-  ;; which we need to use, soo...
-  ;; (let ((sock (socket PF_INET SOCK_DGRAM IPPROTO_IP)))
-  ;;   )
-  #f)
 
 (define (disable-address-randomization)
   (let ((current-persona (personality #xffffffff)))
