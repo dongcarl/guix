@@ -78,9 +78,6 @@
 ;;; "impureEnvVars".
 ;;; 6. Run the builder in a chroot where the build directory is the root.
 
-;; Add this to (guix config) later
-(define %temp-directory "/tmp")
-
 
 (define (output-paths drv)
   "Returns all store output paths produced by DRV."

@@ -61,6 +61,23 @@ AC_ARG_WITH([selinux-policy-dir],
   [selinux_policydir='${datadir}/selinux/'])
 AC_SUBST([selinux_policydir])
 
+AC_ARG_WITH(impersonate-linux-2.6-default,
+  AC_HELP_STRING([--with-impersonate-linux-2.6-default],
+    [Whether builds should should impersonate linux 2.6 by default]),
+  [if test "x$withval" = "xyes"; then
+    impersonate_linux26="#t";
+   else
+    impersonate_linux26="#f";
+  fi],
+  [impersonate_linux26="#f"])
+AC_SUBST(impersonate_linux26)
+
+AC_ARG_WITH(tmpdir,
+  AC_HELP_STRING([--with-tmpdir],
+    [Directory temporary files should be put in at runtime (defaults to /tmp)]),
+  [guix_tmpdir="$withval"],
+  [guix_tmpdir="/tmp"])
+AC_SUBST(guix_tmpdir)
 dnl Better be verbose.
 AC_MSG_CHECKING([for the store directory])
 AC_MSG_RESULT([$storedir])
@@ -287,7 +304,7 @@ AC_CONFIG_FILES([Makefile
                  po/guix/Makefile.in
                  po/packages/Makefile.in
                  etc/guix-daemon.cil
-                 guix/config.scm])
+                 guix/config.scm.in])
 
 AC_CONFIG_FILES([test-env:build-aux/test-env.in], [chmod +x test-env])
 AC_CONFIG_FILES([pre-inst-env:build-aux/pre-inst-env.in],

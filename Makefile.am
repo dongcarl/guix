@@ -39,13 +39,17 @@ do_subst = $(SED)					\
   -e 's,[@]GUILE[@],$(GUILE),g'				\
   -e 's,[@]guilemoduledir[@],$(guilemoduledir),g'	\
   -e 's,[@]guileobjectdir[@],$(guileobjectdir),g'	\
-  -e 's,[@]localedir[@],$(localedir),g'
+  -e 's,[@]localedir[@],$(localedir),g' 		\
+  -e 's,[@]Libexecdir[@],$(libexecdir),g'
 
 scripts/guix: scripts/guix.in Makefile
 	$(AM_V_at)rm -f $@ $@-t
 	$(AM_V_at)$(MKDIR_P) "$(@D)"
 	$(AM_V_GEN)$(do_subst) < "$(srcdir)/$@.in" > "$@-t"
 	$(AM_V_at)chmod a+x,a-w "$@-t" && mv -f "$@-t" "$@"
+
+guix/config.scm: guix/config.scm.in
+	$(AM_V_GEN)$(do_subst) < "$@.in" > "$@"
 
 nodist_noinst_SCRIPTS =				\
   pre-inst-env					\

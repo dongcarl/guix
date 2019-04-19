@@ -26,6 +26,8 @@
             %storedir
             %localstatedir
             %sysconfdir
+            %temp-directory
+            %libexecdir
 
             %store-directory
             %state-directory
@@ -36,7 +38,8 @@
             %libz
             %gzip
             %bzip2
-            %xz))
+            %xz
+            %impersonate-linux-2.6?))
 
 ;;; Commentary:
 ;;;
@@ -63,8 +66,19 @@
 (define %localstatedir
   "@guix_localstatedir@")
 
+(define %temp-directory
+  (or (getenv "TMPDIR")
+      "@guix_tmpdir@"))
+
+(define %impersonate-linux-2.6?
+  @impersonate_linux26@)
+
 (define %sysconfdir
   "@guix_sysconfdir@")
+
+(define %libexecdir
+  (or (getenv "NIX_LIBEXEC_DIR")
+      "@Libexecdir@/guix"))
 
 (define %store-directory
   (or (and=> (getenv "NIX_STORE_DIR") canonicalize-path)
