@@ -22,13 +22,28 @@
 (define-module (guix store derivations)
   #:use-module (ice-9 match)
   #:use-module (rnrs io ports)
+  #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-9 gnu)
   #:use-module (srfi srfi-26)
+  #:use-module (srfi srfi-34)
+  #:use-module (srfi srfi-35)
+  #:use-module (gcrypt hash)
   #:use-module (guix base16)
+  #:use-module (guix combinators)
   #:use-module (guix memoization)
-  #:export (<derivation>
+  #:use-module (guix sets)
+  #:use-module (guix store files)
+  #:export (&derivation-error
+            derivation-error?
+            derivation-error-derivation
+
+            &derivation-missing-output-error
+            derivation-missing-output-error?
+            derivation-missing-output
+
+            <derivation>
             make-derivation
             derivation?
             derivation-outputs
@@ -53,12 +68,34 @@
             derivation-input?
             derivation-input-path
             derivation-input-sub-derivations
+            coalesce-duplicate-inputs
 
+            derivation-name
+            derivation-path->base16-hash
+            derivation-output-names
+            derivation-hash
+            derivation-properties
+            fixed-output-derivation?
+            offloadable-derivation?
+            substitutable-derivation?
+
+            derivation-input<?
+            derivation-input-output-paths
+            derivation-output-paths
+            derivation->output-path
+            derivation->output-paths
+            derivation-path->output-path
+            derivation-path->output-paths
+
+            derivation-prerequisites
+
+            derivation/masked-inputs
             read-derivation
             read-derivation-from-file
             derivation->bytevector
             %derivation-cache
-            write-derivation))
+            write-derivation
+            invalidate-derivation-caches!))
 
 ;;;
 ;;; Nix derivations, as implemented in Nix's `derivations.cc'.
@@ -101,6 +138,217 @@
                                             (derivation-output-path output)))
                                           (derivation-outputs drv)))
                                     (number->string (object-address drv) 16))))
+
+;;;
+;;; Error conditions.
+;;;
+
+(define-condition-type &derivation-error &store-error
+  derivation-error?
+  (derivation derivation-error-derivation))
+
+(define-condition-type &derivation-missing-output-error &derivation-error
+  derivation-missing-output-error?
+  (output derivation-missing-output))
+
+
+(define (derivation-name drv)
+  "Return the base name of DRV."
+  (let ((base (store-path-package-name (derivation-file-name drv))))
+    (string-drop-right base 4)))
+
+(define (derivation-output-names drv)
+  "Return the names of the outputs of DRV."
+  (match (derivation-outputs drv)
+    (((names . _) ...)
+     names)))
+
+(define (fixed-output-derivation? drv)
+  "Return #t if DRV is a fixed-output derivation, such as the result of a
+download with a fixed hash (aka. `fetchurl')."
+  (match drv
+    (($ <derivation>
+        (("out" . ($ <derivation-output> _ (? symbol?) (? bytevector?)))))
+     #t)
+    (_ #f)))
+
+(define (derivation-input<? input1 input2)
+  "Compare INPUT1 and INPUT2, two <derivation-input>."
+  (string<? (derivation-input-path input1)
+            (derivation-input-path input2)))
+
+(define (coalesce-duplicate-inputs inputs)
+  "Return a list of inputs, such that when INPUTS contains the same DRV twice,
+they are coalesced, with their sub-derivations merged.  This is needed because
+Nix itself keeps only one of them."
+  (fold (lambda (input result)
+          (match input
+            (($ <derivation-input> path sub-drvs)
+             ;; XXX: quadratic
+             (match (find (match-lambda
+                            (($ <derivation-input> p s)
+                             (string=? p path)))
+                          result)
+               (#f
+                (cons input result))
+               ((and dup ($ <derivation-input> _ sub-drvs2))
+                ;; Merge DUP with INPUT.
+                (let ((sub-drvs (delete-duplicates
+                                 (append sub-drvs sub-drvs2))))
+                  (cons (make-derivation-input path
+                                               (sort sub-drvs string<?))
+                        (delq dup result))))))))
+        '()
+        inputs))
+
+(define* (derivation-prerequisites drv #:optional (cut? (const #f)))
+  "Return the list of derivation-inputs required to build DRV, recursively.
+
+CUT? is a predicate that is passed a derivation-input and returns true to
+eliminate the given input and its dependencies from the search.  An example of
+such a predicate is 'valid-derivation-input?'; when it is used as CUT?, the
+result is the set of prerequisites of DRV not already in valid."
+  (let loop ((drv       drv)
+             (result    '())
+             (input-set (set)))
+    (let ((inputs (remove (lambda (input)
+                            (or (set-contains? input-set input)
+                                (cut? input)))
+                          (derivation-inputs drv))))
+      (fold2 loop
+             (append inputs result)
+             (fold set-insert input-set inputs)
+             (map (lambda (i)
+                    (read-derivation-from-file (derivation-input-path i)))
+                  inputs)))))
+
+(define (offloadable-derivation? drv)
+  "Return true if DRV can be offloaded, false otherwise."
+  (match (assoc "preferLocalBuild"
+                (derivation-builder-environment-vars drv))
+    (("preferLocalBuild" . "1") #f)
+    (_ #t)))
+
+(define (substitutable-derivation? drv)
+  "Return #t if DRV can be substituted."
+  (match (assoc "allowSubstitutes"
+                (derivation-builder-environment-vars drv))
+    (("allowSubstitutes" . value)
+     (string=? value "1"))
+    (_ #t)))
+
+(define (derivation-output-paths drv sub-drvs)
+  "Return the output paths of outputs SUB-DRVS of DRV."
+  (match drv
+    (($ <derivation> outputs)
+     (map (lambda (sub-drv)
+            (derivation-output-path (assoc-ref outputs sub-drv)))
+          sub-drvs))))
+
+(define derivation-path->base16-hash
+  (mlambda (file)
+    "Return a string containing the base16 representation of the hash of the
+derivation at FILE."
+    (bytevector->base16-string
+     (derivation-hash (read-derivation-from-file file)))))
+
+(define (derivation/masked-inputs drv)
+  "Assuming DRV is a regular derivation (not fixed-output), replace the file
+name of each input with that input's hash."
+  (match drv
+    (($ <derivation> outputs inputs sources
+                     system builder args env-vars)
+     (let ((inputs (map (match-lambda
+                          (($ <derivation-input> path sub-drvs)
+                           (let ((hash (derivation-path->base16-hash path)))
+                             (make-derivation-input hash sub-drvs))))
+                        inputs)))
+       (make-derivation outputs
+                        (sort (coalesce-duplicate-inputs inputs)
+                              derivation-input<?)
+                        sources
+                        system builder args env-vars
+                        #f)))))
+
+(define derivation-hash            ; `hashDerivationModulo' in derivations.cc
+  (lambda (drv)
+    "Return the hash of DRV, modulo its fixed-output inputs, as a bytevector."
+    (match drv
+      (($ <derivation> ((_ . ($ <derivation-output> path
+                                                    (? symbol? hash-algo) (? bytevector? hash)
+                                                    (? boolean? recursive?)))))
+       ;; A fixed-output derivation.
+       (sha256
+        (string->utf8
+         (string-append "fixed:out:"
+                        (if recursive? "r:" "")
+                        (symbol->string hash-algo)
+                        ":" (bytevector->base16-string hash)
+                        ":" path))))
+      (_
+
+       ;; XXX: At this point this remains faster than `port-sha256', because
+       ;; the SHA256 port's `write' method gets called for every single
+       ;; character.
+       (sha256 (derivation->bytevector (derivation/masked-inputs drv)))))))
+
+(define (invalidate-derivation-caches!)
+  "Invalidate internal derivation caches.  This is mostly useful for
+long-running processes that know what they're doing.  Use with care!"
+  ;; Typically this is meant to be used by Cuirass and Hydra, which can clear
+  ;; caches when they start evaluating packages for another architecture.
+  (invalidate-memoization! derivation->bytevector)
+  (invalidate-memoization! derivation-path->base16-hash)
+  (hash-clear! %derivation-cache))
+
+(define derivation-properties
+  (mlambdaq (drv)
+    "Return the property alist associated with DRV."
+    (match (assoc "guix properties"
+                  (derivation-builder-environment-vars drv))
+      ((_ . str) (call-with-input-string str read))
+      (#f        '()))))
+
+(define (derivation-input-output-paths input)
+  "Return the list of output paths corresponding to INPUT, a
+<derivation-input>."
+  (match input
+    (($ <derivation-input> path sub-drvs)
+     (map (cut derivation-path->output-path path <>)
+          sub-drvs))))
+
+(define* (derivation->output-path drv #:optional (output "out"))
+  "Return the store path of its output OUTPUT.  Raise a
+'&derivation-missing-output-error' condition if OUTPUT is not an output of
+DRV."
+  (let ((output* (assoc-ref (derivation-outputs drv) output)))
+    (if output*
+        (derivation-output-path output*)
+        (raise (condition (&derivation-missing-output-error
+                           (derivation drv)
+                           (output output)))))))
+
+(define (derivation->output-paths drv)
+  "Return the list of name/path pairs of the outputs of DRV."
+  (map (match-lambda
+        ((name . output)
+         (cons name (derivation-output-path output))))
+       (derivation-outputs drv)))
+
+(define derivation-path->output-path
+  ;; This procedure is called frequently, so memoize it.
+  (let ((memoized (mlambda (path output)
+                    (derivation->output-path (read-derivation-from-file path)
+                                             output))))
+    (lambda* (path #:optional (output "out"))
+      "Read the derivation from PATH (`/gnu/store/xxx.drv'), and return the store
+path of its output OUTPUT."
+      (memoized path output))))
+
+(define (derivation-path->output-paths path)
+  "Read the derivation from PATH (`/gnu/store/xxx.drv'), and return the
+list of name/path pairs of its outputs."
+  (derivation->output-paths (read-derivation-from-file path)))
 
 (define (read-derivation drv-port)
   "Read the derivation from DRV-PORT and return the corresponding <derivation>

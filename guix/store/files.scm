@@ -22,12 +22,15 @@
   #:use-module (ice-9 regex)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-26)
+  #:use-module (srfi srfi-35)
   #:use-module (gcrypt hash)
   #:use-module (guix base32)
   #:use-module (guix base16)
   #:use-module (guix config)
   #:use-module (guix memoization)
-  #:export (%store-prefix
+  #:export (&store-error
+            store-error?
+            %store-prefix
             store-path
             output-path
             fixed-output-path
@@ -38,7 +41,11 @@
             store-path-hash-part
             direct-store-path
             derivation-log-file
-            log-file))
+            log-file
+            compressed-hash))
+
+(define-condition-type &store-error &error
+  store-error?)
 
 ;;;
 ;;; Store paths.

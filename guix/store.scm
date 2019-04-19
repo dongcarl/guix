@@ -69,7 +69,6 @@
             current-store-protocol-version        ;for internal use
             mcached
 
-            &store-error store-error?
             &store-connection-error store-connection-error?
             store-connection-error-file
             store-connection-error-code
@@ -165,7 +164,8 @@
             interned-file-tree
 
             log-file)
-  #:re-export (%store-prefix
+  #:re-export (&store-error store-error?
+               %store-prefix
                store-path
                output-path
                fixed-output-path
@@ -389,9 +389,6 @@
   store-connection-minor-version)
 (define-deprecated/alias nix-server-socket store-connection-socket)
 
-
-(define-condition-type &store-error &error
-  store-error?)
 
 (define-condition-type &store-connection-error &store-error
   store-connection-error?
