@@ -49,7 +49,8 @@
             %epoch
             reset-timestamps
             outputs-exist?
-            file-closure))
+            file-closure
+            all-transitive-inputs))
 
 ;;; Code for working with the store database directly.
 
@@ -465,3 +466,24 @@ paths referenced by those paths, and so on."
                          (references-of path))))))
         (sqlite-finalize get-references)
         result))))
+
+(define (all-input-output-paths drv)
+  "Returns a list containing the output paths this derivation's inputs need to
+provide."
+  (fold (lambda (input output-paths)
+          (append (derivation-input-output-paths input)
+                  output-paths))
+        '()
+        (derivation-inputs drv)))
+
+(define (all-transitive-inputs drv)
+  "Produces a list of all inputs and all of their references."
+  (let ((input-paths (all-input-output-paths drv)))
+    (vhash-fold (lambda (key val prev)
+                  (cons key prev))
+                '()
+                (fold (lambda (input list-so-far)
+                        (file-closure input #:list-so-far list-so-far))
+                      vlist-null
+                      `(,@(derivation-sources drv)
+                        ,@input-paths)))))
