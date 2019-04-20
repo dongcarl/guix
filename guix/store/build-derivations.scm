@@ -80,13 +80,13 @@
 
 
 (define (output-paths drv)
-  "Returns all store output paths produced by DRV."
+  "Return all store output paths produced by DRV."
   (match (derivation-outputs drv)
     (((outid . ($ <derivation-output> output-path)) ...)
      output-path)))
 
 (define (get-output-specs drv possible-references)
-  "Returns a list of <store-info> objects, one for each output of DRV."
+  "Return a list of <store-info> objects, one for each output of DRV."
   (map (match-lambda
          ((outid . ($ <derivation-output> output-path))
           (let ((references
@@ -823,7 +823,7 @@ even if its outputs already exist."
    inputs))
 
 (define* (build-derivation drv #:optional (outputs (derivation-output-names drv)))
-  "Given a <derivation> DRV with desired outputs OUTPUTS, builds DRV if the
+  "Given a <derivation> DRV with desired outputs OUTPUTS, build DRV if the
 outputs don't already exist."
   (unless (outputs-exist? (derivation-file-name drv)
                           outputs)
