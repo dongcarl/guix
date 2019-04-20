@@ -587,13 +587,20 @@ already in TRIE."
       ((current)
        #f))))
 
-(define (scanning-wrapper-port output-port strings)
+(define (scanning-wrapper-port output-port paths)
   "Creates a wrapper port which passes through bytes to OUTPUT-PORT and
 returns it as well as a procedure which, when called, returns a list of all
-references out of the possibilities enumerated in STRINGS that were
-detected. STRINGS must not be empty."
+references out of the possibilities enumerated in PATHS that were
+detected. PATHS must not be empty."
   ;; Not sure if I should be using custom ports or soft ports...
-  (let* ((lookback-size (apply max (map (compose bytevector-length string->utf8)
+  (let* ((strings (map store-path-hash-part paths))
+         (string->path (fold (lambda (current prev)
+                               (vhash-cons (store-path-hash-part current)
+                                           current
+                                           prev))
+                             vlist-null
+                             paths))
+         (lookback-size (apply max (map (compose bytevector-length string->utf8)
                                         strings)))
          (smallest-length (apply min (map (compose bytevector-length
                                                    string->utf8)
@@ -664,7 +671,9 @@ detected. STRINGS must not be empty."
                   (if match-result
                       (begin
                         (set! references
-                          (let ((str-result (utf8->string match-result)))
+                          (let ((str-result
+                                 (cdr (vhash-assoc (utf8->string match-result)
+                                                   string->path))))
                             (format #t "Found reference to: ~a~%" str-result)
                             (cons str-result
                                   references)))
