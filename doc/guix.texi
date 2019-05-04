@@ -1774,6 +1774,11 @@ on a machine.  Guix, as a package manager, can
 also be installed on top of a running GNU/Linux system,
 @pxref{Installation}.
 
+@quotation Important Note
+@xref{Guided Graphical Installation}, on how to work around a bug that affects
+the graphical installer in version 1.0.0.
+@end quotation
+
 @ifinfo
 @quotation Note
 @c This paragraph is for people reading this from tty2 of the
@@ -1991,6 +1996,57 @@ dependencies of your system configuration can be downloaded.  See the
 
 The graphical installer is a text-based user interface.  It will guide you,
 with dialog boxes, through the steps needed to install GNU@tie{}Guix System.
+
+@quotation Important Note
+Due to a @uref{https://issues.guix.info/issue/35541, bug}, the graphical
+installer of Guix 1.0.0 may produce a system configuration where essential
+commands such as @command{ls} or @command{grep} are missing; as a side effect,
+it also prevents logging in into Xfce.  A new release will be published in the
+coming weeks.  Here is how you can work around it in the meantime on your
+freshly installed system:
+
+@itemize
+@item
+Install packages that provide those commands, along with the text editor of
+your choice (for example, @code{emacs} or @code{vim}):
+
+@example
+guix install coreutils findutils grep procps sed emacs vim
+@end example
+
+At this point, the essential commands you would expect are available.
+
+@item
+Open your configuration file with your editor of choice, for example
+@command{emacs}, running as root:
+
+@example
+sudo emacs /etc/config.scm
+@end example
+
+@item
+Change the @code{packages} field to add the ``base packages'' to the list of
+globally-installed packages, such that your configuration looks like this:
+
+@lisp
+(operating-system
+  ;; ... snip ...
+  (packages (append (list (specification->package "nss-certs"))
+                    %base-packages))
+  ;; ... snip ...
+  )
+@end lisp
+
+@item
+Reconfigure the system so that your new configuration is in effect:
+
+@example
+guix pull && sudo guix system reconfigure /etc/config.scm
+@end example
+@end itemize
+
+We apologize for this embarrassing mistake.
+@end quotation
 
 The first dialog boxes allow you to set up the system as you use it during the
 installation: you can choose the language, keyboard layout, and set up
