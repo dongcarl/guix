@@ -5143,7 +5143,6 @@ Exchange, Last.fm, IMAP/SMTP, Jabber, SIP and Kerberos.")
               (sha256
                (base32
                 "0h4f71kpf2ypdgifg369z35pk4cq99daw540yzjpax52grav2fjv"))))
-    (outputs '("out" "libedataserverui"))
     (build-system cmake-build-system)
     (arguments
      '(#:configure-flags
@@ -5192,28 +5191,7 @@ Exchange, Last.fm, IMAP/SMTP, Jabber, SIP and Kerberos.")
                ;; CMakeLists.txt hard-codes runpath to just the libdir.
                ;; Remove it so the configure flag is respected.
                (("SET\\(CMAKE_INSTALL_RPATH .*") ""))
-             #t))
-         (add-after 'install 'split
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let ((out (assoc-ref outputs "out"))
-                   (libedsui (assoc-ref outputs "libedataserverui")))
-               (for-each (lambda (file)
-                           (mkdir-p (dirname (string-append libedsui file)))
-                           (rename-file (string-append out file)
-                                        (string-append libedsui file)))
-                         '("/lib/pkgconfig/libedataserverui-1.2.pc"
-                           "/lib/libedataserverui-1.2.so"
-                           "/lib/libedataserverui-1.2.so.2"
-                           "/lib/libedataserverui-1.2.so.2.0.0"
-                           "/lib/girepository-1.0/EDataServerUI-1.2.typelib"
-                           "/include/evolution-data-server/libedataserverui"
-                           "/share/gir-1.0/EDataServerUI-1.2.gir"
-                           "/share/vala/vapi/libedataserverui-1.2.vapi"
-                           "/share/vala/vapi/libedataserverui-1.2.deps"))
-               (substitute* (string-append libedsui "/lib/pkgconfig/"
-                                           "libedataserverui-1.2.pc")
-                 ((out) libedsui))
-               #t))))))
+             #t)))))
     (native-inputs
      `(("glib:bin" ,glib "bin") ; for glib-mkenums, etc.
        ("gobject-introspection" ,gobject-introspection)
@@ -6693,7 +6671,7 @@ desktop.  It supports world clock, stop watch, alarms, and count down timer.")
        ("gnome-online-accounts:lib" ,gnome-online-accounts "lib")
        ("gsettings-desktop-schemas" ,gsettings-desktop-schemas)
        ("libdazzle" ,libdazzle)
-       ("libedataserverui" ,evolution-data-server "libedataserverui")
+       ("libedataserverui" ,evolution-data-server)
        ("libgweather" ,libgweather)
        ("geoclue" ,geoclue)))
     (home-page "https://wiki.gnome.org/Apps/Calendar")
@@ -6741,7 +6719,7 @@ desktop.  It supports multiple calendars, month, week and year view.")
     (inputs
      `(("rest" ,rest)                   ; For Todoist plugin
        ("json-glib" ,json-glib)         ; For Todoist plugin
-       ("libedataserverui" ,evolution-data-server "libedataserverui")
+       ("libedataserverui" ,evolution-data-server)
        ("libical" ,libical)
        ("libpeas" ,libpeas)
        ("python-pygobject" ,python-pygobject)
@@ -7958,7 +7936,7 @@ generic enough to work for everyone.")
        ("gtkspell3" ,gtkspell3)
        ("highlight" ,highlight)
        ("libcanberra" ,libcanberra)
-       ("libedataserverui" ,evolution-data-server "libedataserverui")
+       ("libedataserverui" ,evolution-data-server)
        ("libgweather" ,libgweather)
        ("libnotify" ,libnotify)
        ("libsoup" ,libsoup)
