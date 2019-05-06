@@ -426,10 +426,10 @@ for ARCH and optionally VARIANT, or #f if there is no such configuration."
 It has been modified to remove all non-free binary blobs.")
     (license license:gpl2)))
 
-(define %linux-libre-version "5.0.13")
-(define %linux-libre-hash "1jhmvd47bd5nhrim2wqibialry8rj9ym0kvsvp6q0zg4rlpvfg49")
+(define %linux-libre-version "5.1")
+(define %linux-libre-hash "153vd48k98pm8556hfnvs9za77n91gwv0dvv5hnzzhwl9l6jxbcl")
 
-(define %linux-libre-5.0-patches
+(define %linux-libre-5.1-patches
   (list %boot-logo-patch
         %linux-libre-arm-export-__sync_icache_dcache-patch))
 
@@ -437,30 +437,8 @@ It has been modified to remove all non-free binary blobs.")
   (make-linux-libre %linux-libre-version
                     %linux-libre-hash
                     '("x86_64-linux" "i686-linux" "armhf-linux" "aarch64-linux")
-                    #:patches %linux-libre-5.0-patches
+                    #:patches %linux-libre-5.1-patches
                     #:configuration-file kernel-config))
-
-(define-public vhba-module
-  (package
-    (name "vhba-module")
-    (version "20170610")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append
-                    "http://downloads.sourceforge.net/cdemu/vhba-module-"
-                    version ".tar.bz2"))
-              (sha256
-               (base32
-                "1v6r0bgx0a65vlh36b1l2965xybngbpga6rp54k4z74xk0zwjw3r"))))
-    (build-system linux-module-build-system)
-    (arguments
-     ;; TODO: No tests?
-     `(#:tests? #f))
-    (home-page "https://cdemu.sourceforge.io/")
-    (synopsis "Kernel module that emulates SCSI devices")
-    (description "VHBA module provides a Virtual (SCSI) HBA, which is the link
-between the CDemu userspace daemon and linux kernel.")
-    (license license:gpl2+)))
 
 (define %linux-libre-4.19-version "4.19.40")
 (define %linux-libre-4.19-hash "1sqx6jlir5lmkjgi5nabr2qwdvk87s9ax0ygi5qpdlraaw5b0kyk")
@@ -507,7 +485,7 @@ between the CDemu userspace daemon and linux kernel.")
   (make-linux-libre %linux-libre-version
                     %linux-libre-hash
                     '("armhf-linux")
-                    #:patches %linux-libre-5.0-patches
+                    #:patches %linux-libre-5.1-patches
                     #:defconfig "multi_v7_defconfig"
                     #:extra-version "arm-generic"))
 
@@ -515,7 +493,7 @@ between the CDemu userspace daemon and linux kernel.")
   (make-linux-libre %linux-libre-version
                     %linux-libre-hash
                     '("armhf-linux")
-                    #:patches %linux-libre-5.0-patches
+                    #:patches %linux-libre-5.1-patches
                     #:configuration-file kernel-config-veyron
                     #:extra-version "arm-veyron"))
 
@@ -538,7 +516,7 @@ between the CDemu userspace daemon and linux kernel.")
   (make-linux-libre %linux-libre-version
                     %linux-libre-hash
                     '("armhf-linux")
-                    #:patches %linux-libre-5.0-patches
+                    #:patches %linux-libre-5.1-patches
                     #:defconfig "omap2plus_defconfig"
                     #:extra-version "arm-omap2plus"))
 
@@ -556,6 +534,28 @@ between the CDemu userspace daemon and linux kernel.")
                     '("armhf-linux")
                     #:defconfig "omap2plus_defconfig"
                     #:extra-version "arm-omap2plus"))
+
+(define-public vhba-module
+  (package
+    (name "vhba-module")
+    (version "20170610")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "http://downloads.sourceforge.net/cdemu/vhba-module-"
+                    version ".tar.bz2"))
+              (sha256
+               (base32
+                "1v6r0bgx0a65vlh36b1l2965xybngbpga6rp54k4z74xk0zwjw3r"))))
+    (build-system linux-module-build-system)
+    (arguments
+     ;; TODO: No tests?
+     `(#:tests? #f))
+    (home-page "https://cdemu.sourceforge.io/")
+    (synopsis "Kernel module that emulates SCSI devices")
+    (description "VHBA module provides a Virtual (SCSI) HBA, which is the link
+between the CDemu userspace daemon and linux kernel.")
+    (license license:gpl2+)))
 
 
 ;;;
