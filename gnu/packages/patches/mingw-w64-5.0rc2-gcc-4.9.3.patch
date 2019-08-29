@@ -43,3 +43,21 @@ index 1e970f4..99a332f 100644
    __CRT_INLINE float __cdecl hypotf (float x, float y) { return (float) hypot ((double)x, (double)y);}
  #endif
    extern long double __cdecl hypotl (long double, long double);
+--- a/mingw-w64-headers/crt/float.h
++++ b/mingw-w64-headers/crt/float.h
+@@ -31,6 +31,15 @@
+ #if (__GNUC__ < 4)
+ #error Corrupt install of gcc-s internal headers, or search order was changed.
+ #else
++
++	/* Number of base-FLT_RADIX digits in the significand, p.  */
++	#undef FLT_MANT_DIG
++	#undef DBL_MANT_DIG
++	#undef LDBL_MANT_DIG
++	#define FLT_MANT_DIG   __FLT_MANT_DIG__
++	#define DBL_MANT_DIG   __DBL_MANT_DIG__
++	#define LDBL_MANT_DIG  __LDBL_MANT_DIG__
++
+ 	/* #include_next <float_ginclude.h> */
+ 	
+    	/* Number of decimal digits, q, such that any floating-point number with q
