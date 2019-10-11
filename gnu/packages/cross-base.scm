@@ -432,7 +432,7 @@ target that libc."
   "Return LIBC cross-built for TARGET, a GNU triplet. Use XGCC and XBINUTILS
 and the cross tool chain."
   (if (cross-newlib? target libc)
-      (native-libc target libc)
+      (native-libc target libc xgcc xbinutils)
       (let ((libc libc))
         (package (inherit libc)
           (name (string-append "glibc-cross-" target))
@@ -508,10 +508,14 @@ and the cross tool chain."
 
 (define* (native-libc target
                      #:optional
-                     (libc glibc))
+                     (libc glibc)
+                     (xgcc (cross-gcc target))
+                     (xbinutils (cross-binutils target)))
   (if (target-mingw? target)
       (let ((machine (substring target 0 (string-index target #\-))))
-        (make-mingw-w64 machine))
+        (make-mingw-w64 machine
+                        #:xgcc xgcc
+                        #:xbinutils xbinutils))
       libc))
 
 (define* (cross-newlib? target
