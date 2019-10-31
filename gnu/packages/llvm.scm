@@ -438,7 +438,8 @@ with that of libgomp, the GNU Offloading and Multi Processing Library.")
 (define-public clang-6
   (clang-from-llvm llvm-6 clang-runtime
                    "0rxn4rh7rrnsqbdgp4gzc8ishbkryhpl1kd3mpnxzpxxhla3y93w"
-                   #:patches '("clang-6.0-libc-search-path.patch")))
+                   #:patches '("clang-6.0-libc-search-path.patch"
+                               "clang-6.0-LIBRARY_PATH-before-user-inputs.patch")))
 
 ;; Libcxx files specifically used by PySide2.
 (define-public libcxx-6
