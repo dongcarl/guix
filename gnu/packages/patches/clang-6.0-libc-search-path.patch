@@ -8,18 +8,17 @@ to make sure Clang also works on non-GuixSD systems.
 
 --- cfe-6.0.0.src/lib/Driver/ToolChains/Linux.cpp
 +++ cfe-6.0.0.src/lib/Driver/ToolChains/Linux.cpp
-@@ -207,7 +207,9 @@
-   PPaths.push_back(Twine(GCCInstallation.getParentLibPath() + "/../" +
+@@ -208,6 +208,9 @@
                           GCCInstallation.getTriple().str() + "/bin")
                         .str());
--
+ 
 +  // Comment out the distro-specific tweaks so that they don't bite when
 +  // using Guix on a foreign distro.
 +#if 0
    Distro Distro(D.getVFS());
  
    if (Distro.IsAlpineLinux()) {
-@@ -255,6 +257,7 @@
+@@ -255,6 +258,7 @@
  
    if (IsAndroid || Distro.IsOpenSUSE())
      ExtraOpts.push_back("--enable-new-dtags");
@@ -27,41 +26,49 @@ to make sure Clang also works on non-GuixSD systems.
  
    // The selection of paths to try here is designed to match the patterns which
    // the GCC driver itself uses, as this is part of the GCC-compatible driver.
-@@ -329,14 +332,12 @@
-     addPathIfExists(D, D.Dir + "/../" + OSLibDir, Paths);
-   }
+@@ -375,6 +379,10 @@
  
--  addPathIfExists(D, SysRoot + "/lib/" + MultiarchTriple, Paths);
--  addPathIfExists(D, SysRoot + "/lib/../" + OSLibDir, Paths);
--  addPathIfExists(D, SysRoot + "/usr/lib/" + MultiarchTriple, Paths);
--  addPathIfExists(D, SysRoot + "/usr/lib/../" + OSLibDir, Paths);
--
-   // Try walking via the GCC triple path in case of biarch or multiarch GCC
-   // installations with strange symlinks.
-   if (GCCInstallation.isValid()) {
-+    // The following code would end up adding things like
-+    // "/usr/lib/x86_64-unknown-linux-gnu/../../lib64" to the search path.
-+#if 0
-     addPathIfExists(D,
-                     SysRoot + "/usr/lib/" + GCCInstallation.getTriple().str() +
-                         "/../../" + OSLibDir,
-@@ -349,6 +350,7 @@
-                              BiarchSibling.gccSuffix(),
-                       Paths);
-     }
-+#endif
- 
-     // See comments above on the multilib variant for details of why this is
-     // included even from outside the sysroot.
-@@ -373,8 +375,9 @@
-   if (StringRef(D.Dir).startswith(SysRoot))
-     addPathIfExists(D, D.Dir + "/../lib", Paths);
- 
--  addPathIfExists(D, SysRoot + "/lib", Paths);
--  addPathIfExists(D, SysRoot + "/usr/lib", Paths);
+   addPathIfExists(D, SysRoot + "/lib", Paths);
+   addPathIfExists(D, SysRoot + "/usr/lib", Paths);
++
 +  // Add libc's lib/ directory to the search path, so that crt1.o, crti.o,
 +  // and friends can be found.
 +  addPathIfExists(D, "@GLIBC_LIBDIR@", Paths);
  }
  
  bool Linux::HasNativeLLVMSupport() const { return true; }
+@@ -710,6 +718,34 @@
+   addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/include");
+ 
+   addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/include");
++
++  // Check for configure-time "extra" C include directories. When constructing a
++  // toolchain, @C_EXTRA_INCLUDE_DIRS@ should be replaced with something like a
++  // colon-separated string of the include dirs of libc and kernel headers.
++  //
++  // The reason why we use this mechanism instead of C_INCLUDE_DIRS above is
++  // because when a user supplies clang with --sysroot, the normal expectation
++  // is that clang will detect and add the proper $SYSROOT/$MULTIARCHINCL,
++  // $SYSROOT/include, and $SYSROOT/usr/include to its list of search paths.
++  // However, if C_INCLUDE_DIRS is not empty, this function will return early
++  // and not attempt to add the aforementioned search paths, which is not
++  // desirable.
++  //
++  // By adding our configure-time "extra" C include directories here, after
++  // we've added $SYSROOT/include and $SYSROOT/usr/include, we make sure that IF
++  // --sysroot is supplied on the command line, we pick up the expected search
++  // paths in the $SYSROOT, and that they come before our configure-time "extra"
++  // C include directories.
++  StringRef CExtraIncludeDirs("@C_EXTRA_INCLUDE_DIRS@");
++  if (CExtraIncludeDirs != "") {
++      SmallVector<StringRef, 5> dirs;
++      CExtraIncludeDirs.split(dirs, ":");
++      for (StringRef dir : dirs) {
++          StringRef Prefix =
++              llvm::sys::path::is_absolute(dir) ? StringRef(SysRoot) : "";
++          addExternCSystemInclude(DriverArgs, CC1Args, Prefix + dir);
++      }
++  }
+ }
+ 
+ static std::string DetectLibcxxIncludePath(StringRef base) {

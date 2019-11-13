@@ -197,12 +197,7 @@ compiler.  In LLVM this library is called \"compiler-rt\".")
 
              ;; Find libgcc_s, crtbegin.o, and crtend.o.
              (string-append "-DGCC_INSTALL_PREFIX="
-                            (assoc-ref %build-inputs "gcc-lib"))
-
-             ;; Use a sane default include directory.
-             (string-append "-DC_INCLUDE_DIRS="
-                            (assoc-ref %build-inputs "libc")
-                            "/include"))
+                            (assoc-ref %build-inputs "gcc-lib")))
 
        ;; Don't use '-g' during the build to save space.
        #:build-type "Release"
@@ -254,7 +249,9 @@ compiler.  In LLVM this library is called \"compiler-rt\".")
                                 ;; Make sure libc's libdir is on the search path, to
                                 ;; allow crt1.o & co. to be found.
                                 (("@GLIBC_LIBDIR@")
-                                 (string-append libc "/lib")))))
+                                 (string-append libc "/lib"))
+                                (("@C_EXTRA_INCLUDE_DIRS@")
+                                 (string-append libc "/include" ":"))))
                            (else
                             `((substitute* "lib/Driver/Tools.cpp"
                                 ;; Patch the 'getLinuxDynamicLinker' function so that

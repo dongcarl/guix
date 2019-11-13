@@ -8,7 +8,7 @@ to make sure Clang also works on non-GuixSD systems.
 
 --- cfe-3.6.0.src/lib/Driver/ToolChains.cpp	2015-02-18 22:03:07.000000000 +0100
 +++ cfe-3.6.0.src/lib/Driver/ToolChains.cpp	2015-06-19 16:37:20.459701044 +0200
-@@ -2931,6 +2931,9 @@ Linux::Linux(const Driver &D, const llvm
+@@ -3040,6 +3040,9 @@
  
    Linker = GetLinkerPath();
  
@@ -18,7 +18,7 @@ to make sure Clang also works on non-GuixSD systems.
    Distro Distro = DetectDistro(Arch);
  
    if (IsOpenSUSE(Distro) || IsUbuntu(Distro)) {
-@@ -2973,6 +2976,7 @@ Linux::Linux(const Driver &D, const llvm
+@@ -3082,6 +3085,7 @@
  
    if (IsOpenSUSE(Distro))
      ExtraOpts.push_back("--enable-new-dtags");
@@ -26,41 +26,49 @@ to make sure Clang also works on non-GuixSD systems.
  
    // The selection of paths to try here is designed to match the patterns which
    // the GCC driver itself uses, as this is part of the GCC-compatible driver.
-@@ -3043,14 +3047,12 @@ Linux::Linux(const Driver &D, const llvm
-     addPathIfExists(D.Dir + "/../" + OSLibDir, Paths);
-   }
+@@ -3194,6 +3198,10 @@
  
--  addPathIfExists(SysRoot + "/lib/" + MultiarchTriple, Paths);
--  addPathIfExists(SysRoot + "/lib/../" + OSLibDir, Paths);
--  addPathIfExists(SysRoot + "/usr/lib/" + MultiarchTriple, Paths);
--  addPathIfExists(SysRoot + "/usr/lib/../" + OSLibDir, Paths);
--
-   // Try walking via the GCC triple path in case of biarch or multiarch GCC
-   // installations with strange symlinks.
-   if (GCCInstallation.isValid()) {
-+    // The following code would end up adding things like
-+    // "/usr/lib/x86_64-unknown-linux-gnu/../../lib64" to the search path.
-+#if 0
-     addPathIfExists(SysRoot + "/usr/lib/" + GCCInstallation.getTriple().str() +
-                     "/../../" + OSLibDir, Paths);
- 
-@@ -3060,6 +3062,7 @@ Linux::Linux(const Driver &D, const llvm
-       addPathIfExists(GCCInstallation.getInstallPath() +
-                       BiarchSibling.gccSuffix(), Paths);
-     }
-+#endif
- 
-     // See comments above on the multilib variant for details of why this is
-     // included even from outside the sysroot.
-@@ -3083,8 +3086,9 @@ Linux::Linux(const Driver &D, const llvm
-   if (StringRef(D.Dir).startswith(SysRoot))
-     addPathIfExists(D.Dir + "/../lib", Paths);
- 
--  addPathIfExists(SysRoot + "/lib", Paths);
--  addPathIfExists(SysRoot + "/usr/lib", Paths);
+   addPathIfExists(SysRoot + "/lib", Paths);
+   addPathIfExists(SysRoot + "/usr/lib", Paths);
++
 +  // Add libc's lib/ directory to the search path, so that crt1.o, crti.o,
 +  // and friends can be found.
 +  addPathIfExists("@GLIBC_LIBDIR@", Paths);
  }
  
  bool Linux::HasNativeLLVMSupport() const {
+@@ -3384,6 +3392,34 @@
+   addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/include");
+ 
+   addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/include");
++
++  // Check for configure-time "extra" C include directories. When constructing a
++  // toolchain, @C_EXTRA_INCLUDE_DIRS@ should be replaced with something like a
++  // colon-separated string of the include dirs of libc and kernel headers.
++  //
++  // The reason why we use this mechanism instead of C_INCLUDE_DIRS above is
++  // because when a user supplies clang with --sysroot, the normal expectation
++  // is that clang will detect and add the proper $SYSROOT/$MULTIARCHINCL,
++  // $SYSROOT/include, and $SYSROOT/usr/include to its list of search paths.
++  // However, if C_INCLUDE_DIRS is not empty, this function will return early
++  // and not attempt to add the aforementioned search paths, which is not
++  // desirable.
++  //
++  // By adding our configure-time "extra" C include directories here, after
++  // we've added $SYSROOT/include and $SYSROOT/usr/include, we make sure that IF
++  // --sysroot is supplied on the command line, we pick up the expected search
++  // paths in the $SYSROOT, and that they come before our configure-time "extra"
++  // C include directories.
++  StringRef CExtraIncludeDirs("@C_EXTRA_INCLUDE_DIRS@");
++  if (CExtraIncludeDirs != "") {
++      SmallVector<StringRef, 5> dirs;
++      CExtraIncludeDirs.split(dirs, ":");
++      for (StringRef dir : dirs) {
++          StringRef Prefix =
++              llvm::sys::path::is_absolute(dir) ? StringRef(SysRoot) : "";
++          addExternCSystemInclude(DriverArgs, CC1Args, Prefix + dir);
++      }
++  }
+ }
+ 
+ /// \brief Helper to add the variant paths of a libstdc++ installation.
