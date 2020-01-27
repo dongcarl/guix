@@ -225,7 +225,8 @@ compiler.  In LLVM this library is called \"compiler-rt\".")
                     (lambda* (#:key inputs #:allow-other-keys)
                       (let ((libc (assoc-ref inputs "libc"))
                             (compiler-rt (assoc-ref inputs "clang-runtime"))
-                            (gcc (assoc-ref inputs "gcc")))
+                            (gcc (assoc-ref inputs "gcc"))
+                            (kernel-headers (assoc-ref inputs "kernel-headers")))
                         ,@(cond
                            ((version>=? version "6.0")
                             `(;; Link to libclang_rt files from clang-runtime.
@@ -251,7 +252,8 @@ compiler.  In LLVM this library is called \"compiler-rt\".")
                                 (("@GLIBC_LIBDIR@")
                                  (string-append libc "/lib"))
                                 (("@C_EXTRA_INCLUDE_DIRS@")
-                                 (string-append libc "/include" ":"))))
+                                 (string-append libc "/include" ":"
+                                                kernel-headers "/include")))))
                            (else
                             `((substitute* "lib/Driver/Tools.cpp"
                                 ;; Patch the 'getLinuxDynamicLinker' function so that
