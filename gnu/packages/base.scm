@@ -981,6 +981,16 @@ with the Linux kernel.")
             (substitute-keyword-arguments
              (ensure-keyword-arguments (package-arguments base-gcc)
                                        '(#:implicit-inputs? #f))
+             ((#:configure-flags flags)
+              ;; GCC versions 4.9.0 and higher has a configure flag to inform it
+              ;; of the minimum glibc version that it will target. One of the
+              ;; effects of this is allowing us to use the SSP function from
+              ;; glibc instead of from libssp.so when possible.
+              (if (and (string-prefix? "glibc" (package-name libc))
+                       (version>=? (package-version gcc) "4.9.0"))
+                  `(cons (string-append "--with-glibc-version" ,(version-major+minor (package-version libc)))
+                         ,flags)
+                  flags))
              ((#:phases phases)
               `(modify-phases ,phases
                  (add-before 'configure 'treat-glibc-as-system-header
