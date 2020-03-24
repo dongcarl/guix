@@ -1,0 +1,15 @@
+Description: Drop __DATE__ from gendef
+Author: Stephen Kitt <skitt@debian.org>
+
+This allows gendef to be built reproducibly.
+
+--- a/mingw-w64-tools/gendef/src/gendef.c
++++ b/mingw-w64-tools/gendef/src/gendef.c
+@@ -196,7 +196,6 @@
+                    "  By default, the output files are named after their DLL counterparts\n"
+                    "  gendef MYDLL.DLL     Produces MYDLL.def\n"
+                    "  gendef - MYDLL.DLL   Prints the exports to stdout\n");
+-  fprintf (stderr, "\nBuilt on %s\n", __DATE__);
+   fprintf (stderr, "\nReport bugs to <mingw-w64-public@lists.sourceforge.net>\n");
+   exit (0);
+ }
