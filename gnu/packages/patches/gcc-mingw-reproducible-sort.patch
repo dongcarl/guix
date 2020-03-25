@@ -1,0 +1,14 @@
+Description: Force locale-independent stable sort order
+Author: Stephen Kitt <skitt@debian.org>
+
+--- a/gcc/Makefile.in
++++ b/gcc/Makefile.in
+@@ -2936,7 +2936,7 @@
+ 	echo | $(GCC_FOR_TARGET) -E -dM - | \
+ 	  sed -n -e 's/^#define \([^_][a-zA-Z0-9_]*\).*/\1/p' \
+ 		 -e 's/^#define \(_[^_A-Z][a-zA-Z0-9_]*\).*/\1/p' | \
+-	  sort -u > tmp-macro_list
++	  LC_ALL=C sort -u > tmp-macro_list
+ 	$(SHELL) $(srcdir)/../move-if-change tmp-macro_list macro_list
+ 	$(STAMP) s-macro_list
+ 
