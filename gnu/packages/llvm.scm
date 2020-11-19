@@ -59,7 +59,10 @@
   #:use-module (gnu packages python)
   #:use-module (gnu packages swig)
   #:use-module (gnu packages xml)
-  #:export (system->llvm-target))
+  #:export (system->llvm-target
+            clang-runtime-from-llvm
+            clang-from-llvm
+            make-clang-toolchain))
 
 (define* (system->llvm-target #:optional
                               (system (or (and=> (%current-target-system)
