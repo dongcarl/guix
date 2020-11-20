@@ -254,7 +254,8 @@ required structures.")
               (uri (string-append "mirror://gnupg/gnutls/v"
                                   (version-major+minor version)
                                   "/gnutls-3.6.13.tar.xz"))
-              (patches (search-patches "gnutls-skip-trust-store-test.patch"))
+              (patches (search-patches "gnutls-skip-trust-store-test.patch"
+                                       "gnutls-fix-status-request-revoked-expiration.patch"))
               (sha256
                (base32
                 "0f1gnm0756qms5cpx6yn6xb8d3imc2gkqmygf12n9x6r8zs1s11j"))))))
