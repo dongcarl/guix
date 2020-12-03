@@ -398,7 +398,7 @@ $(prefix)/etc/init.d\n")))
 
          ("glibc-utf8-locales" ,glibc-utf8-locales)))
       (propagated-inputs
-       `(("gnutls" ,(if (%current-target-system) gnutls-3.6.14 gnutls))
+       `(("gnutls" ,(if (%current-target-system) gnutls/fixed gnutls))
          ("guile-gcrypt" ,guile-gcrypt)
          ("guile-json" ,guile-json-4)
          ("guile-sqlite3" ,guile-sqlite3)
