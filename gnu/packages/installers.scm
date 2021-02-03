@@ -96,9 +96,18 @@
                              ;; CROSS_-prefixed version of env vars
                              (setenv (string-append "CROSS_" env-name)
                                      (filter-delimited-string env-val mingw-path?))))
-                         '("CPATH" "LIBRARY_PATH"))
+                         '("C_INCLUDE_PATH" "CPLUS_INCLUDE_PATH" "LIBRARY_PATH"))
                         ;; Hack to place mingw-w64 path at the end of search
                         ;; paths.  Could probably use a specfile and dirafter
+                        (setenv "CROSS_C_INCLUDE_PATH"
+                                (string-join
+                                 `(,@(map (cut string-append (assoc-ref %build-inputs "xgcc")
+					                     "/lib/gcc/" ,triplet "/"
+							     ,(package-version xgcc) <>)
+                                                   '("/include"
+                                                     "/include-fixed"))
+                                   ,(getenv "CROSS_C_INCLUDE_PATH"))
+                                 ":"))
                         (setenv "CROSS_CPLUS_INCLUDE_PATH"
                                 (string-join
                                  `(,@(map (cut string-append (assoc-ref %build-inputs "xgcc") <>)
@@ -108,7 +117,7 @@
                                             ,@(map (cut string-append "/lib/gcc/" ,triplet "/" ,(package-version xgcc) <>)
                                                    '("/include"
                                                      "/include-fixed"))))
-                                   ,(getenv "CROSS_CPATH"))
+                                   ,(getenv "CROSS_CPLUS_INCLUDE_PATH"))
                                  ":"))))
                     (add-before 'build 'fix-target-detection
                       (lambda _
