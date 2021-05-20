@@ -29,8 +29,8 @@ msgstr "공헌"
 
 #. type: Plain text
 #: guix-git/doc/contributing.texi:9
-msgid "This project is a cooperative effort, and we need your help to make it grow! Please get in touch with us on @email{guix-devel@@gnu.org} and @code{#guix} on the Freenode IRC network.  We welcome ideas, bug reports, patches, and anything that may be helpful to the project.  We particularly welcome help on packaging (@pxref{Packaging Guidelines})."
-msgstr "이 프로젝트는 협력적인 노력이며, 우리는 성장을 위해 여러분의 도움이 필요합니다! Freenode IRC 네트워크에 있는 @email {guix-devel @@ gnu.org}과 @code {#guix}로 문의해 주세요. 우리는 생각, 문제에 대한 보고, 패치, 프로젝트에 도움이 될만한 어떠한 것도 환영합니다. 우리는 특히 꾸러미 구성에 대한 도움을 환영합니다 (@pxref{Packaging Guidelines})."
+msgid "This project is a cooperative effort, and we need your help to make it grow! Please get in touch with us on @email{guix-devel@@gnu.org} and @code{#guix} on the Libera Chat IRC network.  We welcome ideas, bug reports, patches, and anything that may be helpful to the project.  We particularly welcome help on packaging (@pxref{Packaging Guidelines})."
+msgstr "이 프로젝트는 협력적인 노력이며, 우리는 성장을 위해 여러분의 도움이 필요합니다! Libera Chat IRC 네트워크에 있는 @email {guix-devel @@ gnu.org}과 @code {#guix}로 문의해 주세요. 우리는 생각, 문제에 대한 보고, 패치, 프로젝트에 도움이 될만한 어떠한 것도 환영합니다. 우리는 특히 꾸러미 구성에 대한 도움을 환영합니다 (@pxref{Packaging Guidelines})."
 
 #. type: cindex
 #: guix-git/doc/contributing.texi:10
@@ -7320,7 +7320,7 @@ msgstr ""
 
 #. type: Plain text
 #: guix-git/doc/guix.texi:2632
-msgid "Now, @pxref{Getting Started}, and join us on @code{#guix} on the Freenode IRC network or on @email{guix-devel@@gnu.org} to share your experience!"
+msgid "Now, @pxref{Getting Started}, and join us on @code{#guix} on the Libera Chat IRC network or on @email{guix-devel@@gnu.org} to share your experience!"
 msgstr ""
 
 #. type: section

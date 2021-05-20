@@ -32,8 +32,8 @@ msgstr "Mitwirken"
 
 #. type: Plain text
 #: guix-git/doc/contributing.texi:9
-msgid "This project is a cooperative effort, and we need your help to make it grow! Please get in touch with us on @email{guix-devel@@gnu.org} and @code{#guix} on the Freenode IRC network.  We welcome ideas, bug reports, patches, and anything that may be helpful to the project.  We particularly welcome help on packaging (@pxref{Packaging Guidelines})."
-msgstr "Dieses Projekt basiert auf Kooperation, daher benötigen wir Ihre Hilfe, um es wachsen zu lassen! Bitte kontaktieren Sie uns auf @email{guix-devel@@gnu.org} und @code{#guix} im Freenode-IRC-Netzwerk. Wir freuen uns auf Ihre Ideen, Fehlerberichte, Patches und alles, was hilfreich für das Projekt sein könnte. Besonders willkommen ist Hilfe bei der Erstellung von Paketen (siehe @ref{Packaging Guidelines})."
+msgid "This project is a cooperative effort, and we need your help to make it grow! Please get in touch with us on @email{guix-devel@@gnu.org} and @code{#guix} on the Libera Chat IRC network.  We welcome ideas, bug reports, patches, and anything that may be helpful to the project.  We particularly welcome help on packaging (@pxref{Packaging Guidelines})."
+msgstr "Dieses Projekt basiert auf Kooperation, daher benötigen wir Ihre Hilfe, um es wachsen zu lassen! Bitte kontaktieren Sie uns auf @email{guix-devel@@gnu.org} und @code{#guix} im Libera-Chat-IRC-Netzwerk. Wir freuen uns auf Ihre Ideen, Fehlerberichte, Patches und alles, was hilfreich für das Projekt sein könnte. Besonders willkommen ist Hilfe bei der Erstellung von Paketen (siehe @ref{Packaging Guidelines})."
 
 #. type: cindex
 #: guix-git/doc/contributing.texi:10
@@ -7430,8 +7430,8 @@ msgstr "Das macht hier einen Unterschied, weil @command{guix pull} den @command{
 
 #. type: Plain text
 #: guix-git/doc/guix.texi:2632
-msgid "Now, @pxref{Getting Started}, and join us on @code{#guix} on the Freenode IRC network or on @email{guix-devel@@gnu.org} to share your experience!"
-msgstr "Werfen Sie nun einen Blick auf @ref{Getting Started} und besuchen Sie uns auf @code{#guix} auf dem Freenode-IRC-Netzwerk oder auf der Mailing-Liste @file{guix-devel@@gnu.org}, um uns Rückmeldung zu geben!"
+msgid "Now, @pxref{Getting Started}, and join us on @code{#guix} on the Libera Chat IRC network or on @email{guix-devel@@gnu.org} to share your experience!"
+msgstr "Werfen Sie nun einen Blick auf @ref{Getting Started} und besuchen Sie uns auf @code{#guix} auf dem Libera-Chat-IRC-Netzwerk oder auf der Mailing-Liste @file{guix-devel@@gnu.org}, um uns Rückmeldung zu geben!"
 
 #. type: section
 #: guix-git/doc/guix.texi:2635

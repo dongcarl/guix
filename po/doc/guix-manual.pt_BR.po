@@ -30,8 +30,8 @@ msgstr "Contribuindo"
 
 #. type: Plain text
 #: guix-git/doc/contributing.texi:9
-msgid "This project is a cooperative effort, and we need your help to make it grow! Please get in touch with us on @email{guix-devel@@gnu.org} and @code{#guix} on the Freenode IRC network.  We welcome ideas, bug reports, patches, and anything that may be helpful to the project.  We particularly welcome help on packaging (@pxref{Packaging Guidelines})."
-msgstr "Este projeto é um esforço cooperativo e precisamos da sua ajuda para fazê-lo crescer! Por favor, entre em contato conosco por meio de @email{guix-devel@@gnu.org} e @code{#guix} na rede IRC do Freenode. São muito bem-vindas ideias, relatórios de bugs, patches e qualquer coisa que possa ser útil para o projeto. Nós particularmente agradecemos a ajuda no empacotamento das (@pxref{Diretrizes de empacotamento})."
+msgid "This project is a cooperative effort, and we need your help to make it grow! Please get in touch with us on @email{guix-devel@@gnu.org} and @code{#guix} on the Libera Chat IRC network.  We welcome ideas, bug reports, patches, and anything that may be helpful to the project.  We particularly welcome help on packaging (@pxref{Packaging Guidelines})."
+msgstr "Este projeto é um esforço cooperativo e precisamos da sua ajuda para fazê-lo crescer! Por favor, entre em contato conosco por meio de @email{guix-devel@@gnu.org} e @code{#guix} na rede IRC do Libera Chat. São muito bem-vindas ideias, relatórios de bugs, patches e qualquer coisa que possa ser útil para o projeto. Nós particularmente agradecemos a ajuda no empacotamento das (@pxref{Diretrizes de empacotamento})."
 
 #. type: cindex
 #: guix-git/doc/contributing.texi:10
@@ -7364,7 +7364,7 @@ msgstr ""
 
 #. type: Plain text
 #: guix-git/doc/guix.texi:2632
-msgid "Now, @pxref{Getting Started}, and join us on @code{#guix} on the Freenode IRC network or on @email{guix-devel@@gnu.org} to share your experience!"
+msgid "Now, @pxref{Getting Started}, and join us on @code{#guix} on the Libera Chat IRC network or on @email{guix-devel@@gnu.org} to share your experience!"
 msgstr ""
 
 #. type: section
