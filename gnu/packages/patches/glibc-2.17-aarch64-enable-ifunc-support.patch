@@ -1,0 +1,118 @@
+From 9e3970f3b6527a1d3b41d4d646cf338828efb1f5 Mon Sep 17 00:00:00 2001
+From: Will Newton <will.newton@linaro.org>
+Date: Mon, 25 Nov 2013 14:56:28 +0000
+Subject: [PATCH 2/2] aarch64: Enable ifunc support.
+
+Add support for handling the R_AARCH64_IRELATIVE relocation and
+STT_GNU_IFUNC symbols to the aarch64 port.
+
+ports/ChangeLog.aarch64:
+
+2013-11-26  Will Newton  <will.newton@linaro.org>
+
+	* sysdeps/aarch64/dl-irel.h: Include ldsodefs.h.
+	(ELF_MACHINE_IRELA): Define.  (elf_ifunc_invoke): Pass
+	hwcap to ifunc resolver function.  (elf_irela): New function.
+	* sysdeps/aarch64/dl-machine.h: Include dl-irel.h.
+	(elf_machine_rela) Handle STT_GNU_IFUNC symbols and
+	R_AARCH64_IRELATIVE relocations.  (elf_machine_lazy_rel):
+	Handle R_AARCH64_IRELATIVE relocations.
+---
+ ports/sysdeps/aarch64/dl-irel.h    | 22 +++++++++++++++++++---
+ ports/sysdeps/aarch64/dl-machine.h | 20 ++++++++++++++++++++
+ 2 files changed, 39 insertions(+), 3 deletions(-)
+
+diff --git a/ports/sysdeps/aarch64/dl-irel.h b/ports/sysdeps/aarch64/dl-irel.h
+index 32dee0f442..349797af01 100644
+--- a/ports/sysdeps/aarch64/dl-irel.h
++++ b/ports/sysdeps/aarch64/dl-irel.h
+@@ -22,15 +22,31 @@
+ 
+ #include <stdio.h>
+ #include <unistd.h>
++#include <ldsodefs.h>
+ 
+-/* AArch64 does not yet implement IFUNC support.  However since
+-   2011-06-20 provision of a elf_ifunc_invoke has been mandatory.  */
++#define ELF_MACHINE_IRELA	1
+ 
+ static inline ElfW(Addr)
+ __attribute ((always_inline))
+ elf_ifunc_invoke (ElfW(Addr) addr)
+ {
+-  return ((ElfW(Addr) (*) (void)) (addr)) ();
++  return ((ElfW(Addr) (*) (unsigned long int)) (addr)) (GLRO(dl_hwcap));
++}
++
++static inline void
++__attribute ((always_inline))
++elf_irela (const ElfW(Rela) *reloc)
++{
++  ElfW(Addr) *const reloc_addr = (void *) reloc->r_offset;
++  const unsigned long int r_type = ELFW(R_TYPE) (reloc->r_info);
++
++  if (__glibc_likely (r_type == R_AARCH64_IRELATIVE))
++    {
++      ElfW(Addr) value = elf_ifunc_invoke (reloc->r_addend);
++      *reloc_addr = value;
++    }
++  else
++    __libc_fatal ("unexpected reloc type in static binary");
+ }
+ 
+ #endif
+diff --git a/ports/sysdeps/aarch64/dl-machine.h b/ports/sysdeps/aarch64/dl-machine.h
+index e2db67ca76..47f3f13553 100644
+--- a/ports/sysdeps/aarch64/dl-machine.h
++++ b/ports/sysdeps/aarch64/dl-machine.h
+@@ -23,6 +23,7 @@
+ 
+ #include <tls.h>
+ #include <dl-tlsdesc.h>
++#include <dl-irel.h>
+ 
+ /* Return nonzero iff ELF header is compatible with the running host.  */
+ static inline int __attribute__ ((unused))
+@@ -231,6 +232,12 @@ elf_machine_rela (struct link_map *map, const ElfW(Rela) *reloc,
+       struct link_map *sym_map = RESOLVE_MAP (&sym, version, r_type);
+       ElfW(Addr) value = sym_map == NULL ? 0 : sym_map->l_addr + sym->st_value;
+ 
++      if (sym != NULL
++	  && __glibc_unlikely (ELFW(ST_TYPE) (sym->st_info) == STT_GNU_IFUNC)
++	  && __glibc_likely (sym->st_shndx != SHN_UNDEF)
++	  && __glibc_likely (!skip_ifunc))
++	value = elf_ifunc_invoke (value);
++
+       switch (r_type)
+ 	{
+ 	case R_AARCH64_COPY:
+@@ -320,6 +327,12 @@ elf_machine_rela (struct link_map *map, const ElfW(Rela) *reloc,
+ 	    }
+ 	  break;
+ 
++	case R_AARCH64_IRELATIVE:
++	  value = map->l_addr + reloc->r_addend;
++	  value = elf_ifunc_invoke (value);
++	  *reloc_addr = value;
++	  break;
++
+ 	default:
+ 	  _dl_reloc_bad_type (map, r_type, 0);
+ 	  break;
+@@ -363,6 +376,13 @@ elf_machine_lazy_rel (struct link_map *map,
+       td->entry = (void*)(D_PTR (map, l_info[ADDRIDX (DT_TLSDESC_PLT)])
+ 			  + map->l_addr);
+     }
++  else if (__glibc_unlikely (r_type == R_AARCH64_IRELATIVE))
++    {
++      ElfW(Addr) value = map->l_addr + reloc->r_addend;
++      if (__glibc_likely (!skip_ifunc))
++	value = elf_ifunc_invoke (value);
++      *reloc_addr = value;
++    }
+   else
+     _dl_reloc_bad_type (map, r_type, 1);
+ }
+-- 
+2.31.1
+

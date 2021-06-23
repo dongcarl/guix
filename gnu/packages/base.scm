@@ -1017,6 +1017,39 @@ with the Linux kernel.")
                                        "glibc-CVE-2018-11237.patch"))))
     (properties `((lint-hidden-cve . ("CVE-2017-18269")))))) ; glibc-2.27-git-fixes
 
+(define-public glibc-2.17
+  (package
+    (inherit glibc)
+    (version "2.17")
+    (source (origin
+              (inherit (package-source glibc))
+              (uri (string-append "mirror://gnu/glibc/glibc-" version ".tar.xz"))
+              (sha256
+               (base32
+                "0gmjnn4kma9vgizccw1jv979xw55a8n1nkk94gg0l3hy80vy6539"))
+              (patches (search-patches "glibc-ldd-x86_64.patch"
+                                       "glibc-versioned-locpath.patch"
+                                       "glibc-hurd-magic-pid.patch"
+                                       "glibc-2.17-supported-locales.patch"
+                                       "glibc-2.17-accept-make4.patch"
+                                       "glibc-2.17-_obstack_compat-initialize.patch"
+                                       "glibc-2.17-fix-libgcc_s_resume-issue.patch"
+                                       "glibc-2.17-elfm-loadaddr-dynamic-rewrite.patch"
+                                       "glibc-2.17-add-aarch64-reloc-defs.patch"
+                                       "glibc-2.17-aarch64-enable-ifunc-support.patch"
+                                       "glibc-2.17-__glibc_likely.patch"))))
+    (arguments
+     (substitute-keyword-arguments
+         (package-arguments glibc)
+       ((#:phases phases)
+        `(modify-phases ,phases
+           (add-before 'configure 'fix-pwd
+             (lambda _
+               (setenv "libc_cv_ssp" "false")
+               (substitute* "configure"
+                 (("/bin/pwd") "pwd"))
+               #t))))))))
+
 (define-public (make-gcc-libc base-gcc libc)
   "Return a GCC that targets LIBC."
   (package (inherit base-gcc)

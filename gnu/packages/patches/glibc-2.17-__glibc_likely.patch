@@ -1,0 +1,21 @@
+commit b75ed2c122b6166bc50387d555adde65133fbe52
+Author: Siddhesh Poyarekar <siddhesh@redhat.com>
+Date:   Fri Dec 28 11:53:01 2012 +0530
+
+    Add __glibc_likely as an alias for __builtin_expect when available
+
+diff --git a/misc/sys/cdefs.h b/misc/sys/cdefs.h
+index fb6c959d90..1eee54ec80 100644
+--- a/misc/sys/cdefs.h
++++ b/misc/sys/cdefs.h
+@@ -378,8 +378,10 @@
+ 
+ #if __GNUC__ >= 3
+ # define __glibc_unlikely(cond) __builtin_expect((cond), 0)
++# define __glibc_likely(cond) __builtin_expect((cond), 1)
+ #else
+ # define __glibc_unlikely(cond) (cond)
++# define __glibc_likely(cond) (cond)
+ #endif
+ 
+ #include <bits/wordsize.h>
