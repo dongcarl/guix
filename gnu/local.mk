@@ -1096,8 +1096,10 @@ dist_patch_DATA =						\
   %D%/packages/patches/glibc-versioned-locpath.patch		\
   %D%/packages/patches/glibc-2.17-_obstack_compat-initialize.patch	\
   %D%/packages/patches/glibc-2.17-accept-make4.patch		\
+  %D%/packages/patches/glibc-2.24-elfm-loadaddr-dynamic-rewrite.patch	\
   %D%/packages/patches/glibc-2.17-fix-libgcc_s_resume-issue.patch	\
   %D%/packages/patches/glibc-2.17-supported-locales.patch	\
+  %D%/packages/patches/glibc-2.24-no-build-time-cxx-header-run.patch	\
   %D%/packages/patches/glibc-2.27-git-fixes.patch		\
   %D%/packages/patches/glibc-2.28-git-fixes.patch		\
   %D%/packages/patches/glibc-2.29-git-updates.patch     	\

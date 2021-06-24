@@ -1017,6 +1017,24 @@ with the Linux kernel.")
                                        "glibc-CVE-2018-11237.patch"))))
     (properties `((lint-hidden-cve . ("CVE-2017-18269")))))) ; glibc-2.27-git-fixes
 
+(define-public glibc-2.24
+  (package
+    (inherit glibc)
+    (version "2.24")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                    (url "https://sourceware.org/git/glibc.git")
+                    (commit "0d7f1ed30969886c8dde62fbf7d2c79967d4bace")))
+              (file-name (git-file-name "glibc" "0d7f1ed30969886c8dde62fbf7d2c79967d4bace"))
+              (sha256
+               (base32
+                "0g5hryia5v1k0qx97qffgwzrz4lr4jw3s5kj04yllhswsxyjbic3"))
+              (patches (search-patches "glibc-ldd-x86_64.patch"
+                                       "glibc-versioned-locpath.patch"
+                                       "glibc-2.24-elfm-loadaddr-dynamic-rewrite.patch"
+                                       "glibc-2.24-no-build-time-cxx-header-run.patch"))))))
+
 (define-public glibc-2.17
   (package
     (inherit glibc)
