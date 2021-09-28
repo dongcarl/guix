@@ -208,10 +208,9 @@ where the OS part is overloaded to denote a specific ABI---into GCC
 
           #:phases
           (modify-phases %standard-phases
-            (add-before 'configure 'pre-configure
+            (add-before 'configure 'fix-dynamic-linker
               (lambda* (#:key inputs outputs #:allow-other-keys)
-                (let ((libdir ,(libdir))
-                      (libc   (assoc-ref inputs "libc")))
+                (let ((libc   (assoc-ref inputs "libc")))
                   (when libc
                     ;; The following is not performed for `--without-headers'
                     ;; cross-compiler builds.
@@ -233,8 +232,13 @@ where the OS part is overloaded to denote a specific ABI---into GCC
                         _ gnu-user suffix)
                        (format #f "#define ~a_DYNAMIC_LINKER~a \"~a\"~%"
                                gnu-user suffix
-                               (string-append libc ,(glibc-dynamic-linker)))))
+                               (string-append libc ,(glibc-dynamic-linker)))))))))
 
+            (add-before 'configure 'fix-finding-libgcc
+              (lambda* (#:key inputs outputs #:allow-other-keys)
+                (let ((libdir ,(libdir))
+                      (libc   (assoc-ref inputs "libc")))
+                  (when libc
                     ;; Tell where to find libstdc++, libc, and `?crt*.o', except
                     ;; `crt{begin,end}.o', which come with GCC.
                     (substitute* (find-files "gcc/config"
@@ -272,8 +276,12 @@ where the OS part is overloaded to denote a specific ABI---into GCC
                        (format #f "#define STANDARD_STARTFILE_PREFIX_1 \"~a/lib\"
 #define STANDARD_STARTFILE_PREFIX_2 \"\"
 ~a"
-                               libc line))))
+                               libc line)))))))
 
+            (add-before 'configure 'force-non64-libdir
+              (lambda* (#:key inputs outputs #:allow-other-keys)
+                (let ((libdir ,(libdir))
+                      (libc   (assoc-ref inputs "libc")))
                   ;; TODO: Make this unconditional in core-updates.
                   ,@(if (target-powerpc?)
                       `((when (file-exists? "gcc/config/rs6000")
@@ -282,16 +290,20 @@ where the OS part is overloaded to denote a specific ABI---into GCC
                             (("/lib64") "/lib"))))
                       `())
 
-                  ;; Don't retain a dependency on the build-time sed.
-                  (substitute* "fixincludes/fixincl.x"
-                    (("static char const sed_cmd_z\\[\\] =.*;")
-                     "static char const sed_cmd_z[] = \"sed\";"))
-
                   ;; Aarch64 support didn't land in GCC until the 4.8 series.
                   (when (file-exists? "gcc/config/aarch64")
                     ;; Force Aarch64 libdir to be /lib and not /lib64
                     (substitute* "gcc/config/aarch64/t-aarch64-linux"
-                      (("lib64") "lib")))
+                      (("lib64") "lib"))))))
+
+            (add-before 'configure 'pre-configure
+              (lambda* (#:key inputs outputs #:allow-other-keys)
+                (let ((libdir ,(libdir))
+                      (libc   (assoc-ref inputs "libc")))
+                  ;; Don't retain a dependency on the build-time sed.
+                  (substitute* "fixincludes/fixincl.x"
+                    (("static char const sed_cmd_z\\[\\] =.*;")
+                     "static char const sed_cmd_z[] = \"sed\";"))
 
                   (when (file-exists? "libbacktrace")
                     ;; GCC 4.8+ comes with libbacktrace.  By default it builds
