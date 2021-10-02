@@ -234,7 +234,7 @@ where the OS part is overloaded to denote a specific ABI---into GCC
                                gnu-user suffix
                                (string-append libc ,(glibc-dynamic-linker)))))))))
 
-            (add-before 'configure 'fix-finding-libgcc
+            (add-before 'configure 'help-find-libgcc_s
               (lambda* (#:key inputs outputs #:allow-other-keys)
                 (let ((libdir ,(libdir))
                       (libc   (assoc-ref inputs "libc")))
@@ -278,10 +278,8 @@ where the OS part is overloaded to denote a specific ABI---into GCC
 ~a"
                                libc line)))))))
 
-            (add-before 'configure 'force-non64-libdir
+            (add-before 'configure 'force-non64-suffixed-libdir
               (lambda* (#:key inputs outputs #:allow-other-keys)
-                (let ((libdir ,(libdir))
-                      (libc   (assoc-ref inputs "libc")))
                   ;; TODO: Make this unconditional in core-updates.
                   ,@(if (target-powerpc?)
                       `((when (file-exists? "gcc/config/rs6000")
@@ -294,17 +292,17 @@ where the OS part is overloaded to denote a specific ABI---into GCC
                   (when (file-exists? "gcc/config/aarch64")
                     ;; Force Aarch64 libdir to be /lib and not /lib64
                     (substitute* "gcc/config/aarch64/t-aarch64-linux"
-                      (("lib64") "lib"))))))
+                      (("lib64") "lib")))))
 
-            (add-before 'configure 'pre-configure
+            (add-before 'configure 'fix-sed-invocation
               (lambda* (#:key inputs outputs #:allow-other-keys)
-                (let ((libdir ,(libdir))
-                      (libc   (assoc-ref inputs "libc")))
                   ;; Don't retain a dependency on the build-time sed.
                   (substitute* "fixincludes/fixincl.x"
                     (("static char const sed_cmd_z\\[\\] =.*;")
-                     "static char const sed_cmd_z[] = \"sed\";"))
+                     "static char const sed_cmd_z[] = \"sed\";"))))
 
+            (add-before 'configure 'libbacktrace-disable-Werror
+              (lambda* (#:key inputs outputs #:allow-other-keys)
                   (when (file-exists? "libbacktrace")
                     ;; GCC 4.8+ comes with libbacktrace.  By default it builds
                     ;; with -Werror, which fails with a -Wcast-qual error in glibc
@@ -317,15 +315,20 @@ where the OS part is overloaded to denote a specific ABI---into GCC
                       ;; Same in libsanitizer's bundled copy (!) found in 4.9+.
                       (substitute* "libsanitizer/libbacktrace/Makefile.in"
                         (("-Werror")
-                         ""))))
+                         ""))))))
 
+            (add-before 'configure 'help-libstdc++-find-libgcc_s
+              (lambda* (#:key inputs outputs #:allow-other-keys)
                   ;; Add a RUNPATH to libstdc++.so so that it finds libgcc_s.
                   ;; See <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=32354>
                   ;; and <http://bugs.gnu.org/20358>.
                   (substitute* "libstdc++-v3/src/Makefile.in"
                     (("^OPT_LDFLAGS = ")
-                     "OPT_LDFLAGS = -Wl,-rpath=$(libdir) "))
+                     "OPT_LDFLAGS = -Wl,-rpath=$(libdir) "))))
 
+            (add-before 'configure 'move-libstdc++-gdb-py-to-lib
+              (lambda* (#:key inputs outputs #:allow-other-keys)
+                (let ((libdir ,(libdir)))
                   ;; Move libstdc++*-gdb.py to the "lib" output to avoid a
                   ;; circularity between "out" and "lib".  (Note:
                   ;; --with-python-dir is useless because it imposes $(prefix) as
@@ -333,8 +336,10 @@ where the OS part is overloaded to denote a specific ABI---into GCC
                   (substitute* "libstdc++-v3/python/Makefile.in"
                     (("pythondir = .*$")
                      (string-append "pythondir = " libdir "/share"
-                                    "/gcc-$(gcc_version)/python\n")))
+                                    "/gcc-$(gcc_version)/python\n"))))))
 
+            (add-before 'configure 'remove-PREFIX_INCLUDE_DIR-define
+              (lambda* (#:key inputs outputs #:allow-other-keys)
                   ;; Avoid another circularity between the outputs: this #define
                   ;; ends up in auto-host.h in the "lib" output, referring to
                   ;; "out".  (This variable is used to augment cpp's search path,
@@ -342,7 +347,7 @@ where the OS part is overloaded to denote a specific ABI---into GCC
                   (substitute* "gcc/config.in"
                     (("PREFIX_INCLUDE_DIR")
                      "PREFIX_INCLUDE_DIR_isnt_necessary_here"))
-                  #t)))
+                  #t))
 
             (add-after 'configure 'post-configure
               (lambda _

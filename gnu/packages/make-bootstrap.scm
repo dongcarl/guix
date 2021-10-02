@@ -502,7 +502,7 @@ for `sh' in $PATH, and without nscd, and with static NSS modules."
                           ,flags)))
         ((#:phases phases)
          `(modify-phases ,phases
-            (add-after 'pre-configure 'remove-lgcc_s
+            (add-after 'help-find-libgcc_s 'remove-lgcc_s
               (lambda _
                 ;; Remove the '-lgcc_s' added to GNU_USER_TARGET_LIB_SPEC in
                 ;; the 'pre-configure phase of our main gcc package, because
